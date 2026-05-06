@@ -1,0 +1,98 @@
+
+=== Journal Entry 2026-04-21T23:51:51.003606+00:00 ===
+2026-04-21-23-51-50-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM) engineering design session. Covers complete machine architecture, cassette head geometry, cam ring parametric design with kinematic simulation, FreeCAD macros with auto-export, shopping list request, and cam ring visual diagram request. Contains locked specifications, Python simulation scripts, FreeCAD FCMacro files, SVG blueprints, and Windows batch scripts.]
+
+
+
+
+=== Journal Entry 2026-04-23T00:32:20.963975+00:00 ===
+2026-04-23-00-32-20-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Covers complete machine architecture, cassette head geometry with cam ring through 5 iterations (V1→V5 print-ready), kinematic simulation, FreeCAD macros with auto-export, bearing housing blocks, complete shopping list with BOM, and ongoing hardware specification verification (motor, driver, controller, pulleys, shaft collars, yarn components).]
+
+
+
+
+=== Journal Entry 2026-04-23T06:40:38.186289+00:00 ===
+2026-04-23-06-40-37-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Covers complete machine architecture, cassette head geometry with cam ring through V5 print-ready iterations, bearing housing blocks, NEMA 23 motor+gearbox selection, HTD 5M belt drive system, ceramic yarn guides, Raspberry Pi 4 electronics, 24V power system, and comprehensive BOM reconciliation with 41 placed orders totaling $888.80.]
+
+
+
+
+=== Journal Entry 2026-04-25T11:59:24.890702+00:00 ===
+2026-04-25-11-59-23-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Comprehensive design progression through cam ring V5, bearing housings V1→V2→V2.1→V2.2→V2.3→V2.4 (with deterministic preload via spacer tube), drive hub V2.4→V2.4.1, plus full BOM management across V1-V8 reconciliations. User has placed 57 orders totaling $1,263.84. Contains FreeCAD macros, HTML BOMs with verified ASINs, professional engineering review feedback validation, and Path A architecture decisions for cassette-to-shaft coupling.]
+
+
+
+
+=== Journal Entry 2026-04-25T22:15:27.019844+00:00 ===
+2026-04-25-22-15-26-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Comprehensive design progression through cam ring V5, bearing housings V1→V2.4 (deterministic preload via spacer tube), drive hub V1.0→V1.3 (independent versioning), motor mount V1.0→V1.2 (structural upgrade with embedded ribs). User has placed 57 orders totaling $1,263.84. Contains FreeCAD macros, HTML BOMs with verified ASINs, professional engineering review feedback validation, and Path A architecture decisions. Multiple review cycles where reviewer feedback was carefully verified against actual geometry — caught multiple cases where reviewer "fixes" would have introduced bugs (e.g., slot cutting hub in two halves, head pockets making bolts proud, fillet filters too broad).]
+
+
+
+
+=== Journal Entry 2026-04-26T19:18:31.737739+00:00 ===
+2026-04-26-19-18-30-csm-sock-machine-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Comprehensive multi-phase design progression: cam ring V5, bearing housings V1→V2.5.1 (now using real Smalley CM25-L1 wave spring with spring-controlled preload), drive hub V1.0→V1.3, motor mount V1.0→V1.3 (structural upgrade with embedded ribs + slot-end relief). User has placed 57 orders totaling $1,263.84. Contains FreeCAD macros, HTML BOMs (V8, V9) with verified ASINs, professional engineering review feedback validation across MULTIPLE review cycles where reviewer feedback was carefully verified against actual geometry — caught many cases where reviewer "fixes" would have introduced bugs. Final session work: redesigned bearing housing V2.5 to use real Smalley CM25-L1 catalog spring (replacing fictional spec from V2.4) and updated BOM V9 with V2.5 hardware needs.]
+
+
+
+
+=== Journal Entry 2026-05-01T01:17:29.649420+00:00 ===
+2026-05-01-01-17-28-csm-sock-machine-v3-design.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Multi-phase design: cam ring V5, bearing housings V2.4→V2.5 (now using real Smalley CM25-L1 wave spring with spring-controlled preload, Smalley CM25-L1 verified from live catalog), drive hub V1.0→V1.3, motor mount V1.0→V1.3 (structural upgrade + slot-end relief). Contains FreeCAD macros, HTML BOMs (V8, V9), professional engineering review feedback. Most recent work: V2.5 bearing housing redesign to use CM25-L1 (25mm bore, 19mm shaft clearance, 35N preload at 3.20mm compression). Macro partially built — functional STL geometry complete, console summary/packaging pending.]
+
+
+
+
+=== Journal Entry 2026-05-02T03:35:23.048387+00:00 ===
+2026-05-02-03-35-22-csm-sock-machine-v3-cylinder-cam.txt
+[Long-running DIY automated circular sock machine (CSM V3) engineering design session. Architectural pivot from custom 90mm cylinder to Legare/AutoKnitter standard 4.5"/114.3mm 72-slot architecture after needle measurements revealed standard CSM compatibility. Contains FreeCAD macros for cylinder, cam ring, and other knitting components. Multiple iterations driven by reviewer feedback. CRITICAL: V6 cam ring was found to have fundamental geometric error (radial vs axial cam) - V6.1 corrected version JUST BUILT but not yet packaged/delivered. BOM updated to V10 with Legare-compatible components.]
+
+
+
+
+=== Journal Entry 2026-05-02T19:14:16.615692+00:00 ===
+2026-05-02-19-14-15-csm-v3-automated-sock-machine.txt
+[Long-running DIY automated circular sock machine (CSM V3) engineering design session. Legare/AutoKnitter-compatible architecture (rotating cylinder, stationary cam), 114.3mm/72-slot, 12g latch needles. Contains FreeCAD macros for all knitting components. Session includes: needle butt geometry resolution (closed-loop spring eye confirmed), cylinder spring architecture decisions, multi-feeder (6-feeder future, 2-feeder initial) planning, and architecture confirmation (Legare-compatible motorized, NOT Lonati). Multiple reviewer feedback rounds integrated. BOM at V10.]
+
+
+
+
+=== Journal Entry 2026-05-02T19:21:19.508953+00:00 ===
+2026-05-02-19-21-18-csm-v3-automated-sock-machine.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Legare/AutoKnitter-compatible architecture (rotating cylinder, stationary cam), 114.3mm/72-slot, 12g latch needles. Contains FreeCAD macros for cylinder (through V1.1.1 with spring groove), sinker ring planning, multi-feeder architecture, spring mechanics simulation, wood base sizing, and finishing tool recommendations.]
+
+
+
+
+=== Journal Entry 2026-05-02T19:25:27.866921+00:00 ===
+2026-05-02-19-25-27-csm-v3-automated-sock-machine.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Legare/AutoKnitter-compatible architecture (rotating cylinder, stationary cam), 114.3mm/72-slot, 12g latch needles. Contains FreeCAD macros through Cam Ring V6.2 (corrected axial cam physics), BOM V10 with verified purchase URLs, wood base analysis, reviewer feedback integration, and spring mechanics. Currently designing remaining knitting components (sinker ring next).]
+
+
+
+
+=== Journal Entry 2026-05-04T02:35:54.220759+00:00 ===
+2026-05-04-02-35-53-csm-v3-automated-sock-machine.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Legare/AutoKnitter-compatible architecture (rotating cylinder, stationary cam), 114.3mm/72-slot, 12g latch needles. Contains FreeCAD macros through Cam Ring V6.5 FINAL (smoothstep cam easing, smoothstep-blended top lip, conservative 8mm lift), BOM V11 with MG90S servo upgrade (8×), sinker ring design locked but not yet coded. Multi-reviewer engineering iteration history with accepted/rejected changes documented.]
+
+
+
+
+=== Journal Entry 2026-05-04T02:37:48.322000+00:00 ===
+2026-05-04-02-37-47-csm-v3-automated-sock-machine.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Legare/AutoKnitter-compatible architecture (rotating cylinder, stationary cam), 114.3mm/72-slot, 12g latch needles. Contains FreeCAD macros through Sinker Ring V1.0, BOM V11 with actual Orders.xlsx data ($1,018.83 spent), wave spring and washer sourcing decisions, folder structure clarification session. Multi-reviewer engineering iteration history with accepted/rejected changes documented.]
+
+
+
+
+=== Journal Entry 2026-05-04T02:41:02.807104+00:00 ===
+2026-05-04-02-41-02-csm-v3-sinker-ring-engineering.txt
+[Multi-session DIY automated circular sock knitting machine (CSM V3) engineering design. Covers Sinker Ring V1.0→V1.1 engineering review iteration, directory structure consolidation to 02_CASSETTE_HEAD, and angled tip geometry analysis with V1.2 plan. Contains FreeCAD macros, BOM, purchasing decisions, and component design history.]
+
+
+

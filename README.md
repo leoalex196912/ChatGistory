@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # CSM V3 - Computerized Sock Machine V3
 
 Automated Legare-compatible circular sock knitting machine with motorized drive system and computer control.
@@ -44,3 +45,6 @@ Automated Legare-compatible circular sock knitting machine with motorized drive 
 All design evolution documented chronologically in chat-history/.
 
 See journal.txt for index.
+=======
+# ChatGistory
+>>>>>>> 52dd906ae06a8ef9a5bce6f71aa1d95e0d1a725d

@@ -1,0 +1,652 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- NEMA 23 MOTOR MOUNT  V1.3  (REAL DURABILITY IMPROVEMENT)
+# =============================================================================
+# File:    CSM_V3_MotorMount_V1_3.FCMacro
+# Date:    April 2026
+# Target:  C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\freecad_macros\
+#
+# CHANGES FROM V1.2:
+#   1. FOOT_SLOT_HEAD_H 5.5 -> 5.0mm
+#      Increases material below head pocket from 4.5mm to 5.0mm.
+#      Bolt heads sit ~1mm proud (acceptable, top face has no mating part).
+#      Trade-off accepted for ~10% more support material.
+#
+#   2. NEW: Slot end relief (the real durability win)
+#      Slot ends now have a 0.8mm chamfered top edge at each semicircular
+#      end. This addresses the highest-stress region where bolt shanks
+#      press against slot end walls during tightening cycles.
+#      Implementation: make_slot_hole() now adds small flared cones at
+#      both slot ends, creating a smooth transition at the top edge.
+#      Reduces crack initiation under repeated tension adjustment.
+#
+# REJECTED FROM REVIEW (4 points):
+#   - L-corner fillet via makeFillet (filter too broad - would catch
+#     slot edges, counterbore edges, foot perimeter; makeFillet fragile)
+#   - Shift rib base another 2mm (diminishing returns, eats into plate)
+#   - CHAMFER_SIZE 1.0 -> 0.6mm (chamfers not in load path; no benefit)
+#   - "Rotate so ribs grow upward" (already correct with foot DOWN)
+#
+# CHANGES INHERITED FROM V1.2 (structural upgrade):
+#   - PLATE_T 8 -> 10mm
+#   - FOOT_T 8 -> 10mm
+#   - RIB_BASE 6mm (rib embedded into plate)
+#
+# CHANGES INHERITED FROM V1.1:
+#   - RIB_T 4 -> 6mm
+#   - MOTOR_BOLT_CSK_D 11.0mm (M5 washer fit)
+#   - FOOT_SLOT_HEAD_D 11.0mm (M5 washer fit)
+#   - 60mm Y rail spacing (matches 420x320 base)
+#
+# COST: Negligible (~5g material, ~5 minutes print time)
+# BENEFIT: Reduced crack initiation at slot ends, longer service life
+#
+# PURPOSE:
+#   L-bracket motor mount that holds the NEMA 23 + 5:1 gearbox to the 2020
+#   aluminum extrusion frame. Provides belt tension adjustment via slotted
+#   foot (motor stays in fixed position relative to its bracket; whole
+#   bracket slides along extrusion to set belt tension).
+#
+# MOTOR HARDWARE (already ordered):
+#   StepperOnline 23HS22-2804S-HG5
+#   - NEMA 23 frame: 56.4mm x 56.4mm
+#   - With 5:1 PLE-style planetary gearbox
+#   - Output flange: 60mm dia, pilot boss 36mm dia x 2mm tall
+#   - Mount: 4x M5 at 47mm PCD (NEMA 23 standard)
+#   - Output shaft: 14mm dia, ~25mm long with keyway
+#   - Total motor+gearbox length: ~120mm
+#   - Weight: ~1.5kg
+#
+# BELT GEOMETRY (already ordered):
+#   HTD 5M, 405mm length, 9mm wide
+#   60T cassette pulley (PD 95.49mm)
+#   20T motor pulley (PD 31.83mm)
+#   Calculated nominal center distance: 97.3mm
+#   Slot adjustment range: 30mm = center distance 82-112mm (ample margin)
+#
+# DESIGN APPROACH (Architecture: L-bracket, sliding foot for tension):
+#   Motor face plate:
+#     - 100mm x 100mm x 8mm thick
+#     - Center hole 38mm dia (clears 36mm gearbox pilot + clearance)
+#     - 4x ROUND M5 clearance holes at 47mm PCD (motor stays put)
+#   Foot (frame interface):
+#     - 100mm wide x 50mm deep x 8mm thick
+#     - 4x SLOTTED M5 holes (30mm long) for T-nut sliding in extrusion
+#     - Slot direction = belt tension axis
+#   L-bracket joint:
+#     - 90 deg corner, reinforced with 3 triangular ribs
+#     - Ribs 4mm thick, span both plate and foot
+#
+# SLOT GEOMETRY (lessons from drive hub V1.x):
+#   - Slots terminate WITH relief holes at each end
+#   - Filter chamfer by Z-level + outer surface (not just radius)
+#   - Geometry computed from explicit named variables (no magic numbers)
+#
+# HARDWARE NEEDED (ALL ALREADY OWNED):
+#   - 4x M5 socket head cap screws ~16mm (motor face mounting)
+#     From B0FFSNFK3Y assortment
+#   - 4x M5 socket head cap screws ~12mm (foot to T-nut)
+#     From B0FFSNFK3Y assortment
+#   - 4x M5 T-nuts for 2020 extrusion
+#     From B0GG4N5GR4 (already have 230)
+#
+# AUTO-EXPORT ON RUN:
+#   STL:           C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\
+#   PNG view:      C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\images\
+#   SVG blueprint: C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\blueprints\
+# =============================================================================
+
+import FreeCAD, FreeCADGui, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM"
+
+PATH_STL = os.path.join(BASE, "CSM_V3_MotorMount_V1_3.stl")
+PATH_PNG = os.path.join(BASE, "images", "MotorMount_V1_3_View.png")
+PATH_SVG = os.path.join(BASE, "blueprints", "MotorMount_V1_3_Blueprint.svg")
+
+for p in [PATH_STL, PATH_PNG, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+doc = FreeCAD.newDocument("CSM_MotorMount_V1_3")
+
+# =============================================================================
+# DESIGN PARAMETERS
+# =============================================================================
+# --- Motor face plate ---
+PLATE_W            = 100.0    # plate width (Y direction)
+PLATE_H            = 100.0    # plate height (Z direction)
+PLATE_T            = 10.0     # V1.2: 8.0 -> 10.0 (industrial-safe, more rigid)
+
+# Gearbox pilot boss clearance hole
+PILOT_BOSS_D       = 36.0     # gearbox pilot diameter
+PILOT_HOLE_D       = 38.0     # plate clearance (1mm radial slip)
+
+# Motor mount holes (NEMA 23 + PLE gearbox standard)
+MOTOR_PCD          = 47.0     # bolt circle diameter
+MOTOR_BOLT_D       = 5.5      # M5 clearance through-hole
+MOTOR_BOLT_CSK_D   = 11.0     # V1.1: 10.2 -> 11.0 (proper M5 washer clearance, prevents creep)
+MOTOR_BOLT_CSK_H   = 5.5      # head pocket depth (socket head ~5mm)
+
+# --- Foot (frame interface) ---
+FOOT_W             = 100.0    # same as plate (Y direction)
+FOOT_D             = 50.0     # foot depth (X direction)
+FOOT_T             = 10.0     # V1.2: 8.0 -> 10.0 (matches plate, supports head pocket)
+
+# Foot slotted holes (for T-nut sliding in extrusion)
+FOOT_BOLT_D        = 5.5      # M5 clearance
+FOOT_SLOT_LEN      = 30.0     # slot length along X direction (belt tension axis)
+FOOT_SLOT_PCD_X    = 25.0     # X distance from L-corner to slot center (nominal)
+# V1.1: FOOT_SLOT_SPACING_Y configured for 420x320mm base with parallel 2020 rails
+# Rails: Y = -30mm and Y = +30mm (center-to-center 60mm)
+# Bolts pass through these rail center slots
+FOOT_SLOT_SPACING_Y = 60.0    # MUST MATCH YOUR FRAME'S RAIL SPACING
+                              # 420x320 base default: 60mm
+                              # If your rails are different, adjust accordingly
+FOOT_SLOT_HEAD_D   = 11.0     # V1.1: 10.2 -> 11.0 (M5 washer clearance, prevents creep)
+FOOT_SLOT_HEAD_H   = 5.0      # V1.3: 5.5 -> 5.0 (5mm material below head, was 4.5mm)
+
+# V1.3 NEW: Slot end relief (chamfered top edge at slot ends)
+# Reduces crack initiation where bolt presses against slot walls during
+# repeated tension adjustment cycles. Applied at semicircular slot ends only.
+SLOT_END_RELIEF    = 0.8      # 0.8mm chamfer at top edge of slot ends
+
+# --- L-bracket reinforcement ribs ---
+RIB_T              = 6.0      # V1.1: 4.0 -> 6.0 (rigidity insurance, cube-of-thickness rule)
+RIB_COUNT          = 3        # 3 ribs across width
+RIB_HEIGHT         = 50.0     # rib goes 50mm up the plate
+RIB_DEPTH          = 40.0     # rib goes 40mm along the foot
+RIB_BASE           = 6.0      # V1.2: rib embedded 6mm INTO plate (eliminates line-contact stress)
+
+# General
+CHAMFER_SIZE       = 1.0
+RELIEF_D           = 3.0      # slot end relief holes (lessons from drive hub V1.3)
+
+# =============================================================================
+# COORDINATE SYSTEM
+# =============================================================================
+# X axis: foot extends in +X direction (belt tension direction)
+# Y axis: width of bracket (parallel to extrusion)
+# Z axis: vertical (motor plate extends up)
+#
+# L-bracket origin is at the inside corner where plate meets foot.
+# Plate runs from Z=0 to Z=PLATE_H, X=0 (inside) to X=PLATE_T (outside)
+# Foot runs from X=0 (inside corner) to X=FOOT_D, Z=0 (top) to Z=-FOOT_T (bottom)
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def make_slot_hole(slot_w, slot_l, depth, axis="X"):
+    """Create a slot-shaped through hole.
+    Slot is a rectangle with rounded ends (capsule shape).
+    slot_w = slot width (across short axis)
+    slot_l = total slot length (long axis)
+    depth = depth of hole
+    """
+    radius = slot_w / 2.0
+    rect_l = slot_l - slot_w  # length of straight section
+    if rect_l < 0:
+        rect_l = 0
+    # Build as rectangle + 2 cylinders (capsule shape)
+    rect = Part.makeBox(rect_l, slot_w, depth)
+    rect.translate(FreeCAD.Vector(-rect_l/2.0, -slot_w/2.0, 0))
+    cyl1 = Part.makeCylinder(radius, depth)
+    cyl1.translate(FreeCAD.Vector(-rect_l/2.0, 0, 0))
+    cyl2 = Part.makeCylinder(radius, depth)
+    cyl2.translate(FreeCAD.Vector(rect_l/2.0, 0, 0))
+    slot = rect.fuse(cyl1).fuse(cyl2)
+    return slot
+
+
+def add_slot_end_relief(bracket, slot_w, slot_l, x_center, y_center, z_edge, relief, direction="up"):
+    """V1.3: Add chamfered relief at slot ends at a specific edge.
+    Cuts a flared cone at each semicircular slot end.
+    Reduces crack initiation under repeated bolt tightening cycles.
+    
+    z_edge = the Z height where the slot meets a face (the edge to relieve)
+    direction = "up" means chamfer widens going UP from z_edge (e.g. transition to head pocket)
+                "down" means chamfer widens going DOWN from z_edge (e.g. exit at foot bottom)
+    """
+    if relief <= 0:
+        return bracket
+    radius = slot_w / 2.0
+    rect_l = slot_l - slot_w
+    for x_offset in [-rect_l/2.0, rect_l/2.0]:
+        if direction == "up":
+            # Cone narrower at bottom (z_edge - relief), wider at top (z_edge)
+            cone = Part.makeCone(radius, radius + relief, relief)
+            cone.translate(FreeCAD.Vector(x_center + x_offset, y_center, z_edge - relief))
+        else:  # "down"
+            # Cone wider at bottom (z_edge), narrower at top (z_edge + relief)
+            # Build inverted: makeCone with r1 > r2 makes it narrow upward
+            cone = Part.makeCone(radius + relief, radius, relief)
+            cone.translate(FreeCAD.Vector(x_center + x_offset, y_center, z_edge))
+        bracket = bracket.cut(cone)
+    return bracket
+
+# =============================================================================
+# BUILD L-BRACKET
+# =============================================================================
+print("=" * 65)
+print("CSM V3 -- NEMA 23 MOTOR MOUNT V1.3")
+print("=" * 65)
+print(f"\nBuilding L-bracket...")
+
+# 1. Motor face plate (vertical, in Y-Z plane, X=0 to X=PLATE_T)
+plate = Part.makeBox(PLATE_T, PLATE_W, PLATE_H)
+plate.translate(FreeCAD.Vector(0, -PLATE_W/2.0, 0))
+
+# 2. Foot (horizontal, in X-Y plane, Z=0 to Z=-FOOT_T)
+foot = Part.makeBox(FOOT_D, FOOT_W, FOOT_T)
+foot.translate(FreeCAD.Vector(0, -FOOT_W/2.0, -FOOT_T))
+
+# 3. Fuse plate and foot into L-bracket
+bracket = plate.fuse(foot)
+
+# 4. Cut motor pilot boss clearance hole (center of plate, axis=X)
+pilot_hole = Part.makeCylinder(PILOT_HOLE_D / 2.0, PLATE_T + 4)
+pilot_hole.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)  # rotate to X axis
+pilot_hole.translate(FreeCAD.Vector(-2, 0, PLATE_H / 2.0))
+bracket = bracket.cut(pilot_hole)
+
+# 5. Cut 4x motor mount holes (M5 at 47mm PCD around plate center)
+plate_center_z = PLATE_H / 2.0
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    by = (MOTOR_PCD / 2.0) * math.cos(ang)
+    bz = (MOTOR_PCD / 2.0) * math.sin(ang) + plate_center_z
+
+    # Through-hole for M5 shank
+    hole = Part.makeCylinder(MOTOR_BOLT_D / 2.0, PLATE_T + 4)
+    hole.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+    hole.translate(FreeCAD.Vector(-2, by, bz))
+    bracket = bracket.cut(hole)
+
+    # Counterbore for socket head (head sits flush from outside)
+    head_pocket = Part.makeCylinder(MOTOR_BOLT_CSK_D / 2.0, MOTOR_BOLT_CSK_H + 1)
+    head_pocket.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+    # Outside face is at X=PLATE_T, so head pocket starts there going outward
+    head_pocket.translate(FreeCAD.Vector(PLATE_T - MOTOR_BOLT_CSK_H, by, bz))
+    bracket = bracket.cut(head_pocket)
+
+print(f"  Motor face plate:     {PLATE_W}x{PLATE_H}x{PLATE_T}mm")
+print(f"  Pilot hole:           D{PILOT_HOLE_D}mm")
+print(f"  4x M5 holes at PCD:   {MOTOR_PCD}mm with counterbore D{MOTOR_BOLT_CSK_D}")
+
+# 6. Cut 4x slotted holes in foot (for T-nut sliding belt tension adjust)
+# Slots run along X direction (belt tension axis)
+# Two pairs at Y = +/- FOOT_SLOT_SPACING_Y/2
+foot_top_z = -0.001  # just into foot top
+slot_centers_y = [-FOOT_SLOT_SPACING_Y/2, FOOT_SLOT_SPACING_Y/2]
+slot_centers_x = [FOOT_SLOT_PCD_X, FOOT_D - FOOT_SLOT_PCD_X]
+
+for sx in slot_centers_x:
+    for sy in slot_centers_y:
+        # Slot through-hole (capsule shape, full depth)
+        slot = make_slot_hole(FOOT_BOLT_D, FOOT_SLOT_LEN, FOOT_T + 4)
+        slot.translate(FreeCAD.Vector(sx, sy, -FOOT_T - 2))
+        bracket = bracket.cut(slot)
+
+        # Counterbore for M5 socket head on top of foot
+        head_slot = make_slot_hole(FOOT_SLOT_HEAD_D, FOOT_SLOT_LEN, FOOT_SLOT_HEAD_H + 1)
+        head_slot.translate(FreeCAD.Vector(sx, sy, -FOOT_SLOT_HEAD_H))
+        bracket = bracket.cut(head_slot)
+
+        # V1.3: Add slot end relief at TWO critical Z heights
+        # 1. Foot bottom (Z = -FOOT_T): chamfer widens DOWNWARD (T-nut side)
+        # 2. Head pocket transition (Z = -FOOT_SLOT_HEAD_H): chamfer widens UPWARD
+        # Both reduce crack initiation under repeated tension adjustment cycles
+        bracket = add_slot_end_relief(bracket, FOOT_BOLT_D, FOOT_SLOT_LEN,
+                                       sx, sy, -FOOT_T, SLOT_END_RELIEF, direction="down")
+        bracket = add_slot_end_relief(bracket, FOOT_BOLT_D, FOOT_SLOT_LEN,
+                                       sx, sy, -FOOT_SLOT_HEAD_H, SLOT_END_RELIEF, direction="up")
+
+print(f"  Foot:                 {FOOT_W}x{FOOT_D}x{FOOT_T}mm")
+print(f"  4x slotted holes:     {FOOT_SLOT_LEN}mm long, M5")
+print(f"  Slot pattern:         {FOOT_SLOT_SPACING_Y}mm Y spacing")
+
+# 7. Add reinforcement ribs (triangular, span the L-corner)
+# Ribs are vertical triangles in the X-Z plane, distributed along Y
+rib_y_spacing = (PLATE_W - 20) / (RIB_COUNT - 1) if RIB_COUNT > 1 else 0
+rib_y_start = -(PLATE_W - 20) / 2.0
+for i in range(RIB_COUNT):
+    rib_y = rib_y_start + i * rib_y_spacing if RIB_COUNT > 1 else 0
+
+    # V1.2: Rib base embedded INTO plate by RIB_BASE mm (eliminates line-contact)
+    # Rib starts at X = PLATE_T - RIB_BASE, extends out to X = PLATE_T + RIB_DEPTH
+    pts = [
+        FreeCAD.Vector(PLATE_T - RIB_BASE, rib_y - RIB_T/2.0, 0),
+        FreeCAD.Vector(PLATE_T - RIB_BASE, rib_y - RIB_T/2.0, RIB_HEIGHT),
+        FreeCAD.Vector(PLATE_T + RIB_DEPTH, rib_y - RIB_T/2.0, 0),
+        FreeCAD.Vector(PLATE_T - RIB_BASE, rib_y - RIB_T/2.0, 0),  # close
+    ]
+    poly = Part.makePolygon(pts)
+    face = Part.Face(Part.Wire(poly))
+    rib = face.extrude(FreeCAD.Vector(0, RIB_T, 0))
+    bracket = bracket.fuse(rib)
+
+print(f"  Ribs:                 {RIB_COUNT}x triangular, {RIB_T}mm thick")
+
+# 8. Apply chamfer to outer edges (using V1.3 lessons - careful filter)
+try:
+    edges_to_chamfer = []
+    bb = bracket.BoundBox
+    tol = 0.5
+    for edge in bracket.Edges:
+        v1, v2 = edge.Vertexes[0].Point, edge.Vertexes[1].Point
+        # Only chamfer edges on the EXTREME outer surfaces of the bounding box
+        # (skip all internal pocket/hole edges)
+        on_boundary = False
+        # Check if both endpoints are on a bounding box face
+        for bx in [bb.XMin, bb.XMax]:
+            if abs(v1.x - bx) < tol and abs(v2.x - bx) < tol:
+                on_boundary = True
+                break
+        if not on_boundary:
+            for by in [bb.YMin, bb.YMax]:
+                if abs(v1.y - by) < tol and abs(v2.y - by) < tol:
+                    on_boundary = True
+                    break
+        if not on_boundary:
+            for bz in [bb.ZMin, bb.ZMax]:
+                if abs(v1.z - bz) < tol and abs(v2.z - bz) < tol:
+                    on_boundary = True
+                    break
+        # Also skip very short edges (likely artifacts of fillet/intersection)
+        if on_boundary and edge.Length > 5.0:
+            edges_to_chamfer.append(edge)
+
+    if edges_to_chamfer:
+        bracket = bracket.makeChamfer(CHAMFER_SIZE, edges_to_chamfer)
+        print(f"  Chamfered:            {len(edges_to_chamfer)} outer edges")
+except Exception as e:
+    print(f"  Chamfer warning:      {e}")
+
+# Add to document
+obj_mount = doc.addObject("Part::Feature", "MotorMount_V1_3")
+obj_mount.Shape = bracket
+obj_mount.ViewObject.ShapeColor = (0.6, 0.7, 0.8)  # blue-gray (industrial look)
+
+print(f"\n  Total bounding box:   {bracket.BoundBox.XLength:.0f} x {bracket.BoundBox.YLength:.0f} x {bracket.BoundBox.ZLength:.0f}mm")
+print(f"  Volume:               {bracket.Volume:.0f}mm^3")
+print(f"  Estimated weight:     {bracket.Volume * 1.27 / 1000:.0f}g (PETG, 50% infill)")
+
+doc.recompute()
+
+# =============================================================================
+# EXPORT STL
+# =============================================================================
+print(f"\nExporting STL...")
+try:
+    Part.export([obj_mount], PATH_STL)
+    print(f"  [OK] STL: {PATH_STL}")
+except Exception as e:
+    print(f"  [FAIL] STL: {e}")
+
+# =============================================================================
+# EXPORT PNG
+# =============================================================================
+print(f"\nExporting PNG view...")
+try:
+    view = FreeCADGui.activeDocument().activeView()
+    view.viewIsometric()
+    view.fitAll()
+    view.saveImage(PATH_PNG, 1600, 1200, "Current")
+    print(f"  [OK] PNG: {PATH_PNG}")
+except Exception as e:
+    print(f"  [WARN] PNG skipped: {e}")
+
+# =============================================================================
+# EXPORT SVG BLUEPRINT
+# =============================================================================
+print(f"\nGenerating SVG blueprint...")
+
+svg_content = '''<svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="800" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">NEMA 23 MOTOR MOUNT V1.3 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">10mm plate/foot, embedded ribs, slot-end relief for durability.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- FRONT VIEW (motor face) - LEFT -->
+  <text x="240" y="82" text-anchor="middle" fill="#3d5a99" font-size="13" font-weight="bold">FRONT VIEW (motor face)</text>
+  <text x="240" y="98" text-anchor="middle" fill="#666" font-size="10">100mm x 100mm plate with NEMA 23 pattern</text>
+
+  <!-- Plate outline 100x100 scaled to 200x200 -->
+  <rect x="140" y="120" width="200" height="200" fill="#dde6f0" stroke="#3d5a99" stroke-width="1.5"/>
+
+  <!-- Pilot hole D38 scaled to D76 -->
+  <circle cx="240" cy="220" r="38" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="240" y="218" text-anchor="middle" fill="#333" font-size="9">pilot</text>
+  <text x="240" y="230" text-anchor="middle" fill="#333" font-size="9">D38</text>
+
+  <!-- 4x M5 holes at PCD 47, scaled to radius 47 from center -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="273.2" cy="186.8" r="6"/>
+    <circle cx="273.2" cy="253.2" r="6"/>
+    <circle cx="206.8" cy="253.2" r="6"/>
+    <circle cx="206.8" cy="186.8" r="6"/>
+  </g>
+  <text x="290" y="184" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="290" y="196" fill="#791F1F" font-size="8">PCD 47</text>
+  <text x="290" y="208" fill="#791F1F" font-size="8">counterbore</text>
+  <text x="290" y="220" fill="#791F1F" font-size="8">D11.0 x 5.5</text>
+
+  <!-- Foot indication (below plate, viewed edge-on in front view) -->
+  <rect x="140" y="320" width="200" height="16" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="240" y="332" text-anchor="middle" fill="#9e6a18" font-size="9" font-weight="bold">FOOT (extends out toward viewer)</text>
+
+  <!-- Dimensions -->
+  <line x1="120" y1="120" x2="120" y2="320" stroke="#3d5a99" stroke-width="0.8"/>
+  <polygon points="120,122 117,128 123,128" fill="#3d5a99"/>
+  <polygon points="120,318 117,312 123,312" fill="#3d5a99"/>
+  <text x="100" y="225" fill="#3d5a99" font-size="11" font-weight="bold" transform="rotate(-90 100 225)">100mm</text>
+
+  <line x1="140" y1="350" x2="340" y2="350" stroke="#3d5a99" stroke-width="0.8"/>
+  <polygon points="142,350 148,347 148,353" fill="#3d5a99"/>
+  <polygon points="338,350 332,347 332,353" fill="#3d5a99"/>
+  <text x="240" y="364" text-anchor="middle" fill="#3d5a99" font-size="11" font-weight="bold">100mm wide</text>
+
+  <!-- TOP VIEW (foot pattern) - CENTER -->
+  <text x="700" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">TOP VIEW (foot)</text>
+  <text x="700" y="98" text-anchor="middle" fill="#666" font-size="10">100mm x 50mm with 4x slotted holes</text>
+
+  <!-- Foot rectangle 100x50, scaled 200x100 -->
+  <rect x="600" y="150" width="200" height="100" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+
+  <!-- L-corner indicator -->
+  <line x1="600" y1="150" x2="600" y2="250" stroke="#3d5a99" stroke-width="3"/>
+  <text x="588" y="200" fill="#3d5a99" font-size="9" font-weight="bold" transform="rotate(-90 588 200)">L-corner</text>
+
+  <!-- 4x slotted holes (slot length 30mm scaled to 60px, slot width 5.5mm scaled to 11px) -->
+  <!-- Slot positions: X = 25 and 25, in scaled = 50 from L-corner; Y = +/- 30 from center, in scaled = 60 px -->
+  <!-- Centers: (650, 170), (650, 230), (750, 170), (750, 230) -->
+  <g fill="none" stroke="#791F1F" stroke-width="1">
+    <rect x="620" y="164" width="60" height="12" rx="6"/>
+    <rect x="620" y="224" width="60" height="12" rx="6"/>
+    <rect x="720" y="164" width="60" height="12" rx="6"/>
+    <rect x="720" y="224" width="60" height="12" rx="6"/>
+  </g>
+  <g fill="#E24B4A" opacity="0.4" stroke="none">
+    <rect x="620" y="164" width="60" height="12" rx="6"/>
+    <rect x="620" y="224" width="60" height="12" rx="6"/>
+    <rect x="720" y="164" width="60" height="12" rx="6"/>
+    <rect x="720" y="224" width="60" height="12" rx="6"/>
+  </g>
+
+  <text x="650" y="148" text-anchor="middle" fill="#791F1F" font-size="8">slot 30mm long</text>
+  <text x="700" y="270" text-anchor="middle" fill="#9e6a18" font-size="9" font-weight="bold">Slots run along belt tension axis</text>
+  <text x="700" y="282" text-anchor="middle" fill="#666" font-size="8">(motor moves toward/away from cassette)</text>
+
+  <!-- Belt tension arrow -->
+  <line x1="595" y1="300" x2="805" y2="300" stroke="#5a8d3e" stroke-width="2"/>
+  <polygon points="600,300 610,295 610,305" fill="#5a8d3e"/>
+  <polygon points="800,300 790,295 790,305" fill="#5a8d3e"/>
+  <text x="700" y="315" text-anchor="middle" fill="#1f3a14" font-size="10" font-weight="bold">Belt tension travel: 30mm</text>
+
+  <!-- SIDE VIEW - RIGHT (showing L-bracket profile + ribs) -->
+  <text x="970" y="350" text-anchor="middle" fill="#3d5a99" font-size="13" font-weight="bold">SIDE VIEW (with ribs)</text>
+  <text x="970" y="366" text-anchor="middle" fill="#666" font-size="10">L-profile, 8mm thick</text>
+
+  <!-- Plate (vertical) -->
+  <rect x="900" y="380" width="16" height="200" fill="#dde6f0" stroke="#3d5a99" stroke-width="1.5"/>
+  <text x="892" y="480" fill="#3d5a99" font-size="9" font-weight="bold" transform="rotate(-90 892 480)">PLATE 10mm</text>
+
+  <!-- Foot (horizontal) -->
+  <rect x="900" y="580" width="100" height="16" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="950" y="612" fill="#9e6a18" font-size="9" font-weight="bold">FOOT 10mm</text>
+
+  <!-- 3 reinforcement ribs (triangles) -->
+  <g fill="#c8d4e6" stroke="#3d5a99" stroke-width="1" opacity="0.7">
+    <polygon points="916,580 916,480 980,580"/>
+    <polygon points="916,580 916,480 980,580"/>
+    <polygon points="916,580 916,480 980,580"/>
+  </g>
+  <text x="965" y="540" fill="#3d5a99" font-size="8">3x ribs</text>
+  <text x="965" y="552" fill="#3d5a99" font-size="8">4mm thick</text>
+  <text x="965" y="564" fill="#3d5a99" font-size="8">50mm tall x</text>
+  <text x="965" y="574" fill="#3d5a99" font-size="8">40mm long</text>
+
+  <!-- Info box -->
+  <rect x="40" y="430" width="540" height="320" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="55" y="453" fill="#3d5a99" font-size="13" font-weight="bold">MOTOR MOUNT V1.3 SPECIFICATIONS</text>
+
+  <text x="55" y="475" fill="#9e6a18" font-size="11" font-weight="bold">MOTOR FACE PLATE:</text>
+  <text x="55" y="490" fill="#333" font-size="10">- 100x100x10mm thick PETG (V1.2: 8 -> 10mm)</text>
+  <text x="55" y="503" fill="#333" font-size="10">- D38mm pilot hole (clears 36mm gearbox boss)</text>
+  <text x="55" y="516" fill="#333" font-size="10">- 4x M5 round holes at PCD 47 (NEMA 23 pattern)</text>
+  <text x="55" y="529" fill="#333" font-size="10">- D11.0x5.5mm counterbore for M5 SHCS + washer</text>
+
+  <text x="55" y="551" fill="#9e6a18" font-size="11" font-weight="bold">FOOT (frame interface):</text>
+  <text x="55" y="566" fill="#333" font-size="10">- 100x50x10mm thick PETG (V1.2: 8 -> 10mm)</text>
+  <text x="55" y="579" fill="#333" font-size="10">- 4x slotted holes 30mm long for belt tension</text>
+  <text x="55" y="592" fill="#333" font-size="10">- M5 SHCS counterbore D11.0x5.0mm + washer (V1.3)</text>
+  <text x="55" y="605" fill="#333" font-size="10">- 0.8mm slot-end relief at 2 critical edges (V1.3)</text>
+  <text x="55" y="618" fill="#333" font-size="10">- T-nut sliding in 2020 extrusion (60mm Y rail spacing)</text>
+
+  <text x="55" y="627" fill="#9e6a18" font-size="11" font-weight="bold">L-BRACKET REINFORCEMENT:</text>
+  <text x="55" y="642" fill="#333" font-size="10">- 3x triangular ribs, 6mm thick, EMBEDDED 6mm into plate (V1.2)</text>
+  <text x="55" y="655" fill="#333" font-size="10">- Span 50mm up plate, 40mm along foot</text>
+
+  <text x="55" y="677" fill="#9e6a18" font-size="11" font-weight="bold">HARDWARE (ALL ALREADY OWNED):</text>
+  <text x="55" y="692" fill="#333" font-size="10">- 4x M5 SHCS ~16mm (motor mount)</text>
+  <text x="55" y="705" fill="#333" font-size="10">- 4x M5 SHCS ~12mm + 4x M5 T-nuts (foot)</text>
+  <text x="55" y="718" fill="#333" font-size="10">- All from B0FFSNFK3Y + B0GG4N5GR4 inventory</text>
+
+  <text x="55" y="740" fill="#666" font-size="9" font-style="italic">Belt center distance: 97.3mm nominal | Tension range: 82-112mm</text>
+
+  <!-- Print info -->
+  <rect x="600" y="430" width="460" height="320" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="615" y="453" fill="#3d5a99" font-size="13" font-weight="bold">PRINT + ASSEMBLY</text>
+
+  <text x="615" y="475" fill="#9e6a18" font-size="11" font-weight="bold">PRINT SETTINGS:</text>
+  <text x="615" y="490" fill="#333" font-size="10">- PETG, layer 0.2mm, 5 perimeters</text>
+  <text x="615" y="503" fill="#333" font-size="10">- 50% Gyroid infill, 6 top/bottom solid layers</text>
+  <text x="615" y="516" fill="#333" font-size="10">- Orientation: foot face DOWN on bed</text>
+  <text x="615" y="529" fill="#333" font-size="10">- Supports: minimal, only under ribs if needed</text>
+  <text x="615" y="542" fill="#333" font-size="10">- Print time: ~3 hours</text>
+
+  <text x="615" y="564" fill="#9e6a18" font-size="11" font-weight="bold">ASSEMBLY SEQUENCE:</text>
+  <text x="615" y="579" fill="#333" font-size="10">1. Print bracket, post-process slots clean</text>
+  <text x="615" y="592" fill="#333" font-size="10">2. Slide 4x M5 T-nuts into 2020 extrusion channel</text>
+  <text x="615" y="605" fill="#333" font-size="10">3. Position bracket on extrusion, loose tighten</text>
+  <text x="615" y="618" fill="#333" font-size="10">4. Mount NEMA 23 + gearbox to plate (4x M5)</text>
+  <text x="615" y="631" fill="#333" font-size="10">5. Install 20T pulley on output shaft</text>
+  <text x="615" y="644" fill="#333" font-size="10">6. Wrap belt around both pulleys</text>
+  <text x="615" y="657" fill="#333" font-size="10">7. Slide bracket along extrusion to tension belt</text>
+  <text x="615" y="670" fill="#333" font-size="10">8. Tighten foot bolts when belt tension correct</text>
+
+  <text x="615" y="694" fill="#9e6a18" font-size="11" font-weight="bold">BELT TENSION CHECK:</text>
+  <text x="615" y="709" fill="#333" font-size="10">Belt should deflect ~5mm at midpoint with 1kg force</text>
+  <text x="615" y="722" fill="#333" font-size="10">If belt squeals: too loose - move bracket out</text>
+  <text x="615" y="735" fill="#333" font-size="10">If motor strains: too tight - move bracket in</text>
+
+  <line x1="40" y1="780" x2="1060" y2="780" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>'''
+
+try:
+    with open(PATH_SVG, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    print(f"  [OK] SVG: {PATH_SVG}")
+except Exception as e:
+    print(f"  [FAIL] SVG: {e}")
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+print(f"\n{'='*65}")
+print(f"COMPLETE -- NEMA 23 MOTOR MOUNT V1.3")
+print(f"{'='*65}")
+print(f"\n  V1.3 CHANGES FROM V1.2:")
+print(f"   - FOOT_SLOT_HEAD_H 5.5mm -> 5.0mm")
+print(f"     5mm material below head pocket (was 4.5mm)")
+print(f"   - NEW: 0.8mm chamfered relief at slot end edges")
+print(f"     Applied at TWO critical Z heights per slot:")
+print(f"       * Foot bottom (T-nut bearing edge, max stress)")
+print(f"       * Head pocket transition (geometry step)")
+print(f"     Reduces crack initiation under repeated tightening cycles.")
+print(f"\n  V1.2 STRUCTURAL CHANGES (carried forward):")
+print(f"   - PLATE_T 8mm -> 10mm (industrial-safe rigidity)")
+print(f"   - FOOT_T 8mm -> 10mm (proper bolt-head support)")
+print(f"   - RIB_BASE 6mm: rib embedded INTO plate, not line-contact")
+print(f"\n  V1.1 CHANGES (carried forward):")
+print(f"   - RIB_T 4mm -> 6mm (rigidity insurance)")
+print(f"   - MOTOR_BOLT_CSK_D 10.2 -> 11.0mm (M5 washer fit)")
+print(f"   - FOOT_SLOT_HEAD_D 10.2 -> 11.0mm (M5 washer fit)")
+print(f"\n  FRAME LAYOUT (your 420x320x18mm hardwood base):")
+print(f"   Mount 2x 2020 extrusions ON TOP of wood base, parallel:")
+print(f"     - Rail 1 at Y = -30mm from centerline")
+print(f"     - Rail 2 at Y = +30mm from centerline")
+print(f"     - Spacing: 60mm center-to-center")
+print(f"     - Length: ~400mm each (running along 420mm direction)")
+print(f"   Bracket FOOT bridges both rails:")
+print(f"     - 100mm wide foot covers 60mm rail spacing + 20mm overhang each side")
+print(f"     - 4 slot bolts: 2 per rail (engaging top T-slot)")
+print(f"     - Bracket slides along rails for belt tension adjustment")
+print(f"\n  HARDWARE - ALL ALREADY OWNED:")
+print(f"   - 4x M5 SHCS ~16mm (motor mounting) - B0FFSNFK3Y kit")
+print(f"   - 4x M5 SHCS ~12mm (foot to T-nut) - B0FFSNFK3Y kit")
+print(f"   - 4x M5 T-nuts for 2020 extrusion - B0GG4N5GR4 (have 230)")
+print(f"   No new orders needed.")
+print(f"\n  PRINT SETTINGS:")
+print(f"   Material:     PETG (DRY)")
+print(f"   Layer:        0.2mm")
+print(f"   Perimeters:   5 (CRITICAL for L-corner strength)")
+print(f"   Top/bottom:   6 solid layers")
+print(f"   Infill:       50% Gyroid")
+print(f"   Orientation:  foot face DOWN on bed")
+print(f"                 (smooth bottom = sliding surface against extrusion)")
+print(f"   Supports:     YES, under ribs (low density, 60deg overhang threshold)")
+print(f"   Speed:        40mm/s walls, 100mm/s infill")
+print(f"   Estimated print time: ~3 hours")
+print(f"\n  ASSEMBLY PROCEDURE:")
+print(f"   1. Print bracket (3 hours)")
+print(f"   2. Verify slots are clean - no stringing or print artifacts")
+print(f"   3. Slide 4x M5 T-nuts into 2020 extrusion channel")
+print(f"   4. Position bracket on extrusion, foot bolts in T-nuts")
+print(f"   5. Loose tighten foot bolts (allow bracket to slide)")
+print(f"   6. Mount NEMA 23 + gearbox to plate via 4x M5 SHCS")
+print(f"      (do not over-torque, 4-6 Nm sufficient)")
+print(f"   7. Install 20T HTD pulley on gearbox output shaft")
+print(f"      (set screw to 14mm output keyway)")
+print(f"   8. Wrap HTD 5M belt around 20T motor pulley + 60T cassette pulley")
+print(f"   9. Slide bracket AWAY from cassette to apply belt tension")
+print(f"  10. Adjust tension: belt should deflect ~5mm at midpoint with 1kg force")
+print(f"  11. Tighten foot bolts to lock bracket position (3-4 Nm)")
+print(f"\n  BELT TENSION GUIDE:")
+print(f"   Too loose:    belt squeals on startup, slips under load")
+print(f"   Too tight:    motor strains, premature bearing wear")
+print(f"   Correct:      ~5mm deflection at belt midpoint with 1kg pull")
+print(f"\n  POST-INSTALL VERIFICATION:")
+print(f"   1. Spin pulley by hand - belt should not skip teeth")
+print(f"   2. Power motor briefly - smooth rotation, no squeal")
+print(f"   3. Listen for vibration - bracket should feel solid, not flex")
+print(f"   4. If excessive vibration: add another rib or thicken plate")
+print(f"\n  WHY THIS DESIGN VALIDATES THE FULL DRIVE CHAIN:")
+print(f"   - Motor + gearbox properly mounted")
+print(f"   - Belt geometry verified at correct center distance")
+print(f"   - Cassette can spin under motor power")
+print(f"   - First chance to test V2.4 preload under DYNAMIC load")
+print(f"   - Run 30 RPM for 10 min: check for click/heat/runout")

@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700">
+  <style>
+    .title { font: bold 16px sans-serif; fill: #1e3a5f; }
+    .label { font: 10px sans-serif; fill: #333; }
+    .dim   { font: 11px sans-serif; fill: #b91c1c; }
+    .note  { font: 9px sans-serif; fill: #666; font-style: italic; }
+    .body  { fill: #d4cdb8; stroke: #1e3a5f; stroke-width: 1.5; }
+    .track { fill: #fff; stroke: #5a8d3e; stroke-width: 1; }
+    .peak  { fill: #fee; stroke: #b91c1c; stroke-width: 1; }
+  </style>
+
+  <text x="450" y="30" text-anchor="middle" class="title">CSM V3 Cam Ring V6 - Top View</text>
+
+  <!-- Top view -->
+  <g transform="translate(280, 320)">
+    <circle cx="0" cy="0" r="206" class="body"/>
+    <circle cx="0" cy="0" r="144" fill="#fafaf8" stroke="#888" stroke-width="0.5"/>
+    <text x="0" y="3" text-anchor="middle" class="label">cylinder</text>
+    <text x="0" y="14" text-anchor="middle" class="label">passes</text>
+    <text x="0" y="25" text-anchor="middle" class="label">through</text>
+
+    <!-- Track (inner circle annotation) -->
+    <circle cx="0" cy="0" r="148.5" fill="none" stroke="#5a8d3e" stroke-width="0.5" stroke-dasharray="2 2"/>
+
+    <!-- Peak zone marker (around 295 deg = -65 deg from East) -->
+    <path d="M 0,0 L 62.758811868493865,134.5867063749425 L 95.4539600384511,113.75759980316823 z" fill="#b91c1c" opacity="0.3"/>
+    <text x="60" y="-100" class="dim">PEAK</text>
+    <text x="60" y="-88" class="dim">(knit)</text>
+
+    <!-- 6 feeder positions (small circles) -->
+    <circle cx="0" cy="-180" r="5" fill="#2563eb"/><text x="-2" y="-188" class="label" font-size="8">F1</text>
+    <circle cx="155.9" cy="-90" r="5" fill="#2563eb"/><text x="153.9" y="-98" class="label" font-size="8">F2</text>
+    <circle cx="155.9" cy="90" r="5" fill="#2563eb"/><text x="153.9" y="105" class="label" font-size="8">F3</text>
+    <circle cx="0" cy="180" r="5" fill="#2563eb"/><text x="-2" y="195" class="label" font-size="8">F4</text>
+    <circle cx="-155.9" cy="90" r="5" fill="#2563eb"/><text x="-160" y="105" class="label" font-size="8">F5</text>
+    <circle cx="-155.9" cy="-90" r="5" fill="#2563eb"/><text x="-160" y="-98" class="label" font-size="8">F6</text>
+
+    <text x="0" y="-220" text-anchor="middle" class="dim">OD 165.0mm</text>
+    <text x="0" y="240" text-anchor="middle" class="dim">ID 115.0mm</text>
+  </g>
+
+  <!-- Cam profile unrolled (right side) -->
+  <text x="700" y="80" text-anchor="middle" class="title">Cam Profile (Unrolled)</text>
+  <g transform="translate(550, 100)">
+    <rect x="0" y="0" width="320" height="140" fill="#fafaf8" stroke="#888"/>
+    <text x="10" y="20" class="label">Z height (lift)</text>
+
+    <!-- Profile line: low for 270deg, rise to peak, fall back -->
+    <!-- Scale: 0-360 deg = 0-280px wide -->
+    <!-- Z 4 = bottom (130px from top), Z 19 = top (15px) -->
+    <polyline points="0,115 210,115 235,30 240,30 263,115 280,115"
+              fill="none" stroke="#b91c1c" stroke-width="2"/>
+    <text x="100" y="120" class="label">REST (270 deg)</text>
+    <text x="220" y="50" class="dim">RISE</text>
+    <text x="240" y="20" class="dim">PEAK</text>
+    <text x="265" y="50" class="dim">FALL</text>
+    <text x="0" y="155" class="note">Knit zone: 45 deg (12.5% of rotation)</text>
+  </g>
+
+  <!-- Side view (cross section) -->
+  <text x="700" y="340" text-anchor="middle" class="title">Side Section</text>
+  <g transform="translate(580, 360)">
+    <rect x="0" y="0" width="240" height="100" class="body"/>
+    <!-- Cam track zone -->
+    <rect x="0" y="20" width="60" height="60" class="track"/>
+    <text x="30" y="45" text-anchor="middle" class="label">cam</text>
+    <text x="30" y="58" text-anchor="middle" class="label">track</text>
+    <text x="30" y="71" text-anchor="middle" class="label">15.0mm</text>
+    <text x="240" y="50" class="dim">25.0mm</text>
+    <text x="240" y="65" class="dim">total H</text>
+  </g>
+
+  <text x="40" y="650" class="note">V6: Single V-cam profile, 45 deg knit zone, supports 6 feeders sequentially</text>
+  <text x="40" y="665" class="note">Multi-feeder strategy: yarn switches at peak position; only one feeder active at any time</text>
+  <text x="40" y="680" class="note">Cam profile is conservative for V1.0 build; expect iteration after first knit test (V7+)</text>
+</svg>

@@ -1,0 +1,149 @@
+<svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="800" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">DRIVE HUB V2.4.1 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">PETG-tuned dimensions. Bore 12.15 + tighter nut traps. Path A.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP VIEW (left) -->
+  <text x="280" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">TOP VIEW</text>
+  <text x="280" y="98" text-anchor="middle" fill="#666" font-size="10">Looking down at flange face</text>
+
+  <!-- Flange outer (90mm OD scaled) -->
+  <circle cx="280" cy="280" r="180" fill="#fff8e8" stroke="#9e6a18" stroke-width="2"/>
+  <!-- Hub body OD (50mm scaled, hidden) -->
+  <circle cx="280" cy="280" r="100" fill="none" stroke="#aaaaaa" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <!-- Center boss (18mm OD scaled) -->
+  <circle cx="280" cy="280" r="36" fill="#ffd57a" stroke="#9e6a18" stroke-width="1.5"/>
+  <!-- Shaft bore (12.1mm scaled) -->
+  <circle cx="280" cy="280" r="24.2" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="280" y="285" text-anchor="middle" fill="#993556" font-size="9">D12.15</text>
+
+  <!-- 4 cassette bolts at PCD 70mm -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <!-- 45 deg offset, PCD 70mm scaled to 140 radius -->
+    <circle cx="379" cy="181" r="9"/>
+    <circle cx="379" cy="379" r="9"/>
+    <circle cx="181" cy="379" r="9"/>
+    <circle cx="181" cy="181" r="9"/>
+  </g>
+  <text x="395" y="178" fill="#791F1F" font-size="10">M5 x4</text>
+  <text x="395" y="190" fill="#791F1F" font-size="9">PCD 70</text>
+  <text x="395" y="202" fill="#791F1F" font-size="9">90 CSK 3.0</text>
+
+  <!-- Clamp slot (2mm wide, vertical from outer edge to past shaft) -->
+  <rect x="278" y="280" width="4" height="180" fill="#fff" stroke="#9e6a18" stroke-width="0.8"/>
+  <text x="320" y="430" fill="#666" font-size="9">clamp slot 2mm</text>
+
+  <!-- Clamp bolt indication (top view shows 2 bolts perpendicular to slot) -->
+  <g fill="#5a8d3e" stroke="#1f3a14" stroke-width="0.8">
+    <circle cx="280" cy="120" r="4"/>
+    <circle cx="280" cy="80" r="4"/>
+  </g>
+  <text x="290" y="80" fill="#1f3a14" font-size="9">M5 clamp x2</text>
+  <text x="290" y="92" fill="#1f3a14" font-size="8">(side view)</text>
+
+  <!-- Dimension lines top view -->
+  <line x1="100" y1="64" x2="460" y2="64" stroke="#9e6a18" stroke-width="0.8"/>
+  <polygon points="102,64 108,61 108,67" fill="#9e6a18"/>
+  <polygon points="458,64 452,61 452,67" fill="#9e6a18"/>
+  <text x="280" y="60" text-anchor="middle" fill="#9e6a18" font-size="11" font-weight="bold">D90mm flange</text>
+
+  <line x1="180" y1="500" x2="380" y2="500" stroke="#aaa" stroke-width="0.8"/>
+  <text x="280" y="515" text-anchor="middle" fill="#666" font-size="10">D50mm body (below flange)</text>
+
+  <!-- SIDE SECTION VIEW (right) -->
+  <text x="800" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">SIDE SECTION</text>
+  <text x="800" y="98" text-anchor="middle" fill="#666" font-size="10">Cross-section showing top-hat profile</text>
+
+  <!-- Cassette base (above) -->
+  <rect x="650" y="115" width="300" height="20" fill="#e8d8b8" stroke="#666" stroke-width="0.8"/>
+  <text x="800" y="128" text-anchor="middle" fill="#666" font-size="9">[Cassette base above - M5 inserts here]</text>
+
+  <!-- Center boss (18mm OD x 3mm) protrudes UP into cassette counterbore -->
+  <rect x="773" y="135" width="54" height="9" fill="#ffd57a" stroke="#9e6a18" stroke-width="1.2"/>
+  <text x="855" y="142" fill="#9e6a18" font-size="9">boss D18 x 3mm</text>
+
+  <!-- Flange (90mm OD x 7mm) -->
+  <rect x="620" y="144" width="360" height="21" fill="#fff8e8" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="610" y="158" fill="#9e6a18" font-size="9" text-anchor="end">flange</text>
+  <text x="990" y="158" fill="#9e6a18" font-size="9">7mm</text>
+
+  <!-- Body (50mm OD x 18mm) -->
+  <rect x="700" y="165" width="200" height="54" fill="#fff8e8" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="610" y="195" fill="#9e6a18" font-size="9" text-anchor="end">body</text>
+  <text x="990" y="195" fill="#9e6a18" font-size="9">18mm</text>
+
+  <!-- Shaft bore through entire hub -->
+  <rect x="788" y="115" width="24" height="104" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="800" y="240" text-anchor="middle" fill="#993556" font-size="9">shaft D12.15</text>
+
+  <!-- Clamp slot indication -->
+  <rect x="797" y="165" width="6" height="54" fill="#fff" stroke="#aaa" stroke-width="0.5"/>
+
+  <!-- Clamp bolt 1 (Z=5mm from bottom) -->
+  <rect x="700" y="208" width="200" height="5" fill="none" stroke="#5a8d3e" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="910" y="213" fill="#1f3a14" font-size="9">M5 clamp #1</text>
+  <text x="910" y="223" fill="#1f3a14" font-size="8">(Z=5)</text>
+
+  <!-- Clamp bolt 2 (Z=13mm from bottom) -->
+  <rect x="700" y="184" width="200" height="5" fill="none" stroke="#5a8d3e" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="910" y="189" fill="#1f3a14" font-size="9">M5 clamp #2</text>
+  <text x="910" y="199" fill="#1f3a14" font-size="8">(Z=13)</text>
+
+  <!-- Cassette mount bolts (vertical, threading UP from below) -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="0.8">
+    <rect x="675" y="140" width="3" height="25"/>
+    <rect x="922" y="140" width="3" height="25"/>
+  </g>
+  <text x="630" y="155" fill="#791F1F" font-size="9" text-anchor="end">M5 thru</text>
+  <!-- Countersinks on flange bottom -->
+  <polygon points="672,165 680,165 676,159" fill="#E24B4A" opacity="0.6"/>
+  <polygon points="920,165 928,165 924,159" fill="#E24B4A" opacity="0.6"/>
+  <text x="630" y="178" fill="#791F1F" font-size="8" text-anchor="end">90 CSK</text>
+
+  <!-- Below hub: 60T pulley indication -->
+  <line x1="700" y1="219" x2="900" y2="219" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="800" y="235" text-anchor="middle" fill="#666" font-size="9">[60T HTD pulley below, separate part on shaft]</text>
+  <text x="800" y="248" text-anchor="middle" fill="#666" font-size="8">(clamps to shaft via own set screw)</text>
+
+  <!-- Total height dimension -->
+  <line x1="600" y1="135" x2="600" y2="219" stroke="#9e6a18" stroke-width="0.8"/>
+  <polygon points="600,137 597,143 603,143" fill="#9e6a18"/>
+  <polygon points="600,217 597,211 603,211" fill="#9e6a18"/>
+  <text x="585" y="180" fill="#9e6a18" font-size="10" font-weight="bold" transform="rotate(-90 585 180)">28mm total</text>
+
+  <!-- Info box BOTTOM -->
+  <rect x="40" y="540" width="500" height="220" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="55" y="565" fill="#9e6a18" font-size="13" font-weight="bold">DRIVE HUB V2.4.1 SPECIFICATIONS</text>
+  <text x="55" y="585" fill="#333" font-size="10">- Top-hat profile: 50mm body + 90mm flange + 18mm boss</text>
+  <text x="55" y="600" fill="#333" font-size="10">- Total height: 25mm + 3mm boss = 28mm</text>
+  <text x="55" y="615" fill="#333" font-size="10">- Shaft bore: D12.15mm slip fit on FEYRINX 12mm h8 (PETG safe)</text>
+  <text x="55" y="630" fill="#333" font-size="10">- Split-clamp design: 2mm slot + 2x M5 clamp bolts</text>
+  <text x="55" y="645" fill="#333" font-size="10">- Cassette mount: 4x M5 flathead through flange (PCD 70mm)</text>
+  <text x="55" y="660" fill="#333" font-size="10">- Concentricity: 18mm boss seats in cassette counterbore</text>
+  <text x="55" y="678" fill="#9e6a18" font-size="11" font-weight="bold">HARDWARE NEEDED (ALL ALREADY ORDERED):</text>
+  <text x="55" y="693" fill="#333" font-size="9">- 2x M5 socket head cap screws (clamp) + 2x M5 hex nuts</text>
+  <text x="55" y="706" fill="#333" font-size="9">- 4x M5 flathead screws (cassette mount)</text>
+  <text x="55" y="719" fill="#333" font-size="9">- 4x M5 brass heat-set inserts (in cassette base)</text>
+  <text x="55" y="732" fill="#333" font-size="9">All from your existing assortment kit B0FFSNFK3Y + B0DPQJ4W3Z</text>
+  <text x="55" y="752" fill="#666" font-size="9" font-style="italic">No new hardware required. No drilling of pulley needed.</text>
+
+  <!-- ASSEMBLY ORDER (right) -->
+  <rect x="560" y="540" width="500" height="220" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="575" y="565" fill="#9e6a18" font-size="13" font-weight="bold">ASSEMBLY ORDER (PATH A)</text>
+  <text x="575" y="585" fill="#333" font-size="10">Bottom to top on shaft:</text>
+  <text x="575" y="603" fill="#333" font-size="10">1. Bottom shaft collar (Z=-2mm hard stop)</text>
+  <text x="575" y="617" fill="#333" font-size="10">2. Bottom bearing housing (V2.4)</text>
+  <text x="575" y="631" fill="#333" font-size="10">3. Aluminum mounting plate (6mm)</text>
+  <text x="575" y="645" fill="#333" font-size="10">4. Top bearing housing (V2.4)</text>
+  <text x="575" y="659" fill="#333" font-size="10">5. 60T HTD pulley (set screw to shaft)</text>
+  <text x="575" y="673" fill="#9e6a18" font-size="10" font-weight="bold">6. DRIVE HUB (clamp to shaft, this part)</text>
+  <text x="575" y="687" fill="#333" font-size="10">7. Cassette base (4x M5 bolts UP into hub)</text>
+  <text x="575" y="701" fill="#333" font-size="10">8. Cassette stack (sinker, cam, cylinder, retainer)</text>
+  <text x="575" y="715" fill="#333" font-size="10">9. Top shaft collar (light retention)</text>
+  <text x="575" y="735" fill="#1f3a14" font-size="10" font-weight="bold">Print: PETG, 5 perimeters, 40-50% infill, 0.2mm layer</text>
+  <text x="575" y="750" fill="#1f3a14" font-size="9">Orient flange-up (smooth top face = cassette mating surface)</text>
+
+  <line x1="40" y1="780" x2="1060" y2="780" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>

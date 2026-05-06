@@ -1,0 +1,807 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- BEARING HOUSING BLOCKS  V2.5
+# =============================================================================
+# File:    CSM_V3_BearingHousings_V2_5.FCMacro
+# Date:    April 2026
+# Target:  C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT\freecad_macros\
+#
+# PHILOSOPHY (V2.5 - SPRING-CONTROLLED PRELOAD):
+#   V2.4: Snap-flat preload via 0.5mm spring compression (FORGIVING <1%)
+#         Required custom 12 ID x 25 OD x 0.45mm wave spring (NOT catalog)
+#   V2.5: Spring-controlled preload via Smalley CM25-L1 standard part
+#         Compression 3.20mm at 35N target (FORGIVING ~3.6% per 0.1mm)
+#
+#   This is mechanically superior:
+#   - Real catalog part (Smalley CM25-L1, 17-7 SS, ~$8 each)
+#   - Tolerance-tolerant (small variations don't crash preload)
+#   - Verified solid height limits (work height = max safe compression)
+#
+# CHANGES FROM V2.4:
+#   V2.5-A: Wave spring spec replaced with Smalley CM25-L1
+#           OD: 25mm (was 25mm theoretical)
+#           ID: 19mm shaft clearance (was 12mm theoretical)
+#           Free height: 6.63mm (was 1.7mm theoretical)
+#           Spring rate: 10.94 N/mm
+#           Material: 17-7 stainless
+#           Operating: 35N at 3.20mm compression (3.43mm working height)
+#           Safety margin to work height: 1.37mm (70% of 50N max load)
+#
+#   V2.5-B: Spring pocket dimensions updated for CM25-L1
+#           SPRING_POCKET_D: 26.3 -> 25.7mm (slip fit on 25mm spring + 0.1 clear)
+#           SPRING_POCKET_H: 1.4 -> 5.5mm (fits compressed spring + washer + clearance)
+#           Lead-in chamfer: 0.5mm at top edge for clean assembly
+#
+#   V2.5-C: Spacer ring replaced with McMaster 92141A050 (washer)
+#           OD: 28mm (was 18mm theoretical)
+#           ID: 19mm (was 12mm theoretical)
+#           Thickness: 1.6mm (was 2.0mm theoretical)
+#           Source: McMaster part 92141A050 (~$1, sold in packs)
+#           SPACER_POCKET_D: 26.3 -> 28.10mm (matches bearing pocket OD)
+#           SPACER_POCKET_H: 2.0 -> 1.6mm (matches washer thickness)
+#
+#   V2.5-D: Spacer tube length recalculated
+#           Length: 29.40 -> 22.9mm
+#           Math: bearing-to-bearing distance = 26.6mm (was 30.3mm in V2.4)
+#                 - spring compression 3.20mm
+#                 - tolerance margin 0.5mm
+#                 = 22.9mm
+#           Bearing-to-bearing distance changed because bottom bearing
+#           moved up 3.7mm to accommodate deeper spring pocket.
+#
+# REJECTED FROM REVIEW:
+#   - 40N preload target (only 0.91mm margin to work height = too tight
+#     given tolerance + thermal expansion). Going with 35N instead
+#     (1.37mm margin, 70% of max load = sustainable long-term).
+#
+# UNCHANGED FROM V2.4:
+#   - Block dimensions (top 60x60x20, bottom 80x80x35)
+#   - Top block geometry (single radial bearing pocket)
+#   - Floor 3mm, washer pockets, thrust bearing pocket
+#   - Loctite 603 + slip fit for radial bearings
+#   - All M5 mount holes, countersinks, outer chamfers
+#
+# WAVE SPRING SPEC (V2.5):
+#   Smalley CM25-L1 (real catalog part)
+#   Bore: 25mm | Shaft clearance: 19mm | Load: 50N at work height
+#   Free height: 6.63mm | Work height: 2.06mm
+#   Spring rate: 10.94 N/mm | Material: 17-7 SS | 3 turns
+#   Source: Smalley direct, Rotor Precision, McMaster
+#
+# SPACER WASHER SPEC (V2.5):
+#   McMaster 92141A050: 28mm OD x 19mm ID x 1.6mm thick
+#   Material: 18-8 stainless steel
+#   Source: McMaster-Carr (sold in pack of 25, ~$10)
+#
+# SPACER TUBE PRINT/MACHINING NOTES:
+#   - Print PETG first to validate geometry (~$0)
+#   - For final: have machined from aluminum tube (~$10) or
+#     use 18mm OD aluminum tube cut to 29.40mm with mill/lathe
+#   - Tolerance critical: +/- 0.05mm length
+#   - If too long: spacer hits both races, spring unloaded -> click
+#   - If too short: too much preload -> drag, heat
+#   - Tune with 0.1mm shim washers if needed (no reprint required)
+#
+# KEPT FROM V2 (all correct, all validated):
+#   - Slip fit + Loctite 603 (not press fit)
+#   - Natural retaining shoulder at pocket bottom (shaft bore step)
+#   - Steel thrust washer pockets (2x, above + below 51101)
+#   - ONE radial bearing per block (not 2 stacked)
+#   - Proper 90 degree conical countersinks (Part.makeCone)
+#   - 80x80x35mm bottom block (larger than V1)
+#   - Outer edges chamfered 1mm
+#
+# REJECTED REVIEW SUGGESTIONS (analyzed and declined):
+#   - "Pocket 7.7mm deep to make bearing stick out 0.3mm" -- this does
+#     NOT create axial retention (nothing presses down from above).
+#     Loctite 603 shear strength 12000N is adequate for our load case
+#     which has zero upward axial force on either radial bearing.
+#   - "Anti-rotation flats/ribs" -- overengineered for Loctite 603's
+#     shear strength vs actual friction torque (6+ orders of magnitude
+#     margin). Skipped.
+#
+# BEARINGS USED:
+#   6001-2RS:  OD 28mm  ID 12mm  Width 8mm
+#   51101:     OD 26mm  ID 12mm  Height 9mm
+#   Koyo AS1226 washer: 12mm ID  26mm OD  1mm thick  (use 2 stacked per
+#                                                      side for 2mm total)
+# =============================================================================
+
+import FreeCAD, FreeCADGui, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS (V2.1-A: all paths now create directories)
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT"
+
+PATH_STL_TOP    = os.path.join(BASE, "CSM_V3_BearingHousing_TOP_V2_5.stl")
+PATH_STL_BOT    = os.path.join(BASE, "CSM_V3_BearingHousing_BOTTOM_V2_5.stl")
+PATH_STL_PAIR   = os.path.join(BASE, "CSM_V3_BearingHousings_PAIR_V2_5.stl")
+PATH_STL_SPACER = os.path.join(BASE, "CSM_V3_SpacerTube_V2_5.stl")  # V2.5 NEW LENGTH
+PATH_PNG_TOP    = os.path.join(BASE, "images", "BearingHousing_TOP_V2_5_View.png")
+PATH_PNG_BOT    = os.path.join(BASE, "images", "BearingHousing_BOTTOM_V2_5_View.png")
+PATH_PNG_BOTH   = os.path.join(BASE, "images", "BearingHousings_V2_5_Both_View.png")
+PATH_SVG        = os.path.join(BASE, "blueprints", "BearingHousings_V2_5_Blueprint.svg")
+
+# V2.1-A FIX: all PNG + SVG paths now in the makedirs loop
+# V2.4: spacer STL path added
+for p in [PATH_STL_TOP, PATH_STL_BOT, PATH_STL_PAIR, PATH_STL_SPACER,
+          PATH_PNG_TOP, PATH_PNG_BOT, PATH_PNG_BOTH, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+doc = FreeCAD.newDocument("CSM_BearingHousings_V2_5")
+
+# =============================================================================
+# BEARING SPECIFICATIONS
+# =============================================================================
+BEARING_OD      = 28.0    # 6001-2RS outer
+BEARING_ID      = 12.0    # 6001-2RS inner
+BEARING_W       = 8.0     # 6001-2RS width
+
+THRUST_OD       = 26.0    # 51101 outer
+THRUST_ID       = 12.0    # 51101 inner
+THRUST_H        = 9.0     # 51101 height
+
+# Koyo AS1226 washer: 1mm thick - we stack 2 for 2mm effective thickness
+WASHER_OD        = 26.0
+WASHER_T_STACKED = 2.0    # 2x 1mm washers stacked
+
+# V2.5: Wave spring specifications (Smalley CM25-L1 - REAL CATALOG PART)
+SPRING_OD        = 25.0   # spring outer diameter (Smalley CM25-L1)
+SPRING_ID        = 19.0   # spring inner diameter (Smalley CM25-L1)
+SPRING_FREE_H    = 6.63   # free height (uncompressed)
+SPRING_WORK_H    = 2.06   # work height (50N max - DO NOT EXCEED)
+SPRING_RATE      = 10.94  # N/mm
+SPRING_TARGET_F  = 35.0   # target preload force (N)
+SPRING_COMPRESSION = SPRING_TARGET_F / SPRING_RATE  # 3.20mm at 35N
+SPRING_OPERATING_H = SPRING_FREE_H - SPRING_COMPRESSION  # 3.43mm at 35N
+
+SPRING_POCKET_D  = 25.7   # V2.5: was 26.3 - tighter slip fit on 25mm spring
+SPRING_POCKET_H  = 5.5    # V2.5: was 1.4 - holds compressed spring + 0.5mm clearance
+# Math: spring at preload (3.43mm) + spacer washer (1.6mm) = 5.03mm stack
+#       Pocket depth 5.5mm provides full guidance through compression range
+#       Worst case (free height 6.63mm), spring extends 1.13mm above pocket = OK
+# Lead-in chamfer 0.5mm at top edge of pocket (assembly-friendly)
+SPRING_POCKET_CHAMFER = 0.5
+
+# V2.5: Spacer ring -> McMaster 92141A050 standard washer
+SPACER_ID        = 19.0   # V2.5: was 12.0 (matches CM25-L1 ID)
+SPACER_OD        = 28.0   # V2.5: was 18.0 (McMaster 92141A050)
+SPACER_POCKET_D  = 28.10  # V2.5: was 26.3 (matches bearing pocket D)
+SPACER_POCKET_H  = 1.6    # V2.5: was 2.0 (McMaster 92141A050 thickness)
+
+# V2.5 NEW: Block gap (UNCHANGED from V2.4) and recalculated spacer tube
+# CRITICAL: spacer tube length recalculated for new bearing positions
+BLOCK_GAP            = 11.0    # mm between top of bottom block and bottom of top block
+                               # (6mm aluminum plate + 5mm assembly clearance)
+SPACER_TUBE_ID       = 12.2    # slip fit on shaft
+SPACER_TUBE_OD       = 18.0    # clears bearing OD, contacts inner race
+SPACER_TUBE_LEN      = 22.9    # V2.5: was 29.40 - bearings 3.7mm closer in V2.5
+SPACER_TUBE_TOL      = 0.1     # V2.5: was 0.05 - relaxed (spring is forgiving)
+# V2.5 Math: bearing-to-bearing distance = 26.6mm (was 30.3mm in V2.4)
+#       Spring compression target = 3.20mm at 35N
+#       Tolerance margin = 0.5mm
+#       Spacer length = 26.6 - 3.20 - 0.5 = 22.9mm
+
+SHAFT_D         = 12.0    # main shaft diameter
+
+# =============================================================================
+# FIT TOLERANCES (V2.1-B, C, D)
+# =============================================================================
+SHAFT_CLEAR     = 12.3    # V2.1-C: was 12.5 (tighter clearance, still safe)
+SLIP_FIT        = 0.10    # V2.1-B: was 0.05 (realistic for PETG FDM)
+POCKET_SLIP     = 0.30    # thrust bearing pocket clearance (unchanged)
+
+CSK_DEPTH       = 3.0     # V2.1-D: was 2.8 (ensures head flush)
+
+# =============================================================================
+# TOP BLOCK PARAMETERS
+# =============================================================================
+TOP_W           = 60.0
+TOP_D           = 60.0
+TOP_H           = 20.0
+TOP_BEARING_POCKET_D = BEARING_OD + SLIP_FIT   # 28.10mm
+TOP_BEARING_POCKET_H = BEARING_W + 0.8         # V2.2: 8.8mm (bearing recessed 0.3mm)
+TOP_BOLT_PCD    = 48.0
+TOP_BOLT_D      = 5.5     # M5 clearance
+TOP_BOLT_CS_D_TOP = 10.0  # countersink top diameter (M5 head flush)
+
+# =============================================================================
+# BOTTOM BLOCK PARAMETERS
+# =============================================================================
+BOT_W           = 80.0
+BOT_D           = 80.0
+BOT_H           = 35.0
+
+BOT_FLOOR_H     = 3.0
+BOT_WASHER_POCKET_D = WASHER_OD + POCKET_SLIP  # 26.3mm
+BOT_THRUST_POCKET_D = THRUST_OD + POCKET_SLIP  # 26.3mm
+BOT_RADIAL_POCKET_D = BEARING_OD + SLIP_FIT    # 28.10mm
+BOT_RADIAL_POCKET_H = BEARING_W + 0.5          # 8.5mm
+
+BOT_BOLT_PCD    = 64.0
+BOT_BOLT_D      = 5.5
+BOT_BOLT_CS_D_TOP = 10.0
+
+CHAMFER_SIZE    = 1.0
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def make_countersink_cone(r_bottom, r_top, height):
+    """Proper 90 degree cone for M5 flathead countersink."""
+    return Part.makeCone(r_bottom, r_top, height)
+
+def apply_outer_chamfer(shape, size):
+    """V2.1-E: Chamfer only outer perimeter vertical edges.
+    Uses bounding box proximity check so internal edges (pocket walls,
+    shaft bore) are never accidentally chamfered even if geometry changes.
+    """
+    try:
+        bb = shape.BoundBox
+        tol = 0.1  # 0.1mm tolerance for 'on the perimeter' test
+        edges_to_chamfer = []
+        for edge in shape.Edges:
+            v1, v2 = edge.Vertexes[0].Point, edge.Vertexes[1].Point
+            # Must be a vertical edge (parallel to Z)
+            if abs(v1.z - v2.z) < 1.0:
+                continue
+            # Must lie on the outer perimeter (X or Y at the bounding box limit)
+            on_perimeter = (
+                abs(v1.x - bb.XMin) < tol or abs(v1.x - bb.XMax) < tol or
+                abs(v1.y - bb.YMin) < tol or abs(v1.y - bb.YMax) < tol
+            )
+            if on_perimeter:
+                edges_to_chamfer.append(edge)
+        if edges_to_chamfer:
+            return shape.makeChamfer(size, edges_to_chamfer)
+        return shape
+    except Exception as e:
+        print(f"  Chamfer skipped: {e}")
+        return shape
+
+# =============================================================================
+# BUILD TOP BLOCK
+# =============================================================================
+print("=" * 65)
+print("CSM V3 -- BEARING HOUSING BLOCKS V2.5")
+print("=" * 65)
+print(f"\n[1/3] Building TOP block...")
+
+top = Part.makeBox(TOP_W, TOP_D, TOP_H)
+top.translate(FreeCAD.Vector(-TOP_W / 2.0, -TOP_D / 2.0, 0))
+
+# Bearing pocket from top (open top -- bearing inserts from above)
+pocket = Part.makeCylinder(TOP_BEARING_POCKET_D / 2.0, TOP_BEARING_POCKET_H)
+pocket.translate(FreeCAD.Vector(0, 0, TOP_H - TOP_BEARING_POCKET_H))
+top = top.cut(pocket)
+
+# Shaft through-hole
+through = Part.makeCylinder(SHAFT_CLEAR / 2.0, TOP_H + 2)
+through.translate(FreeCAD.Vector(0, 0, -1))
+top = top.cut(through)
+
+# 4x M5 bolt holes with proper 90 degree countersinks on bottom mount face
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx = (TOP_BOLT_PCD / 2.0) * math.cos(ang)
+    by = (TOP_BOLT_PCD / 2.0) * math.sin(ang)
+
+    bh = Part.makeCylinder(TOP_BOLT_D / 2.0, TOP_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    top = top.cut(bh)
+
+    # Conical countersink on BOTTOM mount face
+    cs = make_countersink_cone(TOP_BOLT_CS_D_TOP / 2.0, TOP_BOLT_D / 2.0, CSK_DEPTH)
+    cs.translate(FreeCAD.Vector(bx, by, 0))
+    top = top.cut(cs)
+
+# Apply outer chamfer (V2.1-E: improved filter)
+top = apply_outer_chamfer(top, CHAMFER_SIZE)
+
+# Position for visualization (left side)
+top.translate(FreeCAD.Vector(-60, 0, 0))
+
+obj_top = doc.addObject("Part::Feature", "BearingHousing_TOP_V2_5")
+obj_top.Shape = top
+obj_top.ViewObject.ShapeColor = (0.25, 0.55, 0.85)
+print(f"  Size:             {TOP_W}x{TOP_D}x{TOP_H}mm")
+print(f"  Bearing pocket:   D{TOP_BEARING_POCKET_D:.2f}mm x {TOP_BEARING_POCKET_H}mm")
+print(f"  Shaft bore:       D{SHAFT_CLEAR}mm")
+print(f"  Countersink:      D{TOP_BOLT_CS_D_TOP}mm x {CSK_DEPTH}mm deep (90 deg)")
+print(f"  Volume:           {top.Volume:.0f}mm^3")
+
+# =============================================================================
+# BUILD BOTTOM BLOCK
+# =============================================================================
+print(f"\n[2/3] Building BOTTOM block...")
+
+bot = Part.makeBox(BOT_W, BOT_D, BOT_H)
+bot.translate(FreeCAD.Vector(-BOT_W / 2.0, -BOT_D / 2.0, 0))
+
+# V2.5 Stack from BOTTOM to TOP (spring pocket DEEPENED for CM25-L1):
+#   Z=0    to 3      - solid PETG floor
+#   Z=3    to 5      - LOWER washer pocket (2 stacked Koyo AS1226 = 2mm)
+#   Z=5    to 14     - 51101 thrust bearing (9mm)
+#   Z=14   to 16     - UPPER washer pocket (2 stacked = 2mm)
+#   Z=16   to 21.5   - WAVE SPRING pocket (5.5mm, V2.5: was 1.4mm)  *** CHANGED ***
+#                      Lead-in chamfer 0.5mm at top edge for assembly
+#   Z=21.5 to 23.1   - SPACER WASHER pocket (1.6mm, V2.5: was 2.0mm)  *** CHANGED ***
+#   Z=23.1 to 31.9   - 6001-2RS radial bearing (8.8mm pocket, recessed)
+#   Z=31.9 to 35     - solid PETG top (~3.1mm, V2.5: was 6.8mm)
+
+z_cursor = BOT_FLOOR_H  # Z=3
+
+# Lower washer pocket (2 stacked AS1226 washers)
+lower_washer = Part.makeCylinder(BOT_WASHER_POCKET_D / 2.0, WASHER_T_STACKED)
+lower_washer.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(lower_washer)
+z_cursor += WASHER_T_STACKED  # Z=5
+
+# 51101 thrust bearing pocket
+thrust_pocket = Part.makeCylinder(BOT_THRUST_POCKET_D / 2.0, THRUST_H)
+thrust_pocket.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(thrust_pocket)
+z_cursor += THRUST_H  # Z=14
+
+# Upper washer pocket (2 stacked AS1226)
+upper_washer = Part.makeCylinder(BOT_WASHER_POCKET_D / 2.0, WASHER_T_STACKED)
+upper_washer.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(upper_washer)
+z_cursor += WASHER_T_STACKED  # Z=16
+
+# V2.5: Wave spring pocket (CM25-L1: D25.7 x 5.5mm)
+spring_pocket = Part.makeCylinder(SPRING_POCKET_D / 2.0, SPRING_POCKET_H)
+spring_pocket.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(spring_pocket)
+
+# V2.5 NEW: Lead-in chamfer at top edge of spring pocket
+# Cone widens from spring pocket OD (top of pocket) to spacer pocket OD
+# Provides smooth transition between the two pocket diameters and prevents
+# scraping the spring during assembly insertion
+spring_chamfer_top_z = z_cursor + SPRING_POCKET_H
+spring_chamfer = Part.makeCone(
+    SPRING_POCKET_D / 2.0,                          # bottom radius (matches pocket)
+    SPRING_POCKET_D / 2.0 + SPRING_POCKET_CHAMFER,  # top radius (slightly wider)
+    SPRING_POCKET_CHAMFER                            # height = chamfer size
+)
+spring_chamfer.translate(FreeCAD.Vector(0, 0, spring_chamfer_top_z - SPRING_POCKET_CHAMFER))
+bot = bot.cut(spring_chamfer)
+
+z_cursor += SPRING_POCKET_H  # Z=21.5 (V2.5: was 17.4)
+
+# V2.5: Spacer washer pocket (McMaster 92141A050: D28.10 x 1.6mm)
+spacer_pocket = Part.makeCylinder(SPACER_POCKET_D / 2.0, SPACER_POCKET_H)
+spacer_pocket.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(spacer_pocket)
+z_cursor += SPACER_POCKET_H  # Z=23.1 (V2.5: was 19.4)
+
+# Radial bearing pocket (slip fit + Loctite)
+radial_pocket = Part.makeCylinder(BOT_RADIAL_POCKET_D / 2.0, BOT_RADIAL_POCKET_H)
+radial_pocket.translate(FreeCAD.Vector(0, 0, z_cursor))
+bot = bot.cut(radial_pocket)
+
+# Shaft through-hole (12.3mm)
+through = Part.makeCylinder(SHAFT_CLEAR / 2.0, BOT_H + 2)
+through.translate(FreeCAD.Vector(0, 0, -1))
+bot = bot.cut(through)
+
+# 4x M5 bolt holes with proper 90 degree countersinks on TOP face
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx = (BOT_BOLT_PCD / 2.0) * math.cos(ang)
+    by = (BOT_BOLT_PCD / 2.0) * math.sin(ang)
+
+    bh = Part.makeCylinder(BOT_BOLT_D / 2.0, BOT_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    bot = bot.cut(bh)
+
+    cs = make_countersink_cone(BOT_BOLT_CS_D_TOP / 2.0, BOT_BOLT_D / 2.0, CSK_DEPTH)
+    cs.translate(FreeCAD.Vector(bx, by, BOT_H - CSK_DEPTH))
+    bot = bot.cut(cs)
+
+# Apply outer chamfer (V2.1-E: improved filter)
+bot = apply_outer_chamfer(bot, CHAMFER_SIZE)
+
+# Position BOTTOM block for visualization (right side)
+bot.translate(FreeCAD.Vector(60, 0, 0))
+
+obj_bot = doc.addObject("Part::Feature", "BearingHousing_BOTTOM_V2_5")
+obj_bot.Shape = bot
+obj_bot.ViewObject.ShapeColor = (0.85, 0.45, 0.25)
+print(f"  Size:             {BOT_W}x{BOT_D}x{BOT_H}mm")
+print(f"  Floor:            {BOT_FLOOR_H}mm solid")
+print(f"  Washer pockets:   D{BOT_WASHER_POCKET_D}mm x {WASHER_T_STACKED}mm (2x)")
+print(f"  Thrust pocket:    D{BOT_THRUST_POCKET_D}mm x {THRUST_H}mm")
+print(f"  Spring pocket:    D{SPRING_POCKET_D}mm x {SPRING_POCKET_H}mm [V2.5 NEW]")
+print(f"  Spacer pocket:    D{SPACER_POCKET_D}mm x {SPACER_POCKET_H}mm [V2.5 NEW]")
+print(f"  Radial pocket:    D{BOT_RADIAL_POCKET_D:.2f}mm x {BOT_RADIAL_POCKET_H}mm")
+print(f"  Shaft bore:       D{SHAFT_CLEAR}mm")
+print(f"  Countersink:      D{BOT_BOLT_CS_D_TOP}mm x {CSK_DEPTH}mm deep (90 deg)")
+print(f"  Volume:           {bot.Volume:.0f}mm^3")
+
+# =============================================================================
+# V2.5 SPACER TUBE (RECALCULATED LENGTH FOR CM25-L1)
+# =============================================================================
+print(f"\n[3/3] Building SPACER TUBE (V2.5)...")
+
+# Build spacer tube as hollow cylinder
+spacer_outer_cyl = Part.makeCylinder(SPACER_TUBE_OD / 2.0, SPACER_TUBE_LEN)
+spacer_inner_cyl = Part.makeCylinder(SPACER_TUBE_ID / 2.0, SPACER_TUBE_LEN + 2)
+spacer_inner_cyl.translate(FreeCAD.Vector(0, 0, -1))
+spacer_tube = spacer_outer_cyl.cut(spacer_inner_cyl)
+
+# Optional: small assembly chamfers on top/bottom edges
+try:
+    edges_to_chamfer = []
+    bb_sp = spacer_tube.BoundBox
+    for e in spacer_tube.Edges:
+        # Chamfer only top and bottom edges (horizontal circular edges)
+        v1 = e.Vertexes[0].Point
+        v2 = e.Vertexes[1].Point
+        # Horizontal edge means same Z for both vertices
+        if abs(v1.z - v2.z) < 0.01:
+            # Only outer edge (at SPACER_TUBE_OD radius)
+            r1 = (v1.x**2 + v1.y**2)**0.5
+            if abs(r1 - SPACER_TUBE_OD/2.0) < 0.1:
+                edges_to_chamfer.append(e)
+    if edges_to_chamfer:
+        spacer_tube = spacer_tube.makeChamfer(0.5, edges_to_chamfer)
+except Exception as e:
+    print(f"  Chamfer skipped on spacer: {e}")
+
+# Position spacer tube for visualization (offset in Y so all 3 parts visible)
+spacer_tube.translate(FreeCAD.Vector(0, 100, 0))
+
+obj_spacer = doc.addObject("Part::Feature", "SpacerTube_V2_5")
+obj_spacer.Shape = spacer_tube
+obj_spacer.ViewObject.ShapeColor = (0.55, 0.55, 0.6)  # gray for steel
+print(f"  ID:               D{SPACER_TUBE_ID}mm (slip on D12 shaft)")
+print(f"  OD:               D{SPACER_TUBE_OD}mm (clears bearing OD)")
+print(f"  Length:           {SPACER_TUBE_LEN}mm  *** PRELOAD CRITICAL ***")
+print(f"  Tolerance:        +/- {SPACER_TUBE_TOL}mm")
+print(f"  Volume:           {spacer_tube.Volume:.0f}mm^3")
+print(f"  Block gap design: {BLOCK_GAP}mm (between top of bot block + bot of top block)")
+print(f"  Force at 3.20mm spring compression: ~35N (V2.5 target preload)")
+
+doc.recompute()
+
+# =============================================================================
+# EXPORT 1 -- STL
+# =============================================================================
+print(f"\nExporting STL files...")
+
+top_export = obj_top.Shape.copy()
+top_export.translate(FreeCAD.Vector(60, 0, 0))  # cancel -60 offset
+
+bot_export = obj_bot.Shape.copy()
+bot_export.translate(FreeCAD.Vector(-60, 0, 0))  # cancel +60 offset
+
+try:
+    tmp_top = doc.addObject("Part::Feature", "tmp_top")
+    tmp_top.Shape = top_export
+    Part.export([tmp_top], PATH_STL_TOP)
+    doc.removeObject("tmp_top")
+    print(f"  [OK] TOP STL:    {PATH_STL_TOP}")
+
+    tmp_bot = doc.addObject("Part::Feature", "tmp_bot")
+    tmp_bot.Shape = bot_export
+    Part.export([tmp_bot], PATH_STL_BOT)
+    doc.removeObject("tmp_bot")
+    print(f"  [OK] BOTTOM STL: {PATH_STL_BOT}")
+
+    Part.export([obj_top, obj_bot], PATH_STL_PAIR)
+    print(f"  [OK] PAIR STL:   {PATH_STL_PAIR}")
+
+    # V2.4: Export spacer tube as separate STL (centered at origin)
+    spacer_export = obj_spacer.Shape.copy()
+    spacer_export.translate(FreeCAD.Vector(0, -100, 0))  # cancel +100 Y offset
+    tmp_spacer = doc.addObject("Part::Feature", "tmp_spacer")
+    tmp_spacer.Shape = spacer_export
+    Part.export([tmp_spacer], PATH_STL_SPACER)
+    doc.removeObject("tmp_spacer")
+    print(f"  [OK] SPACER STL: {PATH_STL_SPACER}")
+
+except Exception as e:
+    print(f"  [FAIL] STL export error: {e}")
+
+# =============================================================================
+# EXPORT 2 -- PNG views
+# =============================================================================
+print(f"\nExporting PNG views...")
+try:
+    view = FreeCADGui.activeDocument().activeView()
+
+    view.viewIsometric()
+    view.fitAll()
+    view.saveImage(PATH_PNG_BOTH, 1920, 1080, "Current")
+    print(f"  [OK] Both:   {PATH_PNG_BOTH}")
+
+    obj_bot.ViewObject.Visibility = False
+    view.fitAll()
+    view.saveImage(PATH_PNG_TOP, 1200, 1200, "Current")
+    obj_bot.ViewObject.Visibility = True
+    print(f"  [OK] TOP:    {PATH_PNG_TOP}")
+
+    obj_top.ViewObject.Visibility = False
+    view.fitAll()
+    view.saveImage(PATH_PNG_BOT, 1200, 1200, "Current")
+    obj_top.ViewObject.Visibility = True
+    view.fitAll()
+    print(f"  [OK] BOTTOM: {PATH_PNG_BOT}")
+
+except Exception as e:
+    print(f"  [WARN] PNG export skipped: {e}")
+
+# =============================================================================
+# EXPORT 3 -- SVG Blueprint
+# =============================================================================
+print(f"\nGenerating SVG blueprint...")
+
+svg_content = '''<svg viewBox="0 0 1100 780" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="780" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">BEARING HOUSING BLOCKS V2.5 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">Spring-controlled preload (Smalley CM25-L1, 35N target). Spacer 22.9mm.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP BLOCK (left) -->
+  <text x="230" y="82" text-anchor="middle" fill="#184e9e" font-size="13" font-weight="bold">TOP BLOCK (60x60x20mm)</text>
+  <text x="230" y="98" text-anchor="middle" fill="#666" font-size="10">1x 6001-2RS + Loctite 603</text>
+
+  <text x="100" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="100" y="120" width="260" height="260" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <circle cx="230" cy="250" r="65.3" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="230" y="247" text-anchor="middle" fill="#333" font-size="9">Bearing pocket</text>
+  <text x="230" y="260" text-anchor="middle" fill="#333" font-size="9">D28.10 (slip 0.10)</text>
+  <circle cx="230" cy="250" r="28.6" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="230" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.3</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="300" cy="180" r="6"/>
+    <circle cx="300" cy="320" r="6"/>
+    <circle cx="160" cy="320" r="6"/>
+    <circle cx="160" cy="180" r="6"/>
+  </g>
+  <text x="320" y="178" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="320" y="190" fill="#791F1F" font-size="8">PCD 48</text>
+  <text x="320" y="202" fill="#791F1F" font-size="8">90 CSK 3.0</text>
+
+  <text x="100" y="410" fill="#666" font-size="9">SIDE SECTION</text>
+  <rect x="100" y="415" width="260" height="90" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <rect x="175" y="415" width="110" height="40" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="230" y="430" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="230" y="443" text-anchor="middle" fill="#333" font-size="8">8.8mm deep (recessed)</text>
+  <line x1="230" y1="415" x2="230" y2="505" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="175" y="455" width="110" height="10" fill="#fff0cc" stroke="#b8860b" stroke-width="0.8"/>
+  <text x="230" y="463" text-anchor="middle" fill="#92400e" font-size="8">Natural shoulder (bottom stop)</text>
+  <polygon points="125,505 125,495 138,505" fill="#e24b4a" opacity="0.6"/>
+  <polygon points="322,505 322,495 335,505" fill="#e24b4a" opacity="0.6"/>
+  <text x="130" y="520" fill="#791F1F" font-size="7">90 CSK 3.0mm</text>
+
+  <rect x="40" y="540" width="400" height="200" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="52" y="558" fill="#184e9e" font-size="11" font-weight="bold">TOP BLOCK V2.5 specs:</text>
+  <text x="52" y="576" fill="#333" font-size="10">- 1x 6001-2RS (28x12x8mm) slip 0.10 + Loctite 603</text>
+  <text x="52" y="592" fill="#333" font-size="10">- Bearing pocket: D28.10 x 8.8mm deep (recessed 0.3mm)</text>
+  <text x="52" y="608" fill="#333" font-size="10">- Shoulder at pocket bottom = axial stop (down)</text>
+  <text x="52" y="624" fill="#333" font-size="10">- Loctite 603 = rotation + upward retention</text>
+  <text x="52" y="640" fill="#333" font-size="10">- Shaft clearance: D12.3mm</text>
+  <text x="52" y="656" fill="#333" font-size="10">- 4x M5 PCD 48, 90deg CSK 3.0mm (head flush)</text>
+  <text x="52" y="672" fill="#333" font-size="10">- Outer chamfer 1mm (bounding-box filter)</text>
+  <text x="52" y="696" fill="#666" font-size="9" font-style="italic">Install: clean OD with IPA, apply Loctite 603 ring,</text>
+  <text x="52" y="710" fill="#666" font-size="9" font-style="italic">press bearing to shoulder. Cure 24h before loading.</text>
+  <text x="52" y="726" fill="#666" font-size="9" font-style="italic">Shear strength after cure: ~12000N holding force.</text>
+
+  <!-- BOTTOM BLOCK (right) -->
+  <text x="810" y="82" text-anchor="middle" fill="#9e4818" font-size="13" font-weight="bold">BOTTOM BLOCK (80x80x35mm)</text>
+  <text x="810" y="98" text-anchor="middle" fill="#666" font-size="10">1 radial + 1 thrust + spring preload</text>
+
+  <text x="680" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="680" y="120" width="260" height="260" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <circle cx="810" cy="250" r="56.2" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="810" y="247" text-anchor="middle" fill="#333" font-size="9">radial pocket</text>
+  <text x="810" y="260" text-anchor="middle" fill="#333" font-size="9">D28.10</text>
+  <circle cx="810" cy="250" r="28.6" fill="#fff8f2" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="810" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.3</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="893" cy="167" r="6"/>
+    <circle cx="893" cy="333" r="6"/>
+    <circle cx="727" cy="333" r="6"/>
+    <circle cx="727" cy="167" r="6"/>
+  </g>
+  <text x="905" y="165" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="905" y="177" fill="#791F1F" font-size="8">PCD 64</text>
+  <text x="905" y="189" fill="#791F1F" font-size="8">90 CSK 3.0</text>
+
+  <text x="470" y="410" fill="#666" font-size="9">SIDE SECTION (stack)</text>
+  <rect x="470" y="415" width="360" height="175" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+
+  <rect x="470" y="577" width="360" height="13" fill="#f5e1d8" stroke="none"/>
+  <text x="835" y="587" fill="#666" font-size="7">3mm floor</text>
+
+  <rect x="580" y="567" width="140" height="10" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="574" fill="#666" font-size="7">2x washers (2mm)</text>
+
+  <rect x="580" y="522" width="140" height="45" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="650" y="547" text-anchor="middle" fill="#333" font-size="9">51101 thrust 9mm</text>
+  <text x="835" y="550" fill="#666" font-size="7">thrust 9mm</text>
+
+  <rect x="580" y="512" width="140" height="10" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="519" fill="#666" font-size="7">2x washers (2mm)</text>
+
+  <rect x="580" y="470" width="140" height="42" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="650" y="489" text-anchor="middle" fill="#333" font-size="9">6001-2RS</text>
+  <text x="650" y="502" text-anchor="middle" fill="#333" font-size="8">slip + Loctite</text>
+  <text x="835" y="495" fill="#666" font-size="7">radial 8.5mm</text>
+
+  <rect x="470" y="415" width="360" height="55" fill="#f5e1d8" stroke="none"/>
+  <text x="650" y="445" text-anchor="middle" fill="#666" font-size="8">solid PETG top (~3.1mm in V2.5)</text>
+
+  <line x1="650" y1="415" x2="650" y2="590" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <line x1="850" y1="415" x2="850" y2="590" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="850,417 847,423 853,423" fill="#9e4818"/>
+  <polygon points="850,588 847,582 853,582" fill="#9e4818"/>
+  <text x="858" y="505" fill="#9e4818" font-size="10" font-weight="bold">35mm</text>
+
+  <rect x="460" y="615" width="600" height="140" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="472" y="633" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM BLOCK V2.5 specs:</text>
+  <text x="472" y="651" fill="#333" font-size="10">- 1x 6001-2RS radial (slip 0.10 + Loctite 603)</text>
+  <text x="472" y="667" fill="#333" font-size="10">- 2x stacked Koyo AS1226 washers ABOVE + BELOW 51101</text>
+  <text x="472" y="683" fill="#333" font-size="10">- Smalley CM25-L1 spring + 92141A050 washer = 35N preload (V2.5)</text>
+  <text x="472" y="699" fill="#333" font-size="10">- Spacer tube length 22.9mm = controlled compression (3.20mm)</text>
+  <text x="472" y="715" fill="#333" font-size="10">- Block gap 11mm LOCKED (6mm Al plate + 5mm clearance)</text>
+  <text x="472" y="731" fill="#333" font-size="10">- 80x80x35mm bottom block (unchanged from V2.4)</text>
+  <text x="472" y="747" fill="#333" font-size="10">- Spring pocket D25.7 x 5.5mm (V2.5: was D26.3 x 1.4mm)</text>
+
+  <!-- CENTER: V2.2 change -->
+  <line x1="440" y1="80" x2="440" y2="600" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="4,3"/>
+  <text x="455" y="95" fill="#1a1a1a" font-size="10" font-weight="bold">V2.2 CHANGE</text>
+  <text x="455" y="112" fill="#065f46" font-size="8">TOP pocket 8.5 -> 8.8mm</text>
+  <text x="455" y="122" fill="#065f46" font-size="8">Bearing sits 0.3mm</text>
+  <text x="455" y="132" fill="#065f46" font-size="8">below top surface</text>
+
+  <text x="455" y="155" fill="#1a1a1a" font-size="10" font-weight="bold">FROM V2.1</text>
+  <text x="455" y="172" fill="#065f46" font-size="8">A: PNG dirs fixed</text>
+  <text x="455" y="184" fill="#065f46" font-size="8">B: SLIP 0.10</text>
+  <text x="455" y="196" fill="#065f46" font-size="8">C: SHAFT 12.3</text>
+  <text x="455" y="208" fill="#065f46" font-size="8">D: CSK 3.0mm</text>
+  <text x="455" y="220" fill="#065f46" font-size="8">E: BBox chamfer</text>
+
+  <text x="455" y="245" fill="#1a1a1a" font-size="10" font-weight="bold">KEPT FROM V2</text>
+  <text x="455" y="262" fill="#065f46" font-size="8">Washer pockets (2x)</text>
+  <text x="455" y="274" fill="#065f46" font-size="8">Loctite 603 locking</text>
+  <text x="455" y="286" fill="#065f46" font-size="8">One radial per block</text>
+  <text x="455" y="298" fill="#065f46" font-size="8">90deg CSK cone</text>
+  <text x="455" y="310" fill="#065f46" font-size="8">80x80x35 bottom</text>
+
+  <text x="455" y="340" fill="#1a1a1a" font-size="10" font-weight="bold">REJECTED</text>
+  <text x="455" y="357" fill="#dc2626" font-size="8">Protruding bearing</text>
+  <text x="455" y="367" fill="#dc2626" font-size="8">(no real retention)</text>
+  <text x="455" y="385" fill="#dc2626" font-size="8">Anti-rotate ribs</text>
+  <text x="455" y="395" fill="#dc2626" font-size="8">(Loctite sufficient)</text>
+
+  <line x1="40" y1="772" x2="1060" y2="772" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>'''
+
+try:
+    with open(PATH_SVG, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    print(f"  [OK] SVG: {PATH_SVG}")
+except Exception as e:
+    print(f"  [FAIL] SVG error: {e}")
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+print(f"\n{'='*65}")
+print(f"COMPLETE -- BEARING HOUSING BLOCKS V2.5")
+print(f"{'='*65}")
+print(f"\n  V2.5 PHILOSOPHY: Spring-controlled preload via Smalley CM25-L1")
+print(f"  Standard catalog parts. Tolerance-tolerant. Mechanically superior to V2.4.")
+print(f"\n  V2.5 CHANGES FROM V2.4:")
+print(f"   - Spring: custom theoretical -> Smalley CM25-L1 (real catalog)")
+print(f"   - Spring pocket: D26.3 x 1.4mm -> D25.7 x 5.5mm")
+print(f"   - Spacer ring: 12 ID x 18 OD x 2mm -> McMaster 92141A050 (28x19x1.6mm)")
+print(f"   - Spacer pocket: D26.3 x 2.0mm -> D28.10 x 1.6mm")
+print(f"   - Spacer tube length: 29.40mm -> 22.9mm")
+print(f"   - Tolerance: +/- 0.05mm -> +/- 0.1mm (spring is forgiving)")
+print(f"   - Lead-in chamfer 0.5mm at spring pocket entry (assembly-friendly)")
+print(f"   - Preload target: 30N -> 35N (better damping, 70% of max load)")
+print(f"\n  CRITICAL DIMENSION (NOW SPRING, NOT TUBE):")
+print(f"   Spring: Smalley CM25-L1, 17-7 stainless, 3 turns")
+print(f"     Spring rate:    {SPRING_RATE} N/mm")
+print(f"     Free height:    {SPRING_FREE_H} mm")
+print(f"     Target preload: {SPRING_TARGET_F}N at {SPRING_COMPRESSION:.2f}mm compression")
+print(f"     Operating H:    {SPRING_OPERATING_H:.2f} mm")
+print(f"     Work height:    {SPRING_WORK_H} mm (50N max - DO NOT EXCEED)")
+print(f"     Safety margin:  {SPRING_OPERATING_H - SPRING_WORK_H:.2f}mm to overstress (70% load)")
+print(f"   Spacer tube: {SPACER_TUBE_LEN}mm +/- {SPACER_TUBE_TOL}mm")
+print(f"     This positions bearings with the right gap for spring compression.")
+print(f"     +/- 0.1mm = +/- 1.1N preload variation (3% sensitivity)")
+print(f"\n  INHERITED FROM V2.4:")
+print(f"   - Spacer tube architecture (positions bearings on shaft)")
+print(f"   - Block gap 11mm (6mm Al plate + 5mm clearance)")
+print(f"   - Top collar role: RETENTION ONLY")
+print(f"\n  INHERITED FROM V2.3:")
+print(f"   - Wave spring + spacer pocket location in bottom block")
+print(f"\n  INHERITED FROM V2.2:")
+print(f"   - TOP pocket 8.8mm (bearing recessed 0.3mm)")
+print(f"\n  INHERITED FROM V2.1:")
+print(f"   - SLIP_FIT 0.10mm, SHAFT 12.3mm, CSK 3.0mm")
+print(f"   - PNG directories fixed, BBox chamfer filter")
+print(f"\n  HARDWARE FOR V2.5 ASSEMBLY:")
+print(f"   Already own:")
+print(f"   - Loctite 603, Koyo AS1226 washers")
+print(f"   - 6001-2RS bearings, 51101 thrust bearing")
+print(f"   - Clamping shaft collars (12mm) - 2 of 4 used")
+print(f"   To order (V2.5 NEW):")
+print(f"   - Smalley CM25-L1 wave spring x 2 (17-7 SS) ~$15-20 total")
+print(f"     Source: smalley.com (free samples often available!) OR")
+print(f"             rotoprecision.ca OR mcmaster.com")
+print(f"   - McMaster 92141A050 spacer washer x 2 (~$10/pack of 25)")
+print(f"     Source: mcmaster.com (28mm OD x 19mm ID x 1.6mm)")
+print(f"   To make (V2.5 - shorter than V2.4):")
+print(f"   - Spacer tube 22.9mm length (PETG print first; aluminum tube ideal)")
+print(f"\n  V2.5 ASSEMBLY (similar to V2.4 with new parts):")
+print(f"   1. Print all 3 STLs (top block, bottom block, spacer tube 22.9mm)")
+print(f"   2. Apply Loctite 603, install bearings, cure 24h")
+print(f"   3. Stack into bottom block:")
+print(f"      lower washers -> thrust bearing -> upper washers")
+print(f"      -> CM25-L1 spring -> McMaster 92141A050 washer")
+print(f"   4. Install radial bearing (Loctite, cure 24h)")
+print(f"   5. Mount blocks on aluminum plate (verify 11mm BLOCK_GAP)")
+print(f"   6. Install bottom shaft collar at Z=-2mm (hard stop)")
+print(f"   7. Insert shaft through bottom block")
+print(f"   8. Slide spacer tube (22.9mm) onto shaft above bottom radial inner race")
+print(f"   9. Lower top block onto shaft (top bearing slides down onto spacer)")
+print(f"  10. Install top shaft collar - LIGHTLY clamp (retention only)")
+print(f"\n  TEST PROTOCOL (V2.5 spring-controlled):")
+print(f"   Test 1: Rotation - smooth, slight resistance OK")
+print(f"   Test 2: Axial play - pull shaft, ZERO movement allowed")
+print(f"   Test 3: Drag - if too sticky, spacer too short (lengthen 0.2-0.3mm)")
+print(f"   Test 4: Click - if click on rotation, spacer too long (shorten 0.2-0.3mm)")
+print(f"   Test 5: Dial indicator - shaft runout <0.2mm TIR at shaft end")
+print(f"\n  TOLERANCE COMPARISON:")
+print(f"   V2.4 (snap-flat 0.45mm spring): 0.1mm error = 20-50% preload swing")
+print(f"   V2.5 (CM25-L1 + spacer tube):   0.1mm error = 3% preload swing")
+print(f"   V2.5 is 5-15x more tolerant of spacer tube length variation.")
+print(f"\n  IF PRELOAD WRONG -- TUNE WITH SHIMS (no reprint needed):")
+print(f"   - Add 0.1mm shim BELOW lower washer to INCREASE preload by ~1N")
+print(f"   - Add 0.1mm shim above spacer washer to DECREASE preload by ~1N")
+print(f"   - Common AS1226 stack adjustment: +/- 0.5mm range available")
+print(f"\n  FORCE PATH (V2.5 - spring-controlled preload):")
+print(f"   Top block (rigid) holds top bearing")
+print(f"     -> top bearing inner race contacts spacer tube")
+print(f"       -> spacer tube (22.9mm, rigid)")
+print(f"         -> bottom radial bearing inner race")
+print(f"           -> spacer washer (McMaster 92141A050, 28x19x1.6mm)")
+print(f"             -> CM25-L1 spring (compressed 3.20mm = ~35N)")
+print(f"               -> upper washers")
+print(f"                 -> thrust bearing (preloaded)")
+print(f"                   -> lower washers")
+print(f"                     -> PETG floor (rigid)")
+print(f"   Result: preload set by SPRING COMPRESSION, controlled by spacer length.")
+print(f"\n  PRINT SETTINGS:")
+print(f"   Blocks:")
+print(f"     Material:     PETG (DRY)")
+print(f"     Layer:        0.2mm")
+print(f"     Perimeters:   5")
+print(f"     Top/bottom:   6 solid layers")
+print(f"     Infill:       40-50% Gyroid or Cubic")
+print(f"     Orientation:  flat on bed, pocket opening UP")
+print(f"     Supports:     NONE")
+print(f"     Speed:        40mm/s walls, 120mm/s infill")
+print(f"   Spacer tube (HIGHER PRECISION REQUIRED):")
+print(f"     Layer:        0.1mm (finer for length precision)")
+print(f"     Perimeters:   8 (rigidity)")
+print(f"     Infill:       100% (solid for deterministic length)")
+print(f"     Orientation:  vertical (length axis Z, end faces flat)")
+print(f"     Supports:     NONE (hollow tube needs no support)")
+print(f"     Top/bottom:   no special - solid throughout")
+print(f"     Speed:        30mm/s (slower for accuracy)")
+print(f"\n  SPACER TUBE FINAL UPGRADE (recommended):")
+print(f"   PETG spacer is OK for prototype testing.")
+print(f"   For production, replace with aluminum tube cut to 22.9mm.")
+print(f"   Source: Amazon search '18mm OD 12mm ID aluminum tube'")
+print(f"   Cut with hacksaw, file ends square, verify 22.9mm with calipers.")
+print(f"   Cost: ~$5-10. Permanent solution.")

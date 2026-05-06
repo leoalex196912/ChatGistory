@@ -1,0 +1,2 @@
+Render images (.png, .jpg) for cylinder will be saved here
+after running the FreeCAD macro and exporting renders.

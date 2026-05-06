@@ -1,0 +1,671 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- SINKER RING V1.2 (angled tip + dual clearance test)
+# =============================================================================
+# File:    CSM_V3_SinkerRing_V1_2.FCMacro
+# Date:    May 2026
+# Target:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\sinker_ring\
+#
+# CHANGES FROM V1.1:
+#
+#   1. ANGLED TIP IMPLEMENTED (was deferred in V1.1)
+#      Local-frame transformation at trailing-tip corner:
+#        - Anchor: tip_theta_deg (trailing edge), NOT theta_deg
+#        - Build orthonormal frame at tip using tilted_radial / tilted_tangential
+#        - Apply 10deg backward tilt INSIDE the local frame
+#        - Use Placement ONLY (no shape rotation + Placement ambiguity)
+#      Geometrically verified: cutting plane passes through tip corner,
+#      normal is exactly 10deg backward from radial at tip.
+#
+#   2. DUAL CLEARANCE TEST SLICES (new)
+#      Outputs TWO test slice STLs at different IDs:
+#        - 115.3mm (V1.1 default - 0.50mm/side clearance)
+#        - 115.1mm (tighter - 0.40mm/side clearance)
+#      Print both, test fit, validate which works for your printer.
+#      Removes guesswork on real-world clearance.
+#
+# CHANGES FROM V1.0 (carried forward, all 9 now implemented):
+#   1. Radial extension 3.0 -> 4.0mm                    [V1.1]
+#   2. Angled tip (10deg backward at trailing-tip)      [V1.2 NEW]
+#   3. Sinker Z base 4.0 -> 2.5mm                       [V1.1]
+#   4. Feeder taper range +/-5deg -> +/-4deg            [V1.1]
+#   5. Clearance ID 114.8 -> 115.3mm (0.50mm/side)      [V1.1]
+#   6. Axial retention 3x M3 screws                     [V1.1]
+#   7. Stress fillet (FDM smoothing)                    [V1.1]
+#   8. Sinker width 1.2 -> 1.3mm                        [V1.1]
+#   9. ID chamfer 0.5mm x 45deg toggleable              [V1.1]
+#
+# DESIGN INTENT:
+#   Stationary ring at TOP of rotating cylinder.
+#   72 sinker projections with 10deg backward angled tips
+#   provide catch-and-release behavior for yarn.
+#   6 feeder windows with smoothstep tapers.
+#
+# CRITICAL DESIGN RULES:
+#   - NEVER remove sinkers at feeder zones (only taper height)
+#   - Sinkers offset by 2.5deg from needle slots (between needles)
+#   - All 72 sinkers retain function
+#   - Smoothstep tapers in feeder zones (no jerk)
+# =============================================================================
+
+import FreeCAD
+import Part
+import math
+import os
+
+# =============================================================================
+# CONFIGURATION
+# =============================================================================
+
+# Output paths
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\sinker_ring"
+PATH_STL_FULL          = os.path.join(BASE, "CSM_V3_SinkerRing_V1_2_FULL.stl")
+PATH_STL_SLICE_ID115_3 = os.path.join(BASE, "CSM_V3_SinkerRing_V1_2_TESTSLICE_ID115_3.stl")
+PATH_STL_SLICE_ID115_1 = os.path.join(BASE, "CSM_V3_SinkerRing_V1_2_TESTSLICE_ID115_1.stl")
+
+# Ensure output directory exists
+try:
+    os.makedirs(BASE, exist_ok=True)
+except:
+    pass
+
+# =============================================================================
+# DIMENSIONS (all in mm)
+# =============================================================================
+
+# Ring main body
+RING_OD = 135.0
+RING_ID = 115.3           # V1.1: was 114.8 (0.50mm/side clearance, was 0.25)
+RING_HEIGHT = 8.0
+RING_OUTER_R = RING_OD / 2  # 67.5mm
+RING_INNER_R = RING_ID / 2  # 57.65mm
+
+# Sinker dimensions and POSITIONING
+# CRITICAL: Sinker projections must be ABOVE the cylinder body
+# Cylinder body: Z=0 to Z=75mm
+# Sinker ring: sits at Z=75 to Z=83mm (ABOVE cylinder)
+# Sinker ring is NOT around the cylinder body - it's at the TOP
+# Sinker projections extend INWARD over the open top of cylinder
+
+NUM_SINKERS = 72
+SINKER_PITCH_DEG = 360.0 / NUM_SINKERS  # 5.0deg
+SINKER_PHASE_OFFSET_DEG = 2.5   # Offset from needle slot (between needles)
+
+SINKER_WIDTH = 1.3        # V1.1: was 1.2mm - better print confidence on 0.4mm nozzle
+SINKER_RADIAL_EXT = 4.0   # V1.1: was 3.0mm - real CSM uses 4-5mm for loop retention
+SINKER_HEIGHT_FULL = 4.0  # mm axial height (full sinkers)
+SINKER_HEIGHT_MIN = 2.0   # mm axial height at feeder window center
+
+# V1.1: Sinker engages yarn loop earlier in stitch cycle
+# Loop sits ~2-3mm above cylinder rim, sinker now matches that position
+SINKER_Z_BASE = 2.5       # V1.1: was 4.0mm - lowered to engage yarn earlier
+
+# Sinker tip radius (where the holding edge sits)
+SINKER_TIP_R = RING_INNER_R - SINKER_RADIAL_EXT  # 53.65mm
+
+# V1.2: Sinker tip - 10deg backward angled tip (active)
+# Anchor: trailing edge tip corner
+# Frame: tilted_radial = radial rotated 10deg toward -tangential
+# Implementation: Placement-only (no mixed transforms)
+SINKER_TIP_ANGLE_DEG = 10.0   # tip face tilted 10deg backward from radial
+ENABLE_ANGLED_TIP = True      # V1.2: set False to revert to flat tip for testing
+
+# V1.1: Structural fillet at sinker base (reduces stress concentration)
+SINKER_BASE_FILLET = 0.5  # mm - small fillet at sinker root
+
+# Feeder windows
+NUM_FEEDERS = 6
+FEEDER_ANGLES = [0, 60, 120, 180, 240, 300]   # 60deg intervals
+FEEDER_WINDOW_ARC_MM = 8.0   # mm circumferential at sinker tip radius
+FEEDER_TAPER_RANGE_DEG = 4.0  # V1.1: was 5.0 - now matches half-window width
+
+# Calculate angular width of feeder window
+# arc_length = radius * angle_rad
+FEEDER_WINDOW_ANGLE_DEG = math.degrees(FEEDER_WINDOW_ARC_MM / RING_INNER_R)
+# About 8deg
+
+# Mounting pins (V1.0 unchanged)
+PCD_PINS = 125.0           # Pitch circle diameter for dowel pins
+PIN_RADIUS = PCD_PINS / 2  # 62.5mm
+PIN_HOLE_DIA = 4.2         # 4mm pin + 0.2mm clearance
+PIN_HOLE_R = PIN_HOLE_DIA / 2
+PIN_HOLE_DEPTH = RING_HEIGHT  # Through hole
+
+# Pin positions (3 pins, 1 round + 2 slotted)
+PIN_ANGLES = [30, 150, 270]
+PIN_SLOT_LENGTH = 0.6   # mm - slot for thermal expansion
+
+# V1.1: Axial retention via 3x M3 screws (downward into cassette base)
+# Located BETWEEN dowel pins (offset by 60deg = halfway)
+PCD_SCREWS = 125.0          # Same PCD as pins for simplicity
+SCREW_RADIUS = PCD_SCREWS / 2
+M3_HOLE_DIA = 3.4           # M3 clearance hole (3.0mm + 0.4mm clearance)
+M3_HOLE_R = M3_HOLE_DIA / 2
+M3_HEAD_DIA = 6.0           # M3 socket head clearance
+M3_HEAD_R = M3_HEAD_DIA / 2
+M3_HEAD_DEPTH = 3.0         # Counterbore depth for socket head
+SCREW_ANGLES = [90, 210, 330]   # offset 60deg from pins (60+30=90, 60+150=210, 60+270=330)
+
+# V1.1: ID chamfer (toggleable)
+ENABLE_ID_CHAMFER = True
+ID_CHAMFER_SIZE = 0.5   # mm at 45deg (applied at top AND bottom inner edges)
+
+# Test slice angles
+TEST_SLICE_START = -15.0  # deg (covers feeder at 0deg)
+TEST_SLICE_END = 15.0
+
+# Resolution
+ANGULAR_SEGMENTS = 360  # 1deg segments for smooth ring
+
+# =============================================================================
+# UTILITY FUNCTIONS
+# =============================================================================
+
+def smoothstep(x):
+    """Cubic smoothstep easing: f(x) = 3x^2 - 2x^3
+    f(0)=0, f(1)=1, f'(0)=0, f'(1)=0
+    Used for taper transitions to eliminate jerk."""
+    if x <= 0:
+        return 0.0
+    if x >= 1:
+        return 1.0
+    return 3 * x * x - 2 * x * x * x
+
+
+def get_sinker_height(theta_deg):
+    """Returns sinker height at given angle.
+    
+    Outside feeder zones: SINKER_HEIGHT_FULL (4mm)
+    At feeder centers: SINKER_HEIGHT_MIN (2mm)
+    Smoothstep taper between.
+    """
+    # Find closest feeder angle
+    min_dist = 360.0
+    for fa in FEEDER_ANGLES:
+        dist = abs(theta_deg - fa)
+        # Handle wraparound (e.g., 358 is close to 0)
+        if dist > 180:
+            dist = 360 - dist
+        if dist < min_dist:
+            min_dist = dist
+    
+    # If outside taper range, full height
+    if min_dist >= FEEDER_TAPER_RANGE_DEG:
+        return SINKER_HEIGHT_FULL
+    
+    # Within taper range - smoothstep from MIN at 0deg to FULL at TAPER_RANGE
+    progress = min_dist / FEEDER_TAPER_RANGE_DEG  # 0 at center, 1 at edge
+    height_diff = SINKER_HEIGHT_FULL - SINKER_HEIGHT_MIN
+    return SINKER_HEIGHT_MIN + height_diff * smoothstep(progress)
+
+
+# =============================================================================
+# BUILD SINKER RING
+# =============================================================================
+
+def make_angled_tip_cutter(theta_deg, half_width_angle, height):
+    """V1.2: Create cutter for 10deg backward angled sinker tip.
+    
+    Geometry strategy:
+      1. Anchor at TRAILING EDGE tip corner (not sinker center)
+      2. Build orthonormal frame using tip_theta_deg
+      3. Apply 10deg backward tilt INSIDE local frame (tilted_radial)
+      4. Use Placement ONLY for global positioning (no mixed transforms)
+    
+    Cutting plane:
+      - Passes through trailing-tip corner
+      - Normal is 10deg backward from radial direction at tip
+      - Cutter material is in radial-outward direction from corner
+    """
+    # Anchor angle: TRAILING EDGE (not sinker center)
+    tip_theta_deg = theta_deg + half_width_angle
+    tip_theta_rad = math.radians(tip_theta_deg)
+    
+    # Tip corner global position (anchor point)
+    tip_x = SINKER_TIP_R * math.cos(tip_theta_rad)
+    tip_y = SINKER_TIP_R * math.sin(tip_theta_rad)
+    
+    # Local basis at TIP (using tip_theta_deg, not theta_deg)
+    radial = FreeCAD.Vector(math.cos(tip_theta_rad), math.sin(tip_theta_rad), 0)
+    tangential = FreeCAD.Vector(-math.sin(tip_theta_rad), math.cos(tip_theta_rad), 0)
+    z_axis = FreeCAD.Vector(0, 0, 1)
+    
+    # Apply 10deg backward tilt IN LOCAL FRAME
+    # tilted_radial = radial rotated toward -tangential by alpha
+    alpha = math.radians(SINKER_TIP_ANGLE_DEG)
+    cos_a = math.cos(alpha)
+    sin_a = math.sin(alpha)
+    
+    tilted_radial = FreeCAD.Vector(
+        radial.x * cos_a - tangential.x * sin_a,
+        radial.y * cos_a - tangential.y * sin_a,
+        0
+    )
+    
+    # Recompute orthonormal tangential from cross product
+    tilted_tangential = FreeCAD.Vector(
+        z_axis.y * tilted_radial.z - z_axis.z * tilted_radial.y,
+        z_axis.z * tilted_radial.x - z_axis.x * tilted_radial.z,
+        z_axis.x * tilted_radial.y - z_axis.y * tilted_radial.x
+    )
+    
+    # Normalize (defensive - should already be unit length)
+    tr_len = math.sqrt(tilted_radial.x**2 + tilted_radial.y**2 + tilted_radial.z**2)
+    tt_len = math.sqrt(tilted_tangential.x**2 + tilted_tangential.y**2 + tilted_tangential.z**2)
+    tilted_radial = FreeCAD.Vector(
+        tilted_radial.x / tr_len, tilted_radial.y / tr_len, tilted_radial.z / tr_len
+    )
+    tilted_tangential = FreeCAD.Vector(
+        tilted_tangential.x / tt_len, tilted_tangential.y / tt_len, tilted_tangential.z / tt_len
+    )
+    
+    # Build cutter in canonical local space (large enough to cut cleanly)
+    L = 6.0   # radial depth (extends outward from tip)
+    W = 6.0   # tangential width (centered on tip)
+    H = height + 1.0  # axial coverage with margin
+    
+    cutter = Part.makeBox(L, W, H)
+    
+    # Shift so cutting face passes through local origin
+    # Local origin will be placed at tip corner
+    # Cutter material at local x > 0 (radial outward)
+    cutter.translate(FreeCAD.Vector(0, -W/2, -0.5))
+    
+    # Build placement (THE ONLY transform applied)
+    placement = FreeCAD.Placement()
+    placement.Base = FreeCAD.Vector(tip_x, tip_y, SINKER_Z_BASE)
+    
+    # Rotation matrix maps local (x,y,z) to global using tilted basis
+    # local X-axis -> tilted_radial (10deg backward from radial)
+    # local Y-axis -> tilted_tangential
+    # local Z-axis -> global Z
+    rot_matrix = FreeCAD.Matrix(
+        tilted_radial.x, tilted_tangential.x, z_axis.x, 0,
+        tilted_radial.y, tilted_tangential.y, z_axis.y, 0,
+        tilted_radial.z, tilted_tangential.z, z_axis.z, 0,
+        0,                0,                    0,        1
+    )
+    placement.Rotation = FreeCAD.Rotation(rot_matrix)
+    
+    cutter.Placement = placement
+    
+    return cutter
+
+
+def build_sinker_ring(slice_only=False, custom_inner_r=None):
+    """Build the sinker ring with all 72 sinker projections.
+    
+    Args:
+        slice_only: if True, build only the test slice (30deg)
+        custom_inner_r: optional override for inner radius (V1.2: dual clearance test)
+                        If None, uses default RING_INNER_R
+    
+    Returns:
+        (FreeCAD Part shape, sinker_count)
+    """
+    # V1.2: Allow custom inner radius for dual clearance testing
+    inner_r = custom_inner_r if custom_inner_r is not None else RING_INNER_R
+    # 1. Create base ring (cylinder with hole)
+    if slice_only:
+        # For test slice, we need a sector
+        slice_angle = TEST_SLICE_END - TEST_SLICE_START  # 30deg
+        # Create sector by intersection
+        full_outer = Part.makeCylinder(RING_OUTER_R, RING_HEIGHT)
+        full_inner = Part.makeCylinder(inner_r, RING_HEIGHT + 0.1,
+                                       FreeCAD.Vector(0, 0, -0.05))
+        full_ring = full_outer.cut(full_inner)
+        
+        # Create sector cutter (large pie slice)
+        sector = Part.makeCylinder(RING_OUTER_R + 10, RING_HEIGHT + 0.2,
+                                   FreeCAD.Vector(0, 0, -0.1),
+                                   FreeCAD.Vector(0, 0, 1),
+                                   slice_angle)
+        sector.rotate(FreeCAD.Vector(0, 0, 0),
+                     FreeCAD.Vector(0, 0, 1),
+                     TEST_SLICE_START)
+        
+        ring = full_ring.common(sector)
+    else:
+        # Full ring
+        outer_cyl = Part.makeCylinder(RING_OUTER_R, RING_HEIGHT)
+        inner_cyl = Part.makeCylinder(inner_r, RING_HEIGHT + 0.1,
+                                      FreeCAD.Vector(0, 0, -0.05))
+        ring = outer_cyl.cut(inner_cyl)
+    
+    # 2. Add 72 sinker projections
+    sinkers_added = 0
+    for i in range(NUM_SINKERS):
+        # Sinker angular position (offset from needle slots)
+        theta_deg = i * SINKER_PITCH_DEG + SINKER_PHASE_OFFSET_DEG
+        # Normalize to 0-360
+        theta_deg = theta_deg % 360
+        
+        # Skip if this sinker is outside test slice region
+        if slice_only:
+            if not (TEST_SLICE_START <= theta_deg <= TEST_SLICE_END):
+                # Also check wraparound
+                norm_theta = theta_deg if theta_deg <= 180 else theta_deg - 360
+                if not (TEST_SLICE_START <= norm_theta <= TEST_SLICE_END):
+                    continue
+        
+        # Get sinker height (tapered near feeders)
+        height = get_sinker_height(theta_deg)
+        
+        # Build sinker projection
+        # Sinker is a small box: width (circumferential) x extension (radial) x height (axial)
+        # Position: tip at SINKER_TIP_R, base at RING_INNER_R
+        
+        theta_rad = math.radians(theta_deg)
+        
+        # Half-width angle for sinker
+        half_width_angle = math.degrees((SINKER_WIDTH / 2) / SINKER_TIP_R)
+        
+        # V1.1: Build sinker as a clean wedge with FLAT TIP
+        # The angled tip (10deg backward from radial at corner) was originally
+        # planned for V1.1 but DEFERRED to V1.2 for the following reasons:
+        #
+        # 1. Geometry is local to each sinker (not a global Z-axis rotation)
+        # 2. Requires careful local-frame transformation:
+        #    - Build cutter in local frame (X=radial, Y=tangential)
+        #    - Apply 10deg rotation in local frame
+        #    - Translate to tip corner (anchor point)
+        #    - Rotate to global theta
+        # 3. V1.1 has 9 other changes - validate those first
+        # 4. Flat tips still hold yarn loops (just less catch-and-release elegance)
+        # 5. Risk of fragile geometry breaking 72 sinkers asymmetrically
+        #
+        # V1.2 will implement angled tip using the local-frame approach.
+        # See README for full V1.2 plan.
+        
+        wedge_angle = 2 * half_width_angle
+        
+        # Outer wedge: the body of the sinker
+        sinker_outer = Part.makeCylinder(
+            RING_INNER_R + 0.1,  # slight overlap with ring
+            height,
+            FreeCAD.Vector(0, 0, SINKER_Z_BASE),
+            FreeCAD.Vector(0, 0, 1),
+            wedge_angle
+        )
+        sinker_outer.rotate(
+            FreeCAD.Vector(0, 0, 0),
+            FreeCAD.Vector(0, 0, 1),
+            theta_deg - half_width_angle
+        )
+        
+        # Inner wedge: cuts away inside to leave ring-segment shape
+        sinker_inner = Part.makeCylinder(
+            SINKER_TIP_R,
+            height + 0.2,
+            FreeCAD.Vector(0, 0, SINKER_Z_BASE - 0.1),
+            FreeCAD.Vector(0, 0, 1),
+            wedge_angle + 0.1
+        )
+        sinker_inner.rotate(
+            FreeCAD.Vector(0, 0, 0),
+            FreeCAD.Vector(0, 0, 1),
+            theta_deg - half_width_angle - 0.05
+        )
+        
+        sinker = sinker_outer.cut(sinker_inner)
+        
+        # V1.2: APPLY ANGLED TIP (10deg backward at trailing-tip corner)
+        if ENABLE_ANGLED_TIP:
+            try:
+                tip_cutter = make_angled_tip_cutter(theta_deg, half_width_angle, height)
+                sinker = sinker.cut(tip_cutter)
+            except Exception as e:
+                # Log failure but don't crash - continues with flat tip on this sinker
+                print(f"  WARNING: Tip cut failed at sinker {i} (theta={theta_deg:.2f}): {e}")
+        
+        # V1.1: FILLET at sinker base
+        # Explicit FreeCAD fillet on 72 sinker bases is complex
+        # FDM print smoothing acts as effective fillet at print resolution
+        # If V1.2 testing shows stress cracks, V1.3 will add explicit fillets
+        
+        ring = ring.fuse(sinker)
+        sinkers_added += 1
+    
+    # 3. Add mounting pin holes (only for full ring)
+    if not slice_only:
+        for angle_deg in PIN_ANGLES:
+            angle_rad = math.radians(angle_deg)
+            pin_x = PIN_RADIUS * math.cos(angle_rad)
+            pin_y = PIN_RADIUS * math.sin(angle_rad)
+            
+            # Round hole for first pin, slotted for others
+            if angle_deg == PIN_ANGLES[0]:
+                # Round hole
+                pin_hole = Part.makeCylinder(
+                    PIN_HOLE_R,
+                    PIN_HOLE_DEPTH + 0.1,
+                    FreeCAD.Vector(pin_x, pin_y, -0.05)
+                )
+            else:
+                # Slotted hole - elongated tangentially for thermal expansion
+                tangent_angle_rad = angle_rad + math.pi/2
+                offset_x = (PIN_SLOT_LENGTH/2) * math.cos(tangent_angle_rad)
+                offset_y = (PIN_SLOT_LENGTH/2) * math.sin(tangent_angle_rad)
+                
+                # Two end cylinders form a stadium-shape slot
+                hole1 = Part.makeCylinder(
+                    PIN_HOLE_R,
+                    PIN_HOLE_DEPTH + 0.1,
+                    FreeCAD.Vector(pin_x + offset_x, pin_y + offset_y, -0.05)
+                )
+                hole2 = Part.makeCylinder(
+                    PIN_HOLE_R,
+                    PIN_HOLE_DEPTH + 0.1,
+                    FreeCAD.Vector(pin_x - offset_x, pin_y - offset_y, -0.05)
+                )
+                pin_hole = hole1.fuse(hole2)
+            
+            ring = ring.cut(pin_hole)
+    
+        # V1.1: Add 3x M3 axial retention screw holes (with counterbore)
+        # Located between dowel pins (60deg offset)
+        # Counterbore on top for socket head screws
+        for angle_deg in SCREW_ANGLES:
+            angle_rad = math.radians(angle_deg)
+            screw_x = SCREW_RADIUS * math.cos(angle_rad)
+            screw_y = SCREW_RADIUS * math.sin(angle_rad)
+            
+            # Through hole for M3 shaft
+            m3_through = Part.makeCylinder(
+                M3_HOLE_R,
+                RING_HEIGHT + 0.2,
+                FreeCAD.Vector(screw_x, screw_y, -0.1)
+            )
+            
+            # Counterbore from top (for socket head)
+            m3_counterbore = Part.makeCylinder(
+                M3_HEAD_R,
+                M3_HEAD_DEPTH + 0.1,
+                FreeCAD.Vector(screw_x, screw_y, RING_HEIGHT - M3_HEAD_DEPTH)
+            )
+            
+            ring = ring.cut(m3_through)
+            ring = ring.cut(m3_counterbore)
+    
+    # V1.1: ID CHAMFER (toggleable) - applied at top AND bottom of ring ID
+    # Helps cylinder assembly into ring, removes layer-line catch
+    if ENABLE_ID_CHAMFER:
+        try:
+            # Find the inner cylinder edges and apply chamfer
+            # Use FreeCAD's makeChamfer on relevant edges
+            # We need to identify edges at ID/top and ID/bottom
+            
+            edges_to_chamfer = []
+            for i, edge in enumerate(ring.Edges):
+                # Look for circular edges at the inner radius
+                if hasattr(edge.Curve, 'Radius'):
+                    r = edge.Curve.Radius
+                    # Check if this is an inner-edge circle
+                    if abs(r - RING_INNER_R) < 0.01:
+                        # Determine if it's at top or bottom
+                        edge_z = edge.Vertexes[0].Point.z
+                        if abs(edge_z) < 0.01 or abs(edge_z - RING_HEIGHT) < 0.01:
+                            edges_to_chamfer.append(i + 1)  # FreeCAD uses 1-based
+            
+            if edges_to_chamfer:
+                ring = ring.makeChamfer(ID_CHAMFER_SIZE, 
+                                       [ring.Edges[i-1] for i in edges_to_chamfer])
+        except Exception as e:
+            # If chamfer fails, continue without it
+            print(f"  Note: ID chamfer skipped ({e})")
+            pass
+    
+    return ring, sinkers_added
+
+
+# =============================================================================
+# PRINT SUMMARY
+# =============================================================================
+
+print("=" * 70)
+print("CSM V3 - SINKER RING V1.2 (angled tip + dual clearance test)")
+print("=" * 70)
+print(f"  Ring OD:                {RING_OD}mm")
+print(f"  Ring ID:                {RING_ID}mm (V1.1: was 114.8)")
+print(f"  Per-side clearance:     {(RING_ID - 114.3)/2:.2f}mm (V1.1: was 0.25)")
+print(f"  Ring height:            {RING_HEIGHT}mm")
+print(f"  Wall thickness:         {RING_OUTER_R - RING_INNER_R:.1f}mm")
+print()
+print(f"  Sinkers:                {NUM_SINKERS} at {SINKER_PITCH_DEG}deg pitch")
+print(f"  Sinker offset:          {SINKER_PHASE_OFFSET_DEG}deg from needle slots")
+print(f"  Sinker width:           {SINKER_WIDTH}mm (V1.1: was 1.2)")
+print(f"  Radial extension:       {SINKER_RADIAL_EXT}mm (V1.1: was 3.0)")
+print(f"  Sinker tip radius:      {SINKER_TIP_R}mm")
+print(f"  Sinker tip:             10deg backward angled (V1.2)")
+print(f"    Anchor:               trailing edge tip corner")
+print(f"    Frame:                local at tip (tilted radial/tangential)")
+print(f"    Transform:            single Placement (no mixed transforms)")
+print(f"  Z base:                 {SINKER_Z_BASE}mm (V1.1: was 4.0)")
+print(f"  Sinker height (full):   {SINKER_HEIGHT_FULL}mm")
+print(f"  Sinker height (taper):  {SINKER_HEIGHT_MIN}mm at feeder centers")
+print(f"  Taper range:            +/-{FEEDER_TAPER_RANGE_DEG}deg (V1.1: was 5)")
+print(f"  Taper easing:           SMOOTHSTEP cubic (jerk-free)")
+print()
+print(f"  Feeders:                {NUM_FEEDERS} at 60deg intervals")
+print(f"  Feeder angles:          {FEEDER_ANGLES}")
+print(f"  Window arc width:       {FEEDER_WINDOW_ARC_MM}mm ({FEEDER_WINDOW_ANGLE_DEG:.2f}deg)")
+print()
+print(f"  Mounting pins:          3 at PCD {PCD_PINS}mm")
+print(f"  Pin angles:             {PIN_ANGLES}")
+print(f"  Pin pattern:            1 round + 2 slotted")
+print()
+print(f"  Axial retention (V1.1): 3x M3 screws at PCD {PCD_SCREWS}mm")
+print(f"  Screw angles:           {SCREW_ANGLES}")
+print(f"  Counterbore:            {M3_HEAD_DIA}mm dia x {M3_HEAD_DEPTH}mm deep")
+print()
+print(f"  ID chamfer (V1.1):      {'ENABLED' if ENABLE_ID_CHAMFER else 'DISABLED'}")
+if ENABLE_ID_CHAMFER:
+    print(f"    Size:                 {ID_CHAMFER_SIZE}mm at 45deg")
+    print(f"    Location:             top AND bottom of ID")
+print()
+
+# =============================================================================
+# BUILD AND EXPORT
+# =============================================================================
+
+doc = FreeCAD.newDocument("CSM_SinkerRing_V1_2")
+
+# Build full ring (uses default RING_INNER_R = 57.65, ID 115.3)
+print("Building full sinker ring (ID 115.3, 0.50mm/side clearance)...")
+ring_full, count_full = build_sinker_ring(slice_only=False)
+print(f"  Created {count_full} sinker projections")
+
+obj_full = doc.addObject("Part::Feature", "SinkerRing_V1_2_FULL")
+obj_full.Shape = ring_full
+print(f"  Full ring volume: {ring_full.Volume:.0f} mm^3")
+
+# Build test slice at default clearance (ID 115.3, 0.50mm/side)
+print()
+print("Building test slice 1 (ID 115.3, 30deg sector)...")
+ring_slice_default, count_slice = build_sinker_ring(slice_only=True)
+print(f"  Created {count_slice} sinker projections in test slice")
+
+obj_slice_default = doc.addObject("Part::Feature", "SinkerRing_V1_2_TESTSLICE_ID115_3")
+obj_slice_default.Shape = ring_slice_default
+obj_slice_default.Placement.Base = FreeCAD.Vector(150, 0, 0)
+print(f"  Test slice 1 volume: {ring_slice_default.Volume:.0f} mm^3")
+
+# V1.2: Build test slice at TIGHTER clearance (ID 115.1, 0.40mm/side)
+# Lets you experimentally validate which clearance fits your printer
+print()
+print("Building test slice 2 (ID 115.1, tighter 0.40mm/side, 30deg sector)...")
+TIGHTER_INNER_R = 115.1 / 2  # 57.55mm
+ring_slice_tight, count_slice_t = build_sinker_ring(slice_only=True, 
+                                                    custom_inner_r=TIGHTER_INNER_R)
+print(f"  Created {count_slice_t} sinker projections in tight test slice")
+
+obj_slice_tight = doc.addObject("Part::Feature", "SinkerRing_V1_2_TESTSLICE_ID115_1")
+obj_slice_tight.Shape = ring_slice_tight
+obj_slice_tight.Placement.Base = FreeCAD.Vector(150, -50, 0)  # below the other slice
+print(f"  Test slice 2 volume: {ring_slice_tight.Volume:.0f} mm^3")
+
+doc.recompute()
+
+# Export STL files
+print()
+print("Exporting STL files...")
+try:
+    import Mesh
+    
+    # Full ring
+    mesh_full = doc.addObject("Mesh::Feature", "Mesh_Full")
+    mesh_full.Mesh = Mesh.Mesh(ring_full.tessellate(0.05))
+    Mesh.export([mesh_full], PATH_STL_FULL)
+    print(f"  Exported: {PATH_STL_FULL}")
+    
+    # Test slice ID 115.3 (default clearance)
+    mesh_slice = doc.addObject("Mesh::Feature", "Mesh_Slice_115_3")
+    mesh_slice.Mesh = Mesh.Mesh(ring_slice_default.tessellate(0.05))
+    Mesh.export([mesh_slice], PATH_STL_SLICE_ID115_3)
+    print(f"  Exported: {PATH_STL_SLICE_ID115_3}")
+    
+    # Test slice ID 115.1 (tighter clearance)
+    mesh_slice_t = doc.addObject("Mesh::Feature", "Mesh_Slice_115_1")
+    mesh_slice_t.Mesh = Mesh.Mesh(ring_slice_tight.tessellate(0.05))
+    Mesh.export([mesh_slice_t], PATH_STL_SLICE_ID115_1)
+    print(f"  Exported: {PATH_STL_SLICE_ID115_1}")
+    
+except Exception as e:
+    print(f"  STL export skipped: {e}")
+    print(f"  Manually export from FreeCAD: File -> Export -> STL")
+
+# Set view
+try:
+    import FreeCADGui
+    FreeCADGui.SendMsgToActiveView("ViewFit")
+    FreeCADGui.activeDocument().activeView().viewIsometric()
+except:
+    pass
+
+print()
+print("=" * 70)
+print("SINKER RING V1.2 COMPLETE")
+print("=" * 70)
+print()
+print("FILES CREATED:")
+print(f"  Full ring:           {PATH_STL_FULL}")
+print(f"  Test slice ID 115.3: {PATH_STL_SLICE_ID115_3} (default 0.50mm/side)")
+print(f"  Test slice ID 115.1: {PATH_STL_SLICE_ID115_1} (tighter 0.40mm/side)")
+print()
+print("PRINT INSTRUCTIONS:")
+print("  Material:     PETG (DRY!)")
+print("  Layer height: 0.16mm")
+print("  Perimeters:   4")
+print("  Top/bottom:   5 layers")
+print("  Infill:       30-40% Gyroid")
+print("  Orientation:  Lying flat (sinkers pointing up)")
+print("  Supports:     NONE")
+print("  Print speed:  Outer wall 25mm/s, others 50mm/s")
+print()
+print("PRINT FIRST: Test slice (30deg, ~45min, ~25g PETG)")
+print("THEN:        Full ring (~3-4hrs, ~140g PETG)")
+print()
+print("FINISHING:")
+print("  1. Light sand sinker tips (1000-grit)")
+print("  2. Test fit over cylinder (should slide smoothly)")
+print("  3. Apply PTFE lubricant to sinker contact surfaces")

@@ -1,0 +1,178 @@
+<svg viewBox="0 0 1000 720" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1000" height="720" fill="#fafaf8"/>
+
+  <text x="500" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">BEARING HOUSING BLOCKS V1 — VISUAL COMPARISON DIAGRAM</text>
+  <text x="500" y="52" text-anchor="middle" fill="#666" font-size="12">Compare with FreeCAD model · TOP block (blue) + BOTTOM block (orange)</text>
+  <line x1="40" y1="66" x2="960" y2="66" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- ============ TOP BLOCK ============ -->
+  <text x="220" y="95" text-anchor="middle" fill="#184e9e" font-size="15" font-weight="bold">TOP BLOCK</text>
+  <text x="220" y="113" text-anchor="middle" fill="#666" font-size="10">60 × 60 × 20 mm · holds 1× 6001-2RS bearing</text>
+
+  <!-- Top view -->
+  <text x="100" y="135" fill="#888" font-size="10" font-weight="bold">TOP VIEW (looking down)</text>
+  <rect x="100" y="142" width="240" height="240" rx="3" fill="#d8e8f5" stroke="#184e9e" stroke-width="2"/>
+
+  <!-- Bearing pocket -->
+  <circle cx="220" cy="262" r="56" fill="#ffffff" stroke="#444" stroke-width="1.5"/>
+  <text x="220" y="255" text-anchor="middle" fill="#333" font-size="10" font-weight="bold">Bearing pocket</text>
+  <text x="220" y="270" text-anchor="middle" fill="#333" font-size="9">Ø 27.95 mm</text>
+  <text x="220" y="283" text-anchor="middle" fill="#666" font-size="8">(press fit 6001-2RS)</text>
+
+  <!-- Shaft bore -->
+  <circle cx="220" cy="262" r="26" fill="#fff8f5" stroke="#D4537E" stroke-width="1.2" stroke-dasharray="3,3"/>
+  <text x="220" y="292" text-anchor="middle" fill="#993556" font-size="8">shaft bore Ø13</text>
+
+  <!-- M5 bolt holes with countersinks -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1.2">
+    <circle cx="288" cy="194" r="6"/>
+    <circle cx="288" cy="330" r="6"/>
+    <circle cx="152" cy="330" r="6"/>
+    <circle cx="152" cy="194" r="6"/>
+  </g>
+  <circle cx="220" cy="262" r="96" fill="none" stroke="#E24B4A" stroke-width="0.6" stroke-dasharray="3,4" opacity="0.5"/>
+
+  <!-- Dimensions -->
+  <line x1="100" y1="130" x2="340" y2="130" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="102,130 108,127 108,133" fill="#184e9e"/>
+  <polygon points="338,130 332,127 332,133" fill="#184e9e"/>
+  <text x="220" y="125" text-anchor="middle" fill="#184e9e" font-size="10" font-weight="bold">60 mm</text>
+
+  <line x1="90" y1="142" x2="90" y2="382" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="90,144 87,150 93,150" fill="#184e9e"/>
+  <polygon points="90,380 87,374 93,374" fill="#184e9e"/>
+  <text x="82" y="265" text-anchor="middle" fill="#184e9e" font-size="10" font-weight="bold" transform="rotate(-90,82,265)">60 mm</text>
+
+  <!-- Bolt annotations -->
+  <text x="355" y="192" fill="#791F1F" font-size="9" font-weight="bold">M5 × 4</text>
+  <text x="355" y="204" fill="#791F1F" font-size="8">PCD 48 mm</text>
+  <text x="355" y="216" fill="#791F1F" font-size="8">at 45°, 135°,</text>
+  <text x="355" y="228" fill="#791F1F" font-size="8">225°, 315°</text>
+
+  <!-- Side view -->
+  <text x="100" y="415" fill="#888" font-size="10" font-weight="bold">SIDE VIEW (cross-section)</text>
+  <rect x="100" y="422" width="240" height="80" fill="#d8e8f5" stroke="#184e9e" stroke-width="2"/>
+
+  <!-- Bearing pocket (open top) -->
+  <rect x="160" y="422" width="120" height="34" fill="#ffffff" stroke="#444" stroke-width="1.2"/>
+  <text x="220" y="440" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="220" y="452" text-anchor="middle" fill="#333" font-size="8">8.5 mm deep</text>
+
+  <!-- Shaft center line -->
+  <line x1="220" y1="412" x2="220" y2="512" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Countersink on bottom -->
+  <polygon points="130,502 130,490 142,490" fill="#E24B4A" opacity="0.6"/>
+  <polygon points="310,502 310,490 298,490" fill="#E24B4A" opacity="0.6"/>
+
+  <!-- Dimensions side -->
+  <line x1="355" y1="422" x2="355" y2="502" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="355,424 352,430 358,430" fill="#184e9e"/>
+  <polygon points="355,500 352,494 358,494" fill="#184e9e"/>
+  <text x="365" y="465" fill="#184e9e" font-size="10" font-weight="bold">20 mm</text>
+
+  <text x="100" y="520" fill="#791F1F" font-size="8">↑ csk bottom (mount face)</text>
+
+  <!-- TOP block info box -->
+  <rect x="40" y="545" width="360" height="155" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="0.8"/>
+  <text x="52" y="562" fill="#184e9e" font-size="11" font-weight="bold">TOP BLOCK — Purpose &amp; assembly:</text>
+  <text x="52" y="580" fill="#333" font-size="10">• Mounts on TOP aluminum plate (6mm)</text>
+  <text x="52" y="595" fill="#333" font-size="10">• Holds 1× 6001-2RS bearing (press fit)</text>
+  <text x="52" y="610" fill="#333" font-size="10">• Shaft rotates through it to reach cassette above</text>
+  <text x="52" y="625" fill="#333" font-size="10">• Only radial load (no axial weight here)</text>
+  <text x="52" y="640" fill="#333" font-size="10">• Countersink on BOTTOM (bolts thread up from plate)</text>
+  <text x="52" y="660" fill="#184e9e" font-size="9" font-weight="bold">Print time: ~2.5 hours PETG · ~35g filament</text>
+  <text x="52" y="678" fill="#184e9e" font-size="9" font-weight="bold">Volume: ~51,000 mm³</text>
+  <text x="52" y="696" fill="#666" font-size="9" font-style="italic">Flat orientation, no supports needed</text>
+
+  <!-- DIVIDER -->
+  <line x1="500" y1="85" x2="500" y2="705" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="5,5"/>
+
+  <!-- ============ BOTTOM BLOCK ============ -->
+  <text x="780" y="95" text-anchor="middle" fill="#9e4818" font-size="15" font-weight="bold">BOTTOM BLOCK</text>
+  <text x="780" y="113" text-anchor="middle" fill="#666" font-size="10">70 × 70 × 30 mm · 2× 6001-2RS + 1× 51101 thrust</text>
+
+  <!-- Top view -->
+  <text x="660" y="135" fill="#888" font-size="10" font-weight="bold">TOP VIEW (looking down)</text>
+  <rect x="660" y="142" width="240" height="240" rx="3" fill="#f5e1d8" stroke="#9e4818" stroke-width="2"/>
+
+  <!-- Visible from top: radial bearing pocket -->
+  <circle cx="780" cy="262" r="48" fill="#ffffff" stroke="#444" stroke-width="1.5"/>
+  <text x="780" y="250" text-anchor="middle" fill="#333" font-size="10" font-weight="bold">Radial pocket</text>
+  <text x="780" y="263" text-anchor="middle" fill="#333" font-size="9">Ø 27.95 mm</text>
+  <text x="780" y="275" text-anchor="middle" fill="#666" font-size="8">(2 stacked bearings)</text>
+  <text x="780" y="286" text-anchor="middle" fill="#666" font-size="8">16 mm deep</text>
+
+  <!-- Shaft bore -->
+  <circle cx="780" cy="262" r="22.3" fill="#fff8f5" stroke="#D4537E" stroke-width="1.2" stroke-dasharray="3,3"/>
+
+  <!-- M5 bolt holes -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1.2">
+    <circle cx="851.6" cy="190.4" r="6"/>
+    <circle cx="851.6" cy="333.6" r="6"/>
+    <circle cx="708.4" cy="333.6" r="6"/>
+    <circle cx="708.4" cy="190.4" r="6"/>
+  </g>
+  <circle cx="780" cy="262" r="101.2" fill="none" stroke="#E24B4A" stroke-width="0.6" stroke-dasharray="3,4" opacity="0.5"/>
+
+  <!-- Dimensions -->
+  <line x1="660" y1="130" x2="900" y2="130" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="662,130 668,127 668,133" fill="#9e4818"/>
+  <polygon points="898,130 892,127 892,133" fill="#9e4818"/>
+  <text x="780" y="125" text-anchor="middle" fill="#9e4818" font-size="10" font-weight="bold">70 mm</text>
+
+  <line x1="650" y1="142" x2="650" y2="382" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="650,144 647,150 653,150" fill="#9e4818"/>
+  <polygon points="650,380 647,374 653,374" fill="#9e4818"/>
+  <text x="642" y="265" text-anchor="middle" fill="#9e4818" font-size="10" font-weight="bold" transform="rotate(-90,642,265)">70 mm</text>
+
+  <!-- Bolt annotations -->
+  <text x="915" y="192" fill="#791F1F" font-size="9" font-weight="bold">M5 × 4</text>
+  <text x="915" y="204" fill="#791F1F" font-size="8">PCD 56 mm</text>
+
+  <!-- Side view (section) -->
+  <text x="660" y="415" fill="#888" font-size="10" font-weight="bold">SECTION VIEW (through center)</text>
+  <rect x="660" y="422" width="240" height="120" fill="#f5e1d8" stroke="#9e4818" stroke-width="2"/>
+
+  <!-- Bottom floor 3mm -->
+  <rect x="660" y="535" width="240" height="7" fill="#e8c4b0" stroke="#9e4818" stroke-width="0.5"/>
+  <text x="910" y="541" fill="#666" font-size="7">floor 3mm</text>
+
+  <!-- Thrust pocket (bottom 9mm) -->
+  <rect x="717" y="498" width="126" height="37" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="780" y="516" text-anchor="middle" fill="#333" font-size="9" font-weight="bold">51101 thrust</text>
+  <text x="780" y="528" text-anchor="middle" fill="#333" font-size="8">Ø26.3 × 9 deep</text>
+
+  <!-- Radial pocket (upper 16mm) -->
+  <rect x="716" y="432" width="128" height="66" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="780" y="452" text-anchor="middle" fill="#333" font-size="9" font-weight="bold">2× 6001-2RS</text>
+  <text x="780" y="465" text-anchor="middle" fill="#333" font-size="8">Ø27.95 × 16 deep</text>
+  <text x="780" y="477" text-anchor="middle" fill="#333" font-size="8">(stacked)</text>
+
+  <!-- Shaft center line -->
+  <line x1="780" y1="422" x2="780" y2="542" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Countersink on top (mount face) -->
+  <polygon points="690,422 690,434 702,434" fill="#E24B4A" opacity="0.6"/>
+  <polygon points="870,422 870,434 858,434" fill="#E24B4A" opacity="0.6"/>
+  <text x="660" y="418" fill="#791F1F" font-size="8">↑ csk TOP (mount face)</text>
+
+  <!-- Height dim -->
+  <line x1="920" y1="422" x2="920" y2="542" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="920,424 917,430 923,430" fill="#9e4818"/>
+  <polygon points="920,540 917,534 923,534" fill="#9e4818"/>
+  <text x="930" y="487" fill="#9e4818" font-size="10" font-weight="bold">30 mm</text>
+
+  <!-- BOTTOM block info box -->
+  <rect x="600" y="555" width="360" height="145" rx="4" fill="#ffffff" stroke="#d3d1c7" stroke-width="0.8"/>
+  <text x="612" y="572" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM BLOCK — Purpose &amp; assembly:</text>
+  <text x="612" y="590" fill="#333" font-size="10">• Mounts UNDER the bottom aluminum plate</text>
+  <text x="612" y="605" fill="#333" font-size="10">• Stack (bottom up): floor, thrust, 2× radial</text>
+  <text x="612" y="620" fill="#333" font-size="10">• Carries ENTIRE cassette weight (~600g)</text>
+  <text x="612" y="635" fill="#333" font-size="10">• Belt tension adds radial load</text>
+  <text x="612" y="650" fill="#333" font-size="10">• Countersink on TOP (bolts come from plate)</text>
+  <text x="612" y="670" fill="#9e4818" font-size="9" font-weight="bold">Print time: ~4 hours PETG · ~85g filament</text>
+  <text x="612" y="688" fill="#9e4818" font-size="9" font-weight="bold">Volume: ~125,000 mm³</text>
+
+  <line x1="40" y1="712" x2="960" y2="712" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>

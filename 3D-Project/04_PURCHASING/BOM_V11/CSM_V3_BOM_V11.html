@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSM V3 Bill of Materials V10</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #fafaf8; color: #1a1a1a; max-width: 1400px; }
+  h1 { color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px; }
+  h2 { color: #1e3a5f; margin-top: 32px; padding: 8px; border-radius: 4px; }
+  h3 { color: #1e3a5f; margin-top: 20px; }
+  .ordered { background: #e8f0e0; border-left: 5px solid #5a8d3e; }
+  .needed { background: #fff3cd; border-left: 5px solid #d97706; }
+  .returns { background: #fee; border-left: 5px solid #d97706; }
+  .summary { background: #ffffff; border-left: 5px solid #1e3a5f; padding: 16px; }
+  .future { background: #e0e7ff; border-left: 5px solid #4338ca; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 16px 0; background: white; font-size: 13px; }
+  th { background: #1e3a5f; color: white; padding: 8px; text-align: left; font-weight: 600; }
+  td { padding: 8px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+  tr:hover { background: #f8f8f5; }
+  .price { text-align: right; font-family: 'Consolas', monospace; }
+  .total-row { font-weight: bold; background: #f0f0e8; }
+  a { color: #1e3a5f; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .return { color: #b91c1c; font-weight: 600; }
+  .keep { color: #166534; }
+  .new { background: #fef3c7; }
+  .new-v10 { background: #dbeafe; }
+  .note { font-size: 11px; color: #666; font-style: italic; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-right: 4px; }
+  .badge-ordered { background: #5a8d3e; color: white; }
+  .badge-return { background: #b91c1c; color: white; }
+  .badge-need { background: #d97706; color: white; }
+  .badge-v25 { background: #6b21a8; color: white; }
+  .badge-v10 { background: #2563eb; color: white; }
+  .badge-future { background: #4338ca; color: white; }
+  .badge-changed { background: #ea580c; color: white; }
+  .header-meta { color: #666; margin-top: -8px; }
+</style>
+</head>
+<body>
+
+<h1>CSM V3 - Bill of Materials V11 (Final - with Orders.xlsx)</h1>
+<p class="header-meta">Updated: May 2026 | Project: Computerized Sock Machine V3 | Status: $919.86 ordered (useful items), $160 servos + $25 yarn pending</p>
+
+<div class="summary">
+  <h2 style="background: none; padding: 0; margin-top: 0; border: none;">Project Status Summary (V11 Final)</h2>
+  <table>
+    <tr><td><strong>Total Orders Placed (Orders.xlsx)</strong></td><td>51 items</td><td class="price"><strong>$1,018.83</strong></td></tr>
+    <tr><td>Mandatory Returns (wrong specs)</td><td>2 items</td><td class="price return">-$58.99</td></tr>
+    <tr class="total-row"><td>&nbsp;&nbsp;  • 8mm Linear Rods (wrong size)</td><td>1 item</td><td class="price return">-$13.99</td></tr>
+    <tr class="total-row"><td>&nbsp;&nbsp;  • NEMA 23 5A (exceeds TB6600)</td><td>1 item</td><td class="price return">-$45.00</td></tr>
+    <tr><td>Optional Return (not needed)</td><td>1 item</td><td class="price return">-$39.98</td></tr>
+    <tr class="total-row"><td>&nbsp;&nbsp;  • Dremel 3100 (PETG melts - use hand files instead)</td><td>1 item</td><td class="price return">-$39.98</td></tr>
+    <tr><td><strong>Net Useful Orders</strong></td><td>~48 items</td><td class="price"><strong>$919.86</strong></td></tr>
+    <tr><td colspan="3"><strong style="color: #1e3a5f;">STILL NEEDED (to complete 2-feeder + full servo inventory):</strong></td></tr>
+    <tr><td>8× MG90S Metal-Gear Servos (6 feeders + 2 spares)</td><td>8 servos</td><td class="price">$160.00</td></tr>
+    <tr><td>Yarn Cones (2 for initial 2-feeder build)</td><td>2 cones</td><td class="price">$25.00</td></tr>
+    <tr class="total-row"><td><strong>FINAL PROJECT TOTAL</strong></td><td><strong>~60 items</strong></td><td class="price"><strong>$1,104.86</strong></td></tr>
+  </table>
+  <p><strong>Budget Status:</strong> Original target $1,230-1,500. <strong>Final cost: $1,104.86 — WELL WITHIN BUDGET ✓</strong></p>
+  <p><strong>Expansion to 6-feeder:</strong> Add ~$40-60 for yarn mast hardware and additional yarn cones. Total expanded: ~$1,145-1,165.</p>
+</div>
+</div>
+
+<div class="summary">
+  <h2 style="background: none; padding: 0; margin-top: 0; border: none;">Project Cost Summary</h2>
+  <table>
+    <tr><td><strong>Already Spent (57 orders)</strong></td><td>57 items</td><td class="price"><strong>$1,263.84</strong></td></tr>
+    <tr><td>Less: Mandatory Returns</td><td>2 items wrong specs</td><td class="price return">-$58.99</td></tr>
+    <tr><td>Less: Optional Returns</td><td>3 items duplicate</td><td class="price return">-$31.89</td></tr>
+    <tr><td>Plus: V2.5 Hardware (Smalley + washers)</td><td>~4 items</td><td class="price">+$35</td></tr>
+    <tr><td>Plus: Wood Base 500×400×18mm (V10 upgrade)</td><td>1 item</td><td class="price">+$35</td></tr>
+    <tr><td>Plus: Cylinder Springs (V10 NEW)</td><td>3 springs</td><td class="price">+$28</td></tr>
+    <tr><td>Plus: Servos for Full Feeder System (V11 UPDATED)</td><td>8× MG90S metal-gear</td><td class="price">+$160</td></tr>
+    <tr><td>Plus: Yarn cones (V10 NEW)</td><td>2 cones</td><td class="price">+$25</td></tr>
+    <tr><td>Plus: Finishing tools (V10 NEW)</td><td>Needle files + knife</td><td class="price">+$18</td></tr>
+    <tr class="total-row"><td><strong>FINAL PROJECT COST (2-feeder initial + full servo inventory)</strong></td><td>~62 items net</td><td class="price"><strong>$1,467.96</strong></td></tr>
+    <tr><td>Future (yarn mast for 6-feeder expansion)</td><td>~3-4 items</td><td class="price">+$40-60</td></tr>
+  </table>
+  <p>Original budget: $1,230-1,500. Project now at <strong>$1,468 including 8× metal-gear servos</strong>. Slightly over budget but justifiable: servo reliability is critical for testing (avoid 50-100 hour failure window). 2 spares included for insurance.</p>
+</div>
+
+<h2 class="ordered">SECTION 1: Already Ordered (57 items, $1,263.84)</h2>
+
+<h3>Mechanical - Bearings &amp; Shaft (Section 05)</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B08HX2LG53" target="_blank">FEYRINX 12mm x 300mm Hardened Chrome Shaft (h8)</a></td><td>B08HX2LG53</td><td>1</td><td class="price">$22.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.ebay.com/itm/157538516383" target="_blank">6001-2RS Bearings (10pk, eBay)</a></td><td>eBay 157538516383</td><td>1 pk</td><td class="price">$8.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0G25X5L23" target="_blank">51101 Thrust Bearings (10pk)</a></td><td>B0G25X5L23</td><td>1 pk</td><td class="price">$10.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FH6QH8VQ" target="_blank">608-2RS Skate Bearings (10pk)</a></td><td>B0FH6QH8VQ</td><td>1 pk</td><td class="price">$8.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DMMB1FHF" target="_blank">12mm Clamping Shaft Collars (4pk)</a></td><td>B0DMMB1FHF</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B007EE4BKU" target="_blank">Koyo AS1226 Thrust Washers</a></td><td>B007EE4BKU</td><td>1 pk</td><td class="price">$15.50</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DRRTY96V" target="_blank">8mm Linear Rods (WRONG SIZE)</a></td><td>B0DRRTY96V</td><td>1</td><td class="price return">$13.99</td><td><span class="badge badge-return">RETURN</span></td></tr>
+</table>
+
+<h3>Mechanical - Aluminum Plate &amp; Stock</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D9S2KH4V" target="_blank">Aluminum Plate 6mm thick</a></td><td>B0D9S2KH4V</td><td>1</td><td class="price">$24.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DRCMV98V" target="_blank">Aluminum Round Stock</a></td><td>B0DRCMV98V</td><td>1</td><td class="price">$18.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Drive System - Motor, Gearbox, Belt, Pulleys (Section 06)</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.stepperonline.com/" target="_blank">NEMA 23 + 5:1 Planetary Gearbox 23HS22-2804S-HG5</a></td><td>StepperOnline direct</td><td>1</td><td class="price">$95.00</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0C6Y1462P" target="_blank">HTD 5M Pulley Kit (60T + 20T + 405mm Belt)</a></td><td>B0C6Y1462P</td><td>1</td><td class="price">$18.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B08SG7L54W" target="_blank">TB6600 Stepper Driver (4A) EASON</a></td><td>B08SG7L54W</td><td>1</td><td class="price">$22.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DSD9YF72" target="_blank">NEMA 23 5A Standalone (WRONG - exceeds TB6600)</a></td><td>B0DSD9YF72</td><td>1</td><td class="price return">$45.00</td><td><span class="badge badge-return">RETURN</span></td></tr>
+</table>
+
+<h3>Frame - 2020 Aluminum Extrusions ⚠️ Verify length is ≥300mm for 200mm cassette</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D89YS5VP" target="_blank">2020 Aluminum Extrusion (Length A)</a></td><td>B0D89YS5VP</td><td>1</td><td class="price">$24.99</td><td><span class="badge badge-ordered">VERIFY LENGTH</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D89Y43YK" target="_blank">2020 Aluminum Extrusion (Length B)</a></td><td>B0D89Y43YK</td><td>1</td><td class="price">$22.99</td><td><span class="badge badge-ordered">VERIFY LENGTH</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FLD88X6Y" target="_blank">Corner Brackets for 2020</a></td><td>B0FLD88X6Y</td><td>1 pk</td><td class="price">$15.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GG4N5GR4" target="_blank">M5 T-Nuts for 2020 (230pk)</a></td><td>B0GG4N5GR4</td><td>1 pk</td><td class="price">$13.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FFSNFK3Y" target="_blank">M2/M3/M4/M5 Screw Assortment Kit (2040pcs)</a></td><td>B0FFSNFK3Y</td><td>1 pk</td><td class="price">$28.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FDWVGMQ9" target="_blank">Steel Dowel Pins Set A</a></td><td>B0FDWVGMQ9</td><td>1 pk</td><td class="price">$11.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0F5HFFVP7" target="_blank">Dowel Pins Set B</a></td><td>B0F5HFFVP7</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DPQJ4W3Z" target="_blank">M5 Brass Heat-Set Inserts (50pk)</a></td><td>B0DPQJ4W3Z</td><td>1 pk</td><td class="price">$12.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DQL5YWKQ" target="_blank">M3 Brass Heat-Set Inserts (50pk)</a></td><td>B0DQL5YWKQ</td><td>1 pk</td><td class="price">$11.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0B768YVN6" target="_blank">Rubber Anti-Vibration Feet</a></td><td>B0B768YVN6</td><td>1 pk</td><td class="price">$10.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<p class="note">⚠️ V10 Note: 2020 extrusions need to span the 200mm OD cassette base with margin. If your existing extrusions are shorter than 300mm, you may need to order a longer pair. Common Amazon search: "2020 aluminum extrusion 350mm" or "400mm".</p>
+
+<h3>Electronics - Compute &amp; Power (Section 03)</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0046AMGW0" target="_blank">Arduino Mega 2560 REV3</a></td><td>B0046AMGW0</td><td>1</td><td class="price">$48.40</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B07V5JTMV9" target="_blank">CanaKit Raspberry Pi 4 4GB Starter</a></td><td>B07V5JTMV9</td><td>1</td><td class="price">$119.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B08FMNDDSL" target="_blank">ELECROW 7" HDMI Touchscreen</a></td><td>B08FMNDDSL</td><td>1</td><td class="price">$59.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B07Y7L664K" target="_blank">S-250-24 PSU 24V 10A</a></td><td>B07Y7L664K</td><td>1</td><td class="price">$29.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GXCLXVBR" target="_blank">Pi 4 Metal Case (REDUNDANT - CanaKit has one)</a></td><td>B0GXCLXVBR</td><td>1</td><td class="price">$13.91</td><td><span class="badge badge-return">OPTIONAL RETURN</span></td></tr>
+</table>
+
+<h3>Electronics - Sensors, Switches, Wiring</h3>
+<table>
+<tr><th>Item</th><th>ASIN/SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B075GKJ1X5" target="_blank">Limit Switches (10pk)</a></td><td>B075GKJ1X5</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B09MSDC3GR" target="_blank">SS49E Hall Sensors</a></td><td>B09MSDC3GR</td><td>1 pk</td><td class="price">$8.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GMJ1NXS9" target="_blank">Hall Sensors (DUPLICATE)</a></td><td>B0GMJ1NXS9</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-return">OPTIONAL RETURN</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0F4KS6KV3" target="_blank">Neodymium Magnets</a></td><td>B0F4KS6KV3</td><td>1 pk</td><td class="price">$7.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B008BHB4L8" target="_blank">RioRand LM2596 DC-DC Buck Converter</a></td><td>B008BHB4L8</td><td>1</td><td class="price">$7.99</td><td><span class="badge badge-ordered">KEEP (need for servos!)</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FNML9SRY" target="_blank">IEC Power Cord</a></td><td>B0FNML9SRY</td><td>1</td><td class="price">$8.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0778PG8P2" target="_blank">Rocker Switch (one of two)</a></td><td>B0778PG8P2</td><td>1 pk</td><td class="price">$7.99</td><td><span class="badge badge-return">OPTIONAL RETURN (duplicate)</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FVSS8RDR" target="_blank">Rocker Switch (DUPLICATE)</a></td><td>B0FVSS8RDR</td><td>1 pk</td><td class="price">$7.99</td><td><span class="badge badge-ordered">KEEP one</span></td></tr>
+<tr><td>Nilight Fuse Kit</td><td>various</td><td>1</td><td class="price">$12.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FLJK48BB" target="_blank">Ceramic Pigtail Connectors</a></td><td>B0FLJK48BB</td><td>1 pk</td><td class="price">$11.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D1N3DKYJ" target="_blank">Springs Set</a></td><td>B0D1N3DKYJ</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0C8N8JBDC" target="_blank">Crimp Tools</a></td><td>B0C8N8JBDC</td><td>1</td><td class="price">$26.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0BRTJXND9" target="_blank">Jumper Wires</a></td><td>B0BRTJXND9</td><td>1 pk</td><td class="price">$6.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DWJSB65V" target="_blank">Silicone Wire 18AWG</a></td><td>B0DWJSB65V</td><td>1 pk</td><td class="price">$15.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0C6FP2S6F" target="_blank">Terminal Blocks</a></td><td>B0C6FP2S6F</td><td>1 pk</td><td class="price">$11.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GDQBBJR9" target="_blank">Heat Shrink Tubing Kit</a></td><td>B0GDQBBJR9</td><td>1 pk</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Knitting Components</h3>
+<table>
+<tr><th>Item</th><th>SKU</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.flydesigns.com/products/auto-knitter-legare-cylinder-needles-12-gauge" target="_blank">AutoKnitter/Legare 12g Latch Needles (100pk)</a></td><td>flydesigns 12g latch</td><td>1 pk (100)</td><td class="price">$56.27</td><td><span class="badge badge-ordered">KEEP (use 72)</span></td></tr>
+</table>
+
+<h3>Materials &amp; Consumables</h3>
+<table>
+<tr><th>Item</th><th>ASIN</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D4QD8T2R" target="_blank">PETG Filament</a></td><td>B0D4QD8T2R</td><td>1 spool</td><td class="price">$22.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0G24ZMB9D" target="_blank">O-Rings Assortment</a></td><td>B0G24ZMB9D</td><td>1 pk</td><td class="price">$8.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0FDGLB2KC" target="_blank">SUNLU S1+ Filament Dryer</a></td><td>B0FDGLB2KC</td><td>1</td><td class="price">$54.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0074NALBO" target="_blank">Loctite 603 Retaining Compound</a></td><td>B0074NALBO</td><td>1</td><td class="price">$18.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B07JWB983K" target="_blank">West System Epoxy Bundle</a></td><td>B07JWB983K</td><td>1</td><td class="price">$45.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B07DTGP1QT" target="_blank">Sandpaper Assortment</a></td><td>B07DTGP1QT</td><td>1 pk</td><td class="price">$12.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0G8DYYLCD" target="_blank">Nitrile Gloves</a></td><td>B0G8DYYLCD</td><td>1 box</td><td class="price">$12.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B003UTX0R8" target="_blank">PTFE Lubricant</a></td><td>B003UTX0R8</td><td>1</td><td class="price">$9.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B00DT52Y98" target="_blank">Isopropyl Alcohol 99% (1 gal)</a></td><td>B00DT52Y98</td><td>1</td><td class="price">$24.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Tools</h3>
+<table>
+<tr><th>Item</th><th>ASIN</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B000GSLKIW" target="_blank">NEIKO Digital Caliper</a></td><td>B000GSLKIW</td><td>1</td><td class="price">$24.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0D6F29HQV" target="_blank">Dial Indicator with Magnetic Base</a></td><td>B0D6F29HQV</td><td>1</td><td class="price">$32.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0756VKPTB" target="_blank">Soldering Iron Kit</a></td><td>B0756VKPTB</td><td>1</td><td class="price">$24.99</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h2 class="returns">SECTION 2: Items to Return ($90.88 potential refund)</h2>
+
+<table>
+<tr><th>Item</th><th>Reason</th><th>Refund</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DSD9YF72" target="_blank">NEMA 23 5A Standalone Motor</a> (B0DSD9YF72)</td><td>Exceeds TB6600 4A driver capacity. Already have correct StepperOnline gearbox motor.</td><td class="price return">$45.00</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DRRTY96V" target="_blank">8mm Linear Rods</a> (B0DRRTY96V)</td><td>Wrong diameter. Project uses 12mm shaft.</td><td class="price return">$13.99</td></tr>
+<tr><td colspan="2" class="total-row"><strong>Mandatory Returns Total</strong></td><td class="price total-row"><strong>$58.99</strong></td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GXCLXVBR" target="_blank">Pi 4 Metal Case</a> (B0GXCLXVBR)</td><td>CanaKit kit already includes case.</td><td class="price return">$13.91</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GMJ1NXS9" target="_blank">Hall Sensors</a> (B0GMJ1NXS9)</td><td>Duplicate.</td><td class="price return">$9.99</td></tr>
+<tr><td>Rocker Switch (one of B0778PG8P2 / B0FVSS8RDR)</td><td>Duplicate.</td><td class="price return">$7.99</td></tr>
+<tr><td colspan="2" class="total-row"><strong>Optional Returns Total</strong></td><td class="price total-row"><strong>$31.89</strong></td></tr>
+<tr><td colspan="2" class="total-row"><strong>TOTAL POTENTIAL REFUND</strong></td><td class="price total-row return"><strong>$90.88</strong></td></tr>
+</table>
+
+<h2 class="needed">SECTION 3: V2.5 Drive System Hardware (~$50)</h2>
+
+<p>For the bearing housings V2.5.1 to function with real catalog parts:</p>
+
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new"><td><strong>Smalley CM25-L1 Wave Spring</strong></td>
+<td>Crest-to-Crest, 17-7 SS, 3 turns<br>
+Db: 25mm, Ds: 19mm<br>
+Spring rate: 10.94 N/mm</td>
+<td><a href="https://www.smalley.com/wave-spring/cm25-l1" target="_blank">smalley.com</a><br>
+<a href="https://www.smalley.com/request-retaining-ring-and-wave-spring-samples" target="_blank">Request free samples first!</a></td>
+<td>2</td>
+<td class="price">$15-20</td>
+<td><span class="badge badge-v25">V2.5</span></td></tr>
+
+<tr class="new"><td><strong>Spacer Washer (steel)</strong></td>
+<td>~19mm ID, ~28mm OD, ~1.6mm thick<br>
+18-8 stainless steel</td>
+<td><a href="https://www.mcmaster.com/products/stainless-steel-flat-washers/" target="_blank">mcmaster.com</a><br>
+<span class="note">Search metric flat washers, or call 630-833-0300 for exact match</span></td>
+<td>2-25 (pack)</td>
+<td class="price">$5-15</td>
+<td><span class="badge badge-v25">V2.5</span></td></tr>
+
+<tr class="new"><td><strong>Aluminum Tube for Spacer</strong><br><span class="note">(Optional - PETG print works)</span></td>
+<td>18mm OD x 12mm ID x 30mm length<br>
+6061 aluminum, cut to 22.9mm</td>
+<td><a href="https://www.amazon.com/s?k=18mm+OD+12mm+ID+aluminum+tube" target="_blank">Amazon search</a></td>
+<td>1</td>
+<td class="price">$8-15</td>
+<td><span class="badge badge-need">OPTIONAL</span></td></tr>
+</table>
+
+<h2 class="new-v10">SECTION 4: V10 NEW ITEMS (~$119)</h2>
+
+<h3>Wood Base Upgrade (V10 changed)</h3>
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new-v10"><td><strong>Wood Base 500 x 400 x 18mm</strong> <span class="badge badge-changed">UPGRADED</span></td>
+<td>Hardwood (oak, maple, or birch plywood)<br>
+~20" x 16" x 3/4"<br>
+Was 420x320, upgraded for 6-feeder layout</td>
+<td><a href="https://www.homedepot.com/" target="_blank">Home Depot</a> or local lumber<br>
+<span class="note">Search "birch plywood 20x16" or buy 4x8 sheet, cut to size</span></td>
+<td>1</td>
+<td class="price">$30-40</td>
+<td><span class="badge badge-v10">V10 NEW</span></td></tr>
+</table>
+
+<h3>Cylinder Springs (V10 NEW - Required for Knitting)</h3>
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new-v10"><td><strong>Cylinder Spring - Common Thickness</strong></td>
+<td>Steel music wire, 0.110" / 2.79mm<br>
+For Legare/AutoKnitter cylinders<br>
+Wraps around cylinder OD groove</td>
+<td><a href="https://www.flydesigns.com/products/sock-machine-accessories-cylinder-springs-common-thickness" target="_blank">flydesigns.com</a><br>
+<strong>ORDER NOTE: "Please ship OPEN/STRAIGHT for sizing flexibility"</strong></td>
+<td>3</td>
+<td class="price">$18 + ship</td>
+<td><span class="badge badge-v10">V10 NEW</span></td></tr>
+</table>
+
+<h3>Servos for Full System + Spares (V11 FINAL)</h3>
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new-v10"><td><strong>MG90S Metal-Gear Micro Servo (8-pack)</strong></td>
+<td>9g micro servo, 4.8-6V, 2.5-3.0 kg-cm torque<br>
+180° rotation, PWM control<br>
+Metal gears (NOT plastic) = 100k+ cycle life, 800+ hours operation<br>
+Compatible with Arduino Mega<br>
+6 for feeders F1-F6 + 2 spares</td>
+<td><a href="https://www.amazon.com/s?k=MG90S+metal+gear+servo" target="_blank">Amazon: MG90S servo</a><br>
+Adafruit / SparkFun also available<br>
+<span class="note">Price ~$15-20/servo, 8-pack ~$120-160</span></td>
+<td>8 servos</td>
+<td class="price">$160</td>
+<td><span class="badge badge-changed">V11 LOCKED</span></td></tr>
+</table>
+
+<p><strong>Why MG90S (metal gear)?</strong> SG90 plastic gears fail at 50-100 hours (exactly when testing begins). MG90S lasts 800+ hours. Cost difference ($70) is far less than the 3-4 hours of troubleshooting if servo dies mid-knit.</p>
+
+<h3>Yarn for Initial Testing (V10 NEW)</h3>
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new-v10"><td><strong>Sock yarn cones (100% wool or wool/nylon blend)</strong></td>
+<td>Fingering/sport weight (10-12 wraps per inch)<br>
+For 12g latch needles<br>
+Wool or wool-nylon blend (durable)<br>
+2 different colors recommended</td>
+<td><a href="https://www.knitpicks.com/sock-yarn" target="_blank">KnitPicks Sock Yarn</a><br>
+<a href="https://www.amazon.com/s?k=cotton+sock+yarn+cone" target="_blank">Amazon: cotton/wool sock yarn cones</a><br>
+<span class="note">Local yarn shop also good option</span></td>
+<td>2 cones</td>
+<td class="price">$15-25</td>
+<td><span class="badge badge-v10">V10 NEW</span></td></tr>
+</table>
+
+<h3>Finishing Tools (V10 NEW)</h3>
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="new-v10"><td><strong>Needle File Set (6-piece)</strong></td>
+<td>For deburring slots, spring groove, bolt holes<br>
+Various profiles (round, flat, triangular, etc.)<br>
+Critical for cleaning small PETG features</td>
+<td><a href="https://www.amazon.com/s?k=needle+file+set+6+piece" target="_blank">Amazon: "needle file set 6 piece"</a></td>
+<td>1 set</td>
+<td class="price">$8-12</td>
+<td><span class="badge badge-v10">V10 NEW</span></td></tr>
+
+<tr class="new-v10"><td><strong>Hobby Knife / X-Acto</strong></td>
+<td>For trimming stringing, removing support marks<br>
+Replaceable blades</td>
+<td><a href="https://www.amazon.com/s?k=x-acto+hobby+knife" target="_blank">Amazon: hobby knife</a></td>
+<td>1</td>
+<td class="price">$5-8</td>
+<td><span class="badge badge-v10">V10 NEW</span></td></tr>
+</table>
+
+<p><strong>NOT recommended for this project:</strong> Dremel rotary tool. PETG melts under high RPM friction. Hand tools (sandpaper + needle files) give better control for small features.</p>
+
+<h2 class="future">SECTION 5: Future Expansion (6-feeder, now INCLUDED with MG90S)</h2>
+
+<p><strong>No additional servo purchases needed.</strong> The 8× MG90S includes 6 for full feeder system + 2 spares.</p>
+
+<p>When expanding from 2 feeders to 6, purchase these items:</p>
+
+<table>
+<tr><th>Item</th><th>Specification</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+<tr class="future"><td>Additional yarn cones</td>
+<td>4 more cones (6 total)<br>
+Different colors/fibers for patterns</td>
+<td><a href="https://www.knitpicks.com/sock-yarn" target="_blank">KnitPicks</a> or <a href="https://www.amazon.com/s?k=cotton+sock+yarn+cone" target="_blank">Amazon</a></td>
+<td>4 cones</td>
+<td class="price">$30-50</td>
+<td><span class="badge badge-future">FUTURE</span></td></tr>
+
+<tr class="future"><td>Yarn mast hardware</td>
+<td>Additional 2020 extrusion (vertical) +<br>
+hardware for cone holders<br>
+~600mm tall tower</td>
+<td><a href="https://www.amazon.com/s?k=2020+aluminum+extrusion+600mm" target="_blank">Amazon: 2020 extrusion 600mm</a></td>
+<td>1-2 pieces</td>
+<td class="price">$15-25</td>
+<td><span class="badge badge-future">FUTURE</span></td></tr>
+</table>
+
+<h2 class="summary">Drive System Status Summary</h2>
+
+<table>
+<tr><th>Part</th><th>Version</th><th>Status</th><th>Hardware Status</th></tr>
+<tr><td>Cam Ring</td><td>V6 (in progress)</td><td>Designing</td><td>All in inventory</td></tr>
+<tr><td>Bearing Housings (Top + Bottom)</td><td>V2.5.1</td><td>Print-ready</td><td>Spring + washer needed</td></tr>
+<tr><td>Spacer Tubes (3x for tuning)</td><td>V2.5.1</td><td>Print-ready</td><td>22.7/22.9/23.1mm</td></tr>
+<tr><td>Drive Hub</td><td>V1.3</td><td>Print-ready</td><td>All in inventory</td></tr>
+<tr><td>Motor Mount</td><td>V1.3</td><td>Print-ready</td><td>All in inventory</td></tr>
+<tr><td>Cylinder</td><td>V1.1.1</td><td>Print-ready</td><td>Springs needed (V10)</td></tr>
+<tr><td>Sinker Ring</td><td>V1.0 (next)</td><td>To design</td><td>None needed</td></tr>
+<tr><td>Retainer Ring</td><td>V1.0 (next)</td><td>To design</td><td>None needed (PA12)</td></tr>
+<tr><td>Cassette Base</td><td>V1.0 (next)</td><td>To design</td><td>None needed</td></tr>
+<tr><td>Feeder Module</td><td>V1.0 (next)</td><td>To design</td><td>SG90 servos (V10)</td></tr>
+<tr><td>Yarn Mast</td><td>V1.0 (later)</td><td>To design</td><td>2020 extrusion vertical</td></tr>
+</table>
+
+<h2 class="summary">Final Project Cost Calculation (V10)</h2>
+
+<table>
+<tr><td>Total Already Ordered</td><td class="price">$1,263.84</td></tr>
+<tr><td>Less: Mandatory Returns</td><td class="price return">-$58.99</td></tr>
+<tr><td>Less: Optional Returns</td><td class="price return">-$31.89</td></tr>
+<tr><td>Plus: V2.5 Smalley Springs (x2)</td><td class="price">+$20</td></tr>
+<tr><td>Plus: V2.5 Spacer Washers (McMaster)</td><td class="price">+$15</td></tr>
+<tr><td>Plus: Wood Base 500x400 (V10 upgrade)</td><td class="price">+$35</td></tr>
+<tr><td>Plus: Cylinder Springs x3 (V10 NEW)</td><td class="price">+$28</td></tr>
+<tr><td>Plus: MG90S Metal-Gear Servos 8-pack (V11 UPDATED)</td><td class="price">+$160</td></tr>
+<tr><td>Plus: Yarn cones x2 (V10 NEW)</td><td class="price">+$25</td></tr>
+<tr><td>Plus: Finishing tools (V10 NEW)</td><td class="price">+$18</td></tr>
+<tr class="total-row"><td><strong>FINAL PROJECT TOTAL (2-feeder initial + full servo inventory)</strong></td><td class="price"><strong>$1,467.96</strong></td></tr>
+<tr><td>Future: Yarn mast + cones for 6-feeder expansion</td><td class="price">+$40-60</td></tr>
+<tr class="total-row"><td><strong>FULLY EXPANDED TOTAL (6-feeder + mast)</strong></td><td class="price"><strong>~$1,508-1,528</strong></td></tr>
+</table>
+
+<p><em>Original budget: $1,230 - $1,500. Project at $1,468 (slightly over but justified: metal-gear servos eliminate failure risk in critical 50-100 hour window). 2 spare servos included for insurance. Fully expanded is ~$1,510.</em></p>
+
+<hr>
+<p style="font-size: 11px; color: #666;">BOM V11 (updated from V10) | Generated April 2026 | CSM V3 Project | Architecture: Legare-compatible 4.5"/72-slot motorized 6-feeder | Servo strategy: 8× MG90S metal-gear (reliability over cost)</p>
+
+</body>
+</html>

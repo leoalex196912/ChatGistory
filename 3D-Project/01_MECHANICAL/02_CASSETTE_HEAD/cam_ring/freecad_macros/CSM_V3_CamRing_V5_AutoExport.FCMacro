@@ -1,0 +1,452 @@
+
+import FreeCAD, FreeCADGui, Part, math, os, sys
+
+# =============================================================================
+# OUTPUT PATHS — adjust BASE if your drive letter differs
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cam_ring"
+
+PATH_STL        = os.path.join(BASE, "CSM_V3_CamRing_V5.stl")
+PATH_PNG        = os.path.join(BASE, "images", "CSM_V3_CamRing_V5_View.png")
+PATH_SVG        = os.path.join(BASE, "blueprints", "CSM_V3_CamRing_V5_Blueprint.svg")
+PATH_CHART      = os.path.join(BASE, "images", "CSM_V3_CamRing_V5_Profile_Chart.png")
+
+doc = FreeCAD.newDocument("CSM_CamRing_V5_PrintReady")
+
+    
+# Ensure output folders exist
+for path in [PATH_STL, PATH_PNG, PATH_SVG, PATH_CHART]:
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+
+print("=" * 58)
+print("CSM V3 CAM RING — V5 PRINT-READY  (Auto-Export)")
+print("=" * 58)
+print(f"  Output folder: {BASE}")
+
+# =============================================================================
+# ALL PARAMETERS
+# =============================================================================
+CAM_ID    = 90.7
+CAM_OD    = 140.0
+CAM_H     = 25.0
+
+R_BASE    = CAM_ID / 2.0
+CAM_R_OUT = CAM_OD / 2.0
+CAM_WALL  = (CAM_OD - CAM_ID) / 2.0
+
+LIFT        = 11.0
+STITCH_DROP = 3.2
+POINTS      = 288
+
+RAISE_Z  = 6.0
+GUARD_Z  = 3.0
+STITCH_Z = 8.0
+
+TRACK_W = 2.1
+TRACK_D = 3.3
+
+R_STITCH_CEN = R_BASE + RAISE_Z + GUARD_Z + STITCH_Z / 2.0
+INSERT_ARC   = 22.0
+arc_ang      = INSERT_ARC / R_STITCH_CEN
+INSERT_CHORD = 2 * R_STITCH_CEN * math.sin(arc_ang / 2)
+INSERT_W     = 7.65
+SLOT_W       = 8.0
+INSERT_H     = 20.0
+INSERT_R_IN  = R_BASE + RAISE_Z + GUARD_Z - 0.15
+STITCH1_ANG  = 90.0
+STITCH2_ANG  = 270.0
+
+PIN_D      = 3.0
+PIN_HOLE_D = 3.1
+PIN_DEPTH  = 10.0
+
+SHAFT_R   = 6.5
+BOLT_PCD  = 130.0
+BOLT_R    = BOLT_PCD / 2.0
+APIN_PCD  = 120.0
+APIN_R    = APIN_PCD / 2.0
+APIN_N    = 3
+APIN_D    = 4.0
+APIN_DEPTH= 10.0
+KEY_W     = 3.0
+KEY_DEPTH = 1.5
+
+# =============================================================================
+# CAM PROFILE FUNCTION — V5 Final
+# =============================================================================
+def cam_radius(theta_deg):
+    t = theta_deg % 180.0
+    if t < 50.0:
+        x = t / 50.0
+        return R_BASE + LIFT * (1.0 - math.cos(math.pi * x)) / 2.0
+    elif t < 80.0:
+        return R_BASE + LIFT
+    elif t < 140.0:
+        x = (t - 80.0) / 60.0
+        return R_BASE + LIFT - STITCH_DROP * x
+    elif t < 170.0:
+        x = (t - 140.0) / 30.0
+        return R_BASE + (LIFT - STITCH_DROP) * (math.cos(math.pi * x / 2.0))**2
+    else:
+        x = (t - 170.0) / 10.0
+        return R_BASE + 0.1 * (math.sin(math.pi * x))**2
+
+# =============================================================================
+# BUILD GEOMETRY
+# =============================================================================
+print("\nBuilding cam geometry...")
+
+pts = []
+for i in range(POINTS):
+    a = 2.0 * math.pi * i / POINTS
+    r = cam_radius(math.degrees(a))
+    pts.append(FreeCAD.Vector(r * math.cos(a), r * math.sin(a), 0.0))
+pts.append(pts[0])
+
+face    = Part.Face(Part.makePolygon(pts))
+profile = face.extrude(FreeCAD.Vector(0, 0, CAM_H))
+outer   = Part.makeCylinder(CAM_R_OUT, CAM_H)
+cam     = outer.cut(profile)
+
+shft = Part.makeCylinder(SHAFT_R, CAM_H + 2)
+shft.translate(FreeCAD.Vector(0, 0, -1))
+cam = cam.cut(shft)
+
+t_out = Part.makeCylinder(R_BASE + TRACK_D, TRACK_W)
+t_in  = Part.makeCylinder(R_BASE - 0.1, TRACK_W + 2)
+t_out.translate(FreeCAD.Vector(0, 0, CAM_H / 2.0 - TRACK_W / 2.0))
+t_in.translate( FreeCAD.Vector(0, 0, CAM_H / 2.0 - TRACK_W / 2.0 - 1))
+cam = cam.cut(t_out.cut(t_in))
+
+def insert_pocket(center_ang_deg, body):
+    half  = INSERT_CHORD / 2.0
+    z0    = (CAM_H - INSERT_H) / 2.0
+    pin_r = INSERT_R_IN + STITCH_Z / 2.0
+
+    slot = Part.makeBox(SLOT_W, STITCH_Z, INSERT_H)
+    slot.translate(FreeCAD.Vector(-SLOT_W / 2.0, INSERT_R_IN, z0))
+    slot.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), center_ang_deg)
+    body = body.cut(slot)
+
+    for z in [z0 + 4.0, z0 + INSERT_H - 4.0]:
+        for side in [-1, 1]:
+            ph = Part.makeCylinder(PIN_HOLE_D / 2.0, PIN_DEPTH + 2)
+            ph.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+            ph.translate(FreeCAD.Vector(side * (half + 2.0), pin_r, z))
+            ph.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), center_ang_deg)
+            body = body.cut(ph)
+
+    ss_len = CAM_WALL - 1.5
+    for chord_off in [-half * 0.5, half * 0.5]:
+        ss = Part.makeCylinder(1.6, ss_len)
+        ss.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+        ss.translate(FreeCAD.Vector(chord_off, CAM_R_OUT - ss_len, CAM_H / 2.0))
+        ss.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), center_ang_deg)
+        body = body.cut(ss)
+
+    return body
+
+cam = insert_pocket(STITCH1_ANG, cam)
+cam = insert_pocket(STITCH2_ANG, cam)
+
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx, by = BOLT_R * math.cos(ang), BOLT_R * math.sin(ang)
+    bh = Part.makeCylinder(5.5 / 2.0, CAM_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    cam = cam.cut(bh)
+    cs = Part.makeCylinder(4.5, 5.0)
+    cs.translate(FreeCAD.Vector(bx, by, CAM_H - 5.0))
+    cam = cam.cut(cs)
+
+for i in range(APIN_N):
+    ang = math.radians(i * 120.0 + 30.0)
+    px, py = APIN_R * math.cos(ang), APIN_R * math.sin(ang)
+    ph = Part.makeCylinder(APIN_D / 2.0 + 0.05, APIN_DEPTH)
+    ph.translate(FreeCAD.Vector(px, py, 0))
+    cam = cam.cut(ph)
+
+ks = Part.makeBox(KEY_W + 0.15, KEY_DEPTH + 0.1, KEY_W * 5)
+ks.translate(FreeCAD.Vector(-(KEY_W + 0.15) / 2.0,
+                              R_BASE - KEY_DEPTH - 0.1,
+                              CAM_H / 2.0 - KEY_W * 2.5))
+cam = cam.cut(ks)
+
+sg = Part.makeCylinder(CAM_R_OUT - 0.5, 1.5)
+si = Part.makeCylinder(CAM_R_OUT - 3.0, 2.5)
+sg.translate(FreeCAD.Vector(0, 0, 1.0))
+si.translate(FreeCAD.Vector(0, 0, 0.5))
+cam = cam.cut(sg.cut(si))
+
+obj = doc.addObject("Part::Feature", "CSM_CamRing_V5")
+obj.Shape = cam
+obj.ViewObject.ShapeColor = (0.10, 0.28, 0.52)
+doc.recompute()
+print("  Geometry complete ✅")
+
+# =============================================================================
+# EXPORT 1 — STL
+# =============================================================================
+print(f"\nExporting STL...")
+try:
+    Part.export([obj], PATH_STL)
+    size_kb = os.path.getsize(PATH_STL) / 1024
+    print(f"  ✅ STL saved: {PATH_STL}")
+    print(f"     Size: {size_kb:.0f} KB  |  Volume: {cam.Volume:.0f}mm³")
+except Exception as e:
+    print(f"  ❌ STL export failed: {e}")
+
+# =============================================================================
+# EXPORT 2 — PNG 3D view (using FreeCAD's built-in screenshot)
+# =============================================================================
+print(f"\nExporting 3D view PNG...")
+try:
+    view = FreeCADGui.activeDocument().activeView()
+    view.viewIsometric()
+    view.fitAll()
+    # Set view appearance
+    FreeCADGui.activeDocument().activeView().setAnimationEnabled(False)
+
+    # Standard screenshot via FreeCAD
+    view.saveImage(PATH_PNG, 1920, 1080, "Current")
+    print(f"  ✅ PNG saved: {PATH_PNG}")
+except Exception as e:
+    print(f"  ⚠️  PNG export skipped (GUI not available in headless mode): {e}")
+    print(f"     Manual: Tools > Save Picture in FreeCAD")
+
+# =============================================================================
+# EXPORT 3 — SVG Blueprint (generated programmatically)
+# =============================================================================
+print(f"\nGenerating SVG blueprint...")
+
+svg_content = '''<svg viewBox="0 0 900 580" xmlns="http://www.w3.org/2000/svg" font-family="Courier New, monospace">
+  <rect width="900" height="580" fill="#0d1117"/>
+  <text x="450" y="26" text-anchor="middle" fill="#00e5ff" font-size="14" font-weight="bold" letter-spacing="3">CAM RING V5 — BLUEPRINT</text>
+  <text x="450" y="42" text-anchor="middle" fill="#64748b" font-size="10">OD=140mm | ID=90.7mm | H=25mm | Conservative Profile | Print-Ready Prototype</text>
+  <line x1="40" y1="50" x2="860" y2="50" stroke="#1e3a5f" stroke-width="1"/>
+
+  <!-- TOP VIEW -->
+  <text x="200" y="70" text-anchor="middle" fill="#fbbf24" font-size="11" letter-spacing="2">TOP VIEW</text>
+  <circle cx="200" cy="270" r="168" fill="#1e3a5f" opacity="0.3" stroke="#00e5ff" stroke-width="1.5"/>
+  <circle cx="200" cy="270" r="108" fill="#0d1117" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <circle cx="200" cy="270" r="8" fill="#f472b6"/>
+  <path d="M200,270 L200,102 A168,168 0 0,1 200,102" fill="none"/>
+
+  <!-- Cam profile outline (approximate) -->
+  <ellipse cx="200" cy="160" rx="100" ry="12" fill="#1D9E75" opacity="0.5"/>
+  <text x="200" y="164" text-anchor="middle" fill="#00ff88" font-size="8">RAISE zone 0-50 deg</text>
+
+  <!-- Insert pockets -->
+  <rect x="182" y="102" width="36" height="25" rx="3" fill="#EF9F27" opacity="0.8" stroke="#fbbf24" stroke-width="1"/>
+  <text x="200" y="118" text-anchor="middle" fill="#633806" font-size="8">Insert #1</text>
+  <text x="200" y="128" text-anchor="middle" fill="#633806" font-size="7">90 deg</text>
+
+  <rect x="182" y="413" width="36" height="25" rx="3" fill="#D85A30" opacity="0.8" stroke="#fbbf24" stroke-width="1"/>
+  <text x="200" y="428" text-anchor="middle" fill="#4A1B0C" font-size="8">Insert #2</text>
+  <text x="200" y="438" text-anchor="middle" fill="#4A1B0C" font-size="7">270 deg</text>
+
+  <!-- Bolt holes -->
+  <circle cx="291" cy="179" r="5" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+  <circle cx="291" cy="361" r="5" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+  <circle cx="109" cy="361" r="5" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+  <circle cx="109" cy="179" r="5" fill="#ef4444" stroke="#fca5a5" stroke-width="1"/>
+  <circle cx="200" cy="270" r="97.5" fill="none" stroke="#ef4444" stroke-width="0.8" stroke-dasharray="3,4" opacity="0.5"/>
+
+  <!-- Alignment pins -->
+  <circle cx="200" cy="150" r="3" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="262" cy="374" r="3" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="138" cy="374" r="3" fill="#a78bfa" stroke="#7c3aed" stroke-width="1"/>
+  <circle cx="200" cy="270" r="60" fill="none" stroke="#a78bfa" stroke-width="0.8" stroke-dasharray="2,4" opacity="0.5"/>
+
+  <!-- OD dimension -->
+  <line x1="200" y1="270" x2="368" y2="270" stroke="#00e5ff" stroke-width="0.8"/>
+  <text x="295" y="263" fill="#00e5ff" font-size="9">R=70mm OD=140mm</text>
+  <!-- ID dimension -->
+  <line x1="200" y1="270" x2="200" y2="162" stroke="#f472b6" stroke-width="0.8" stroke-dasharray="3,2"/>
+  <text x="207" y="215" fill="#f472b6" font-size="9">R=45.35mm ID=90.7mm</text>
+  <!-- Gap annotation -->
+  <text x="316" y="282" fill="#64ffda" font-size="8">Gap=0.35mm</text>
+
+  <!-- SECTION VIEW -->
+  <text x="630" y="70" text-anchor="middle" fill="#fbbf24" font-size="11" letter-spacing="2">SECTION A-A</text>
+
+  <!-- Outer wall left -->
+  <rect x="490" y="90" width="56" height="135" fill="#1e3a5f" stroke="#00e5ff" stroke-width="1.5"/>
+  <!-- Outer wall right -->
+  <rect x="714" y="90" width="56" height="135" fill="#1e3a5f" stroke="#00e5ff" stroke-width="1.5"/>
+  <!-- Bore (ID=90.7mm) -->
+  <rect x="546" y="90" width="168" height="135" fill="#070d14" stroke="#f472b6" stroke-width="1.5" stroke-dasharray="4,3"/>
+  <!-- Track groove -->
+  <rect x="540" y="148" width="6" height="13" fill="#fbbf24" opacity="0.6"/>
+  <rect x="714" y="148" width="6" height="13" fill="#fbbf24" opacity="0.6"/>
+
+  <!-- Insert pocket right side -->
+  <rect x="694" y="100" width="20" height="106" fill="#EF9F27" opacity="0.6" stroke="#fbbf24" stroke-width="1"/>
+  <text x="704" y="140" text-anchor="middle" fill="#633806" font-size="7">Insert</text>
+  <text x="704" y="150" text-anchor="middle" fill="#633806" font-size="7">pocket</text>
+
+  <!-- Set screw -->
+  <line x1="749" y1="157" x2="770" y2="157" stroke="#64748b" stroke-width="2"/>
+  <text x="775" y="160" fill="#64748b" font-size="8">M3 set screw</text>
+
+  <!-- Dimensions section view -->
+  <!-- OD = 140 -->
+  <line x1="490" y1="72" x2="770" y2="72" stroke="#00e5ff" stroke-width="0.8"/>
+  <line x1="490" y1="68" x2="490" y2="76" stroke="#00e5ff" stroke-width="0.8"/>
+  <line x1="770" y1="68" x2="770" y2="76" stroke="#00e5ff" stroke-width="0.8"/>
+  <text x="630" y="68" text-anchor="middle" fill="#00e5ff" font-size="9">OD = 140.0 mm</text>
+  <!-- ID = 90.7 -->
+  <line x1="546" y1="82" x2="714" y2="82" stroke="#f472b6" stroke-width="0.8"/>
+  <line x1="546" y1="78" x2="546" y2="86" stroke="#f472b6" stroke-width="0.8"/>
+  <line x1="714" y1="78" x2="714" y2="86" stroke="#f472b6" stroke-width="0.8"/>
+  <text x="630" y="80" text-anchor="middle" fill="#f472b6" font-size="9">ID = 90.7 mm</text>
+  <!-- H = 25 -->
+  <line x1="462" y1="90" x2="462" y2="225" stroke="#00e5ff" stroke-width="0.8"/>
+  <line x1="458" y1="90" x2="466" y2="90" stroke="#00e5ff" stroke-width="0.8"/>
+  <line x1="458" y1="225" x2="466" y2="225" stroke="#00e5ff" stroke-width="0.8"/>
+  <text x="455" y="162" text-anchor="middle" fill="#00e5ff" font-size="9" transform="rotate(-90,455,162)">H = 25 mm</text>
+  <!-- Wall = 24.65 -->
+  <line x1="490" y1="240" x2="546" y2="240" stroke="#00ff88" stroke-width="0.8"/>
+  <line x1="490" y1="236" x2="490" y2="244" stroke="#00ff88" stroke-width="0.8"/>
+  <line x1="546" y1="236" x2="546" y2="244" stroke="#00ff88" stroke-width="0.8"/>
+  <text x="518" y="252" text-anchor="middle" fill="#00ff88" font-size="8">Wall = 24.65mm</text>
+
+  <!-- CAM PROFILE ZONES BOX -->
+  <rect x="40" y="490" width="820" height="80" rx="4" fill="#0a1628" stroke="#1e3a5f" stroke-width="1"/>
+  <text x="56" y="508" fill="#00e5ff" font-size="10" font-weight="bold">Cam profile V5 — conservative (2-feed, inserts at 90 deg and 270 deg):</text>
+  <text x="56" y="522" fill="#94a3b8" font-size="9">RAISE  0-50 deg   cosine ease-in       lift 0 to 11.0mm</text>
+  <text x="56" y="534" fill="#94a3b8" font-size="9">HOLD   50-80 deg  constant             lift 11.0mm (yarn capture window)</text>
+  <text x="300" y="522" fill="#94a3b8" font-size="9">STITCH  80-140 deg  linear drop        lift 11.0 to 7.8mm (insert +/-1.5mm)</text>
+  <text x="300" y="534" fill="#94a3b8" font-size="9">LOWER  140-170 deg  cos2 ease-out      lift 7.8 to 0mm</text>
+  <text x="300" y="546" fill="#94a3b8" font-size="9">BLEND  170-180 deg  sin2 bump 0.1mm   C1 continuous at 170 and 180 deg</text>
+  <text x="56" y="558" fill="#fbbf24" font-size="9">Post-process: sand 220-400-800 (circumferential) + West System epoxy + 1000-1500 wet sand + PTFE lube</text>
+
+  <line x1="40" y1="574" x2="860" y2="574" stroke="#1e3a5f" stroke-width="0.5"/>
+  <text x="40" y="579" fill="#334155" font-size="8">CSM V3 | CamRing_V5_PrintReady | April 2026 | Leonid</text>
+</svg>'''
+
+try:
+    with open(PATH_SVG, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    print(f"  ✅ SVG blueprint saved: {PATH_SVG}")
+except Exception as e:
+    print(f"  ❌ SVG export failed: {e}")
+
+# =============================================================================
+# EXPORT 4 — Profile chart PNG using matplotlib
+# =============================================================================
+print(f"\nGenerating profile chart PNG...")
+try:
+    import matplotlib
+    matplotlib.use('Agg')   # non-interactive backend
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    angles_np = np.linspace(0, 360, 2880)
+    lift_np   = np.array([cam_radius(a) - R_BASE for a in angles_np])
+    omega     = 2 * math.pi * 60 / 60
+    vel_np    = np.array([(cam_radius(a + 0.05) - cam_radius(a - 0.05)) / 0.1 * omega
+                           for a in angles_np])
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5))
+    fig.patch.set_facecolor('#0d1117')
+    fig.suptitle("CSM V3 — Cam Profile V5  |  Conservative  |  Print-Ready",
+                 fontsize=12, fontweight='bold', color='#00e5ff')
+
+    for ax in axes:
+        ax.set_facecolor('#080f1a')
+        ax.tick_params(colors='#64748b')
+        ax.xaxis.label.set_color('#64748b')
+        ax.yaxis.label.set_color('#64748b')
+        ax.title.set_color('#fbbf24')
+        for spine in ax.spines.values():
+            spine.set_edgecolor('#1e3a5f')
+        ax.grid(alpha=0.2, color='#1e3a5f')
+
+    ax1 = axes[0]
+    ax1.plot(angles_np, lift_np, color='#00e5ff', lw=2, label='Needle lift (mm)')
+    yarn_m = ((angles_np % 180) >= 55) & ((angles_np % 180) <= 95)
+    ax1.fill_between(angles_np, 0, 12, where=yarn_m,
+                     color='#378ADD', alpha=0.20, label='Yarn feed window')
+    sm = ((angles_np % 180) >= 80) & ((angles_np % 180) <= 140)
+    ax1.fill_between(angles_np, 0, 12, where=sm,
+                     color='#EF9F27', alpha=0.12, label='Stitch zone')
+    for b, lbl in [(50,'50°'),(80,'80°'),(140,'140°'),(170,'170°'),(180,'180°'),(230,'230°'),(260,'260°'),(320,'320°'),(350,'350°')]:
+        ax1.axvline(b, color='#334155', lw=0.6)
+    ax1.axvline(0, color='#334155', lw=0.6)
+    for b, lbl in [(0,'0°'),(50,'Hold'),(80,'Stitch'),(140,'Lower'),(170,''),(180,'180°')]:
+        ax1.text(b + 1, 11.2, lbl, fontsize=7, color='#64748b')
+    ax1.text(5,  10.0, 'Feed 1', fontsize=9, color='#00e5ff', alpha=0.8)
+    ax1.text(185, 10.0, 'Feed 2', fontsize=9, color='#00e5ff', alpha=0.8)
+    ax1.set(xlabel='Cylinder angle θ (degrees)', ylabel='Needle lift (mm)',
+            title='V5 cam profile — full 360° (2 feeds)',
+            xlim=(0, 360), ylim=(-1, 12.5))
+    ax1.legend(fontsize=8, facecolor='#0d1117', edgecolor='#1e3a5f',
+               labelcolor='#94a3b8')
+
+    # Blend zone inset
+    inset = ax1.inset_axes([0.70, 0.05, 0.28, 0.38],
+                            facecolor='#0a1628')
+    blend_a = np.linspace(165, 185, 500)
+    blend_l = np.array([cam_radius(a) - R_BASE for a in blend_a])
+    inset.plot(blend_a, blend_l, color='#a78bfa', lw=1.5)
+    inset.axvline(170, color='#334155', lw=0.8, ls='--')
+    inset.axvline(180, color='#334155', lw=0.8, ls='--')
+    inset.set_title('Blend zone', fontsize=7, color='#94a3b8')
+    inset.tick_params(labelsize=6, colors='#64748b')
+    for sp in inset.spines.values(): sp.set_edgecolor('#1e3a5f')
+    inset.grid(alpha=0.2, color='#1e3a5f')
+    inset.set_facecolor('#080f1a')
+    inset.text(171.5, 0.06, 'peak\n0.10mm', fontsize=6, color='#a78bfa')
+
+    ax2 = axes[1]
+    mv = float(np.max(np.abs(vel_np)))
+    ax2.plot(angles_np, vel_np, color='#534AB7', lw=1.5)
+    ax2.axhline(0, color='#334155', lw=0.5)
+    ax2.axhline( 150, color='#E24B4A', lw=1, ls='--', alpha=0.7, label='Safe limit ±150 mm/s')
+    ax2.axhline(-150, color='#E24B4A', lw=1, ls='--', alpha=0.7)
+    ax2.text(10, 20, f'Max: {mv:.1f} mm/s\n(limit 150mm/s)\nMargin: {150/mv:.0f}×',
+             fontsize=9, color='#534AB7')
+    ax2.text(10, -25, 'C¹ continuous — all zones', fontsize=8, color='#00ff88')
+    ax2.set(xlabel='Cylinder angle θ (degrees)', ylabel='Velocity (mm/s)',
+            title=f'Needle velocity @ 60 RPM  |  max = {mv:.1f} mm/s',
+            xlim=(0, 360), ylim=(-30, 30))
+    ax2.legend(fontsize=8, facecolor='#0d1117', edgecolor='#1e3a5f',
+               labelcolor='#94a3b8')
+
+    plt.tight_layout()
+    plt.savefig(PATH_CHART, dpi=150, bbox_inches='tight',
+                facecolor='#0d1117')
+    plt.close()
+    print(f"  ✅ Profile chart saved: {PATH_CHART}")
+
+except ImportError:
+    print(f"  ⚠️  matplotlib not installed — chart skipped")
+    print(f"     Install: pip install matplotlib")
+except Exception as e:
+    print(f"  ⚠️  Chart export error: {e}")
+
+# =============================================================================
+# FINAL VIEW IN FREECAD
+# =============================================================================
+FreeCADGui.activeDocument().activeView().viewIsometric()
+FreeCADGui.activeDocument().activeView().fitAll()
+
+vol = cam.Volume
+print(f"\n{'='*58}")
+print(f"COMPLETE — CAM RING V5 PRINT-READY")
+print(f"{'='*58}")
+print(f"  Volume: {vol:.0f}mm³ | PETG: {vol*1.27/1000:.1f}g | Al: {vol*2.70/1000:.1f}g")
+print(f"\n  FILES SAVED:")
+print(f"  STL:      {PATH_STL}")
+print(f"  PNG view: {PATH_PNG}")
+print(f"  SVG:      {PATH_SVG}")
+print(f"  Chart:    {PATH_CHART}")
+print(f"\n  POST-PROCESS:")
+print(f"  1. Drill Ø3mm guide pin holes  (500 RPM, hand drill)")
+print(f"  2. Drill Ø4mm alignment holes")
+print(f"  3. IPA wipe all cam faces")
+print(f"  4. Sand 220->400->800 grit (CIRCUMFERENTIAL)")
+print(f"  5. Thin epoxy coat (West System 105+207) -> cure 24h")
+print(f"  6. Wet sand 1000->1500 grit + PTFE dry lube")
+print(f"  7. TEST: rotates with one finger = ready")

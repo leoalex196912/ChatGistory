@@ -1,0 +1,161 @@
+<svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="800" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">NEMA 23 MOTOR MOUNT V1.1 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">L-bracket, 6mm ribs, 60mm Y rail spacing (420x320mm base).</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- FRONT VIEW (motor face) - LEFT -->
+  <text x="240" y="82" text-anchor="middle" fill="#3d5a99" font-size="13" font-weight="bold">FRONT VIEW (motor face)</text>
+  <text x="240" y="98" text-anchor="middle" fill="#666" font-size="10">100mm x 100mm plate with NEMA 23 pattern</text>
+
+  <!-- Plate outline 100x100 scaled to 200x200 -->
+  <rect x="140" y="120" width="200" height="200" fill="#dde6f0" stroke="#3d5a99" stroke-width="1.5"/>
+
+  <!-- Pilot hole D38 scaled to D76 -->
+  <circle cx="240" cy="220" r="38" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="240" y="218" text-anchor="middle" fill="#333" font-size="9">pilot</text>
+  <text x="240" y="230" text-anchor="middle" fill="#333" font-size="9">D38</text>
+
+  <!-- 4x M5 holes at PCD 47, scaled to radius 47 from center -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="273.2" cy="186.8" r="6"/>
+    <circle cx="273.2" cy="253.2" r="6"/>
+    <circle cx="206.8" cy="253.2" r="6"/>
+    <circle cx="206.8" cy="186.8" r="6"/>
+  </g>
+  <text x="290" y="184" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="290" y="196" fill="#791F1F" font-size="8">PCD 47</text>
+  <text x="290" y="208" fill="#791F1F" font-size="8">counterbore</text>
+  <text x="290" y="220" fill="#791F1F" font-size="8">D11.0 x 5.5</text>
+
+  <!-- Foot indication (below plate, viewed edge-on in front view) -->
+  <rect x="140" y="320" width="200" height="16" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="240" y="332" text-anchor="middle" fill="#9e6a18" font-size="9" font-weight="bold">FOOT (extends out toward viewer)</text>
+
+  <!-- Dimensions -->
+  <line x1="120" y1="120" x2="120" y2="320" stroke="#3d5a99" stroke-width="0.8"/>
+  <polygon points="120,122 117,128 123,128" fill="#3d5a99"/>
+  <polygon points="120,318 117,312 123,312" fill="#3d5a99"/>
+  <text x="100" y="225" fill="#3d5a99" font-size="11" font-weight="bold" transform="rotate(-90 100 225)">100mm</text>
+
+  <line x1="140" y1="350" x2="340" y2="350" stroke="#3d5a99" stroke-width="0.8"/>
+  <polygon points="142,350 148,347 148,353" fill="#3d5a99"/>
+  <polygon points="338,350 332,347 332,353" fill="#3d5a99"/>
+  <text x="240" y="364" text-anchor="middle" fill="#3d5a99" font-size="11" font-weight="bold">100mm wide</text>
+
+  <!-- TOP VIEW (foot pattern) - CENTER -->
+  <text x="700" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">TOP VIEW (foot)</text>
+  <text x="700" y="98" text-anchor="middle" fill="#666" font-size="10">100mm x 50mm with 4x slotted holes</text>
+
+  <!-- Foot rectangle 100x50, scaled 200x100 -->
+  <rect x="600" y="150" width="200" height="100" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+
+  <!-- L-corner indicator -->
+  <line x1="600" y1="150" x2="600" y2="250" stroke="#3d5a99" stroke-width="3"/>
+  <text x="588" y="200" fill="#3d5a99" font-size="9" font-weight="bold" transform="rotate(-90 588 200)">L-corner</text>
+
+  <!-- 4x slotted holes (slot length 30mm scaled to 60px, slot width 5.5mm scaled to 11px) -->
+  <!-- Slot positions: X = 25 and 25, in scaled = 50 from L-corner; Y = +/- 30 from center, in scaled = 60 px -->
+  <!-- Centers: (650, 170), (650, 230), (750, 170), (750, 230) -->
+  <g fill="none" stroke="#791F1F" stroke-width="1">
+    <rect x="620" y="164" width="60" height="12" rx="6"/>
+    <rect x="620" y="224" width="60" height="12" rx="6"/>
+    <rect x="720" y="164" width="60" height="12" rx="6"/>
+    <rect x="720" y="224" width="60" height="12" rx="6"/>
+  </g>
+  <g fill="#E24B4A" opacity="0.4" stroke="none">
+    <rect x="620" y="164" width="60" height="12" rx="6"/>
+    <rect x="620" y="224" width="60" height="12" rx="6"/>
+    <rect x="720" y="164" width="60" height="12" rx="6"/>
+    <rect x="720" y="224" width="60" height="12" rx="6"/>
+  </g>
+
+  <text x="650" y="148" text-anchor="middle" fill="#791F1F" font-size="8">slot 30mm long</text>
+  <text x="700" y="270" text-anchor="middle" fill="#9e6a18" font-size="9" font-weight="bold">Slots run along belt tension axis</text>
+  <text x="700" y="282" text-anchor="middle" fill="#666" font-size="8">(motor moves toward/away from cassette)</text>
+
+  <!-- Belt tension arrow -->
+  <line x1="595" y1="300" x2="805" y2="300" stroke="#5a8d3e" stroke-width="2"/>
+  <polygon points="600,300 610,295 610,305" fill="#5a8d3e"/>
+  <polygon points="800,300 790,295 790,305" fill="#5a8d3e"/>
+  <text x="700" y="315" text-anchor="middle" fill="#1f3a14" font-size="10" font-weight="bold">Belt tension travel: 30mm</text>
+
+  <!-- SIDE VIEW - RIGHT (showing L-bracket profile + ribs) -->
+  <text x="970" y="350" text-anchor="middle" fill="#3d5a99" font-size="13" font-weight="bold">SIDE VIEW (with ribs)</text>
+  <text x="970" y="366" text-anchor="middle" fill="#666" font-size="10">L-profile, 8mm thick</text>
+
+  <!-- Plate (vertical) -->
+  <rect x="900" y="380" width="16" height="200" fill="#dde6f0" stroke="#3d5a99" stroke-width="1.5"/>
+  <text x="892" y="480" fill="#3d5a99" font-size="9" font-weight="bold" transform="rotate(-90 892 480)">PLATE 8mm</text>
+
+  <!-- Foot (horizontal) -->
+  <rect x="900" y="580" width="100" height="16" fill="#f0e8dd" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="950" y="612" fill="#9e6a18" font-size="9" font-weight="bold">FOOT 8mm</text>
+
+  <!-- 3 reinforcement ribs (triangles) -->
+  <g fill="#c8d4e6" stroke="#3d5a99" stroke-width="1" opacity="0.7">
+    <polygon points="916,580 916,480 980,580"/>
+    <polygon points="916,580 916,480 980,580"/>
+    <polygon points="916,580 916,480 980,580"/>
+  </g>
+  <text x="965" y="540" fill="#3d5a99" font-size="8">3x ribs</text>
+  <text x="965" y="552" fill="#3d5a99" font-size="8">4mm thick</text>
+  <text x="965" y="564" fill="#3d5a99" font-size="8">50mm tall x</text>
+  <text x="965" y="574" fill="#3d5a99" font-size="8">40mm long</text>
+
+  <!-- Info box -->
+  <rect x="40" y="430" width="540" height="320" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="55" y="453" fill="#3d5a99" font-size="13" font-weight="bold">MOTOR MOUNT V1.1 SPECIFICATIONS</text>
+
+  <text x="55" y="475" fill="#9e6a18" font-size="11" font-weight="bold">MOTOR FACE PLATE:</text>
+  <text x="55" y="490" fill="#333" font-size="10">- 100x100x8mm thick PETG</text>
+  <text x="55" y="503" fill="#333" font-size="10">- D38mm pilot hole (clears 36mm gearbox boss)</text>
+  <text x="55" y="516" fill="#333" font-size="10">- 4x M5 round holes at PCD 47 (NEMA 23 pattern)</text>
+  <text x="55" y="529" fill="#333" font-size="10">- D11.0x5.5mm counterbore for M5 SHCS + washer</text>
+
+  <text x="55" y="551" fill="#9e6a18" font-size="11" font-weight="bold">FOOT (frame interface):</text>
+  <text x="55" y="566" fill="#333" font-size="10">- 100x50x8mm thick PETG</text>
+  <text x="55" y="579" fill="#333" font-size="10">- 4x slotted holes 30mm long for belt tension</text>
+  <text x="55" y="592" fill="#333" font-size="10">- M5 SHCS counterbore D11.0x5.5mm + washer</text>
+  <text x="55" y="605" fill="#333" font-size="10">- T-nut sliding in 2020 extrusion (60mm Y rail spacing)</text>
+
+  <text x="55" y="627" fill="#9e6a18" font-size="11" font-weight="bold">L-BRACKET REINFORCEMENT:</text>
+  <text x="55" y="642" fill="#333" font-size="10">- 3x triangular ribs, 6mm thick each (V1.1: was 4mm)</text>
+  <text x="55" y="655" fill="#333" font-size="10">- Span 50mm up plate, 40mm along foot</text>
+
+  <text x="55" y="677" fill="#9e6a18" font-size="11" font-weight="bold">HARDWARE (ALL ALREADY OWNED):</text>
+  <text x="55" y="692" fill="#333" font-size="10">- 4x M5 SHCS ~16mm (motor mount)</text>
+  <text x="55" y="705" fill="#333" font-size="10">- 4x M5 SHCS ~12mm + 4x M5 T-nuts (foot)</text>
+  <text x="55" y="718" fill="#333" font-size="10">- All from B0FFSNFK3Y + B0GG4N5GR4 inventory</text>
+
+  <text x="55" y="740" fill="#666" font-size="9" font-style="italic">Belt center distance: 97.3mm nominal | Tension range: 82-112mm</text>
+
+  <!-- Print info -->
+  <rect x="600" y="430" width="460" height="320" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="615" y="453" fill="#3d5a99" font-size="13" font-weight="bold">PRINT + ASSEMBLY</text>
+
+  <text x="615" y="475" fill="#9e6a18" font-size="11" font-weight="bold">PRINT SETTINGS:</text>
+  <text x="615" y="490" fill="#333" font-size="10">- PETG, layer 0.2mm, 5 perimeters</text>
+  <text x="615" y="503" fill="#333" font-size="10">- 50% Gyroid infill, 6 top/bottom solid layers</text>
+  <text x="615" y="516" fill="#333" font-size="10">- Orientation: foot face DOWN on bed</text>
+  <text x="615" y="529" fill="#333" font-size="10">- Supports: minimal, only under ribs if needed</text>
+  <text x="615" y="542" fill="#333" font-size="10">- Print time: ~3 hours</text>
+
+  <text x="615" y="564" fill="#9e6a18" font-size="11" font-weight="bold">ASSEMBLY SEQUENCE:</text>
+  <text x="615" y="579" fill="#333" font-size="10">1. Print bracket, post-process slots clean</text>
+  <text x="615" y="592" fill="#333" font-size="10">2. Slide 4x M5 T-nuts into 2020 extrusion channel</text>
+  <text x="615" y="605" fill="#333" font-size="10">3. Position bracket on extrusion, loose tighten</text>
+  <text x="615" y="618" fill="#333" font-size="10">4. Mount NEMA 23 + gearbox to plate (4x M5)</text>
+  <text x="615" y="631" fill="#333" font-size="10">5. Install 20T pulley on output shaft</text>
+  <text x="615" y="644" fill="#333" font-size="10">6. Wrap belt around both pulleys</text>
+  <text x="615" y="657" fill="#333" font-size="10">7. Slide bracket along extrusion to tension belt</text>
+  <text x="615" y="670" fill="#333" font-size="10">8. Tighten foot bolts when belt tension correct</text>
+
+  <text x="615" y="694" fill="#9e6a18" font-size="11" font-weight="bold">BELT TENSION CHECK:</text>
+  <text x="615" y="709" fill="#333" font-size="10">Belt should deflect ~5mm at midpoint with 1kg force</text>
+  <text x="615" y="722" fill="#333" font-size="10">If belt squeals: too loose - move bracket out</text>
+  <text x="615" y="735" fill="#333" font-size="10">If motor strains: too tight - move bracket in</text>
+
+  <line x1="40" y1="780" x2="1060" y2="780" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>

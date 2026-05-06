@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700">
+  <style>
+    .title { font: bold 16px sans-serif; fill: #1e3a5f; }
+    .label { font: 11px sans-serif; fill: #333; }
+    .dim   { font: 12px sans-serif; fill: #b91c1c; }
+    .note  { font: 10px sans-serif; fill: #666; font-style: italic; }
+  </style>
+
+  <text x="450" y="30" text-anchor="middle" class="title">CSM V3 Cam Ring V6.1 - Cam Profile (UNROLLED)</text>
+
+  <!-- Unrolled cam profile (key visualization) -->
+  <g transform="translate(50, 80)">
+    <rect x="0" y="0" width="800" height="200" fill="#fafaf8" stroke="#888"/>
+    
+    <!-- Y axis: Z height labels -->
+    <text x="-30" y="40" class="label">Z=15</text>
+    <text x="-30" y="160" class="label">Z=5</text>
+    
+    <!-- X axis: angle labels -->
+    <text x="0" y="220" class="label">0°</text>
+    <text x="600" y="220" class="label">270°</text>
+    <text x="650" y="220" class="label">292.5°</text>
+    <text x="700" y="220" class="label">297.5°</text>
+    <text x="750" y="220" class="label">315°</text>
+    <text x="800" y="220" class="label">360°</text>
+    
+    <!-- Cam profile: rest at Y=160 (Z=5), peak at Y=40 (Z=15) -->
+    <!-- Scale: 800px = 360deg, 120px = 10mm lift -->
+    <polyline points="0,160 600,160 650,40 700,40 750,160 800,160"
+              fill="none" stroke="#b91c1c" stroke-width="3"/>
+    
+    <!-- Zone labels -->
+    <text x="300" y="180" text-anchor="middle" class="label">REST (270deg low)</text>
+    <text x="625" y="100" class="dim">RISE</text>
+    <text x="675" y="30" class="dim">PEAK</text>
+    <text x="725" y="100" class="dim">FALL</text>
+    <text x="780" y="180" text-anchor="middle" class="label">rest</text>
+    
+    <text x="400" y="-10" text-anchor="middle" class="dim">LIFT = 8.0mm</text>
+    
+    <!-- Highlight knit zone -->
+    <rect x="600" y="0" width="150" height="200" fill="#fff3cd" opacity="0.3"/>
+  </g>
+
+  <!-- Description -->
+  <g transform="translate(50, 350)">
+    <text x="0" y="0" class="title">V6.1 CORRECTION (vs V6 broken):</text>
+    <text x="0" y="25" class="label">V6 was WRONG: used radial depth variation (3mm to 9mm) to "lift" needles.</text>
+    <text x="0" y="42" class="label">Radial cuts don't lift needles - they just shift them inward/outward.</text>
+    <text x="0" y="59" class="label">V6.1 CORRECT: cam slot's BOTTOM EDGE varies in Z (vertical) by angle.</text>
+    <text x="0" y="76" class="label">Needle butt rides on this Z-varying edge, lifted physically as cylinder rotates.</text>
+  </g>
+  
+  <g transform="translate(50, 460)">
+    <text x="0" y="0" class="title">Test Slice Strategy:</text>
+    <text x="0" y="25" class="label">Print 65 deg test slice covering full knit zone (260-325 deg).</text>
+    <text x="0" y="42" class="label">Validate single needle motion before printing full ring.</text>
+    <text x="0" y="59" class="label">Print time: ~1 hour, ~30g PETG (vs 4-6 hours, 150g for full ring).</text>
+    <text x="0" y="76" class="label">If profile needs adjustment: change LIFT or angle parameters, regenerate.</text>
+  </g>
+  
+  <g transform="translate(50, 580)">
+    <text x="0" y="0" class="title">Test Protocol:</text>
+    <text x="0" y="22" class="label">1. Mount test slice over a section of cylinder (with needles installed)</text>
+    <text x="0" y="39" class="label">2. Slowly slide cylinder past slice - butt should lift smoothly</text>
+    <text x="0" y="56" class="label">3. Verify lift amount matches LIFT (10mm)</text>
+    <text x="0" y="73" class="label">4. Verify smooth transitions (no binding)</text>
+    <text x="0" y="90" class="label">5. If OK, print full ring</text>
+  </g>
+</svg>

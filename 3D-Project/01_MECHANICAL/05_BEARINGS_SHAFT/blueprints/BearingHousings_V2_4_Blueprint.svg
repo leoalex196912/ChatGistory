@@ -1,0 +1,144 @@
+<svg viewBox="0 0 1100 780" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="780" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">BEARING HOUSING BLOCKS V2.4 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">Deterministic preload via 29.40mm spacer tube. Block gap 11mm.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP BLOCK (left) -->
+  <text x="230" y="82" text-anchor="middle" fill="#184e9e" font-size="13" font-weight="bold">TOP BLOCK (60x60x20mm)</text>
+  <text x="230" y="98" text-anchor="middle" fill="#666" font-size="10">1x 6001-2RS + Loctite 603</text>
+
+  <text x="100" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="100" y="120" width="260" height="260" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <circle cx="230" cy="250" r="65.3" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="230" y="247" text-anchor="middle" fill="#333" font-size="9">Bearing pocket</text>
+  <text x="230" y="260" text-anchor="middle" fill="#333" font-size="9">D28.10 (slip 0.10)</text>
+  <circle cx="230" cy="250" r="28.6" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="230" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.3</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="300" cy="180" r="6"/>
+    <circle cx="300" cy="320" r="6"/>
+    <circle cx="160" cy="320" r="6"/>
+    <circle cx="160" cy="180" r="6"/>
+  </g>
+  <text x="320" y="178" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="320" y="190" fill="#791F1F" font-size="8">PCD 48</text>
+  <text x="320" y="202" fill="#791F1F" font-size="8">90 CSK 3.0</text>
+
+  <text x="100" y="410" fill="#666" font-size="9">SIDE SECTION</text>
+  <rect x="100" y="415" width="260" height="90" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <rect x="175" y="415" width="110" height="40" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="230" y="430" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="230" y="443" text-anchor="middle" fill="#333" font-size="8">8.8mm deep (recessed)</text>
+  <line x1="230" y1="415" x2="230" y2="505" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <rect x="175" y="455" width="110" height="10" fill="#fff0cc" stroke="#b8860b" stroke-width="0.8"/>
+  <text x="230" y="463" text-anchor="middle" fill="#92400e" font-size="8">Natural shoulder (bottom stop)</text>
+  <polygon points="125,505 125,495 138,505" fill="#e24b4a" opacity="0.6"/>
+  <polygon points="322,505 322,495 335,505" fill="#e24b4a" opacity="0.6"/>
+  <text x="130" y="520" fill="#791F1F" font-size="7">90 CSK 3.0mm</text>
+
+  <rect x="40" y="540" width="400" height="200" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="52" y="558" fill="#184e9e" font-size="11" font-weight="bold">TOP BLOCK V2.4 specs:</text>
+  <text x="52" y="576" fill="#333" font-size="10">- 1x 6001-2RS (28x12x8mm) slip 0.10 + Loctite 603</text>
+  <text x="52" y="592" fill="#333" font-size="10">- Bearing pocket: D28.10 x 8.8mm deep (recessed 0.3mm)</text>
+  <text x="52" y="608" fill="#333" font-size="10">- Shoulder at pocket bottom = axial stop (down)</text>
+  <text x="52" y="624" fill="#333" font-size="10">- Loctite 603 = rotation + upward retention</text>
+  <text x="52" y="640" fill="#333" font-size="10">- Shaft clearance: D12.3mm</text>
+  <text x="52" y="656" fill="#333" font-size="10">- 4x M5 PCD 48, 90deg CSK 3.0mm (head flush)</text>
+  <text x="52" y="672" fill="#333" font-size="10">- Outer chamfer 1mm (bounding-box filter)</text>
+  <text x="52" y="696" fill="#666" font-size="9" font-style="italic">Install: clean OD with IPA, apply Loctite 603 ring,</text>
+  <text x="52" y="710" fill="#666" font-size="9" font-style="italic">press bearing to shoulder. Cure 24h before loading.</text>
+  <text x="52" y="726" fill="#666" font-size="9" font-style="italic">Shear strength after cure: ~12000N holding force.</text>
+
+  <!-- BOTTOM BLOCK (right) -->
+  <text x="810" y="82" text-anchor="middle" fill="#9e4818" font-size="13" font-weight="bold">BOTTOM BLOCK (80x80x35mm)</text>
+  <text x="810" y="98" text-anchor="middle" fill="#666" font-size="10">1 radial + 1 thrust + spring preload</text>
+
+  <text x="680" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="680" y="120" width="260" height="260" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <circle cx="810" cy="250" r="56.2" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="810" y="247" text-anchor="middle" fill="#333" font-size="9">radial pocket</text>
+  <text x="810" y="260" text-anchor="middle" fill="#333" font-size="9">D28.10</text>
+  <circle cx="810" cy="250" r="28.6" fill="#fff8f2" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="810" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.3</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="893" cy="167" r="6"/>
+    <circle cx="893" cy="333" r="6"/>
+    <circle cx="727" cy="333" r="6"/>
+    <circle cx="727" cy="167" r="6"/>
+  </g>
+  <text x="905" y="165" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="905" y="177" fill="#791F1F" font-size="8">PCD 64</text>
+  <text x="905" y="189" fill="#791F1F" font-size="8">90 CSK 3.0</text>
+
+  <text x="470" y="410" fill="#666" font-size="9">SIDE SECTION (stack)</text>
+  <rect x="470" y="415" width="360" height="175" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+
+  <rect x="470" y="577" width="360" height="13" fill="#f5e1d8" stroke="none"/>
+  <text x="835" y="587" fill="#666" font-size="7">3mm floor</text>
+
+  <rect x="580" y="567" width="140" height="10" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="574" fill="#666" font-size="7">2x washers (2mm)</text>
+
+  <rect x="580" y="522" width="140" height="45" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="650" y="547" text-anchor="middle" fill="#333" font-size="9">51101 thrust 9mm</text>
+  <text x="835" y="550" fill="#666" font-size="7">thrust 9mm</text>
+
+  <rect x="580" y="512" width="140" height="10" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="519" fill="#666" font-size="7">2x washers (2mm)</text>
+
+  <rect x="580" y="470" width="140" height="42" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="650" y="489" text-anchor="middle" fill="#333" font-size="9">6001-2RS</text>
+  <text x="650" y="502" text-anchor="middle" fill="#333" font-size="8">slip + Loctite</text>
+  <text x="835" y="495" fill="#666" font-size="7">radial 8.5mm</text>
+
+  <rect x="470" y="415" width="360" height="55" fill="#f5e1d8" stroke="none"/>
+  <text x="650" y="445" text-anchor="middle" fill="#666" font-size="8">solid PETG top (~10.5mm)</text>
+
+  <line x1="650" y1="415" x2="650" y2="590" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <line x1="850" y1="415" x2="850" y2="590" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="850,417 847,423 853,423" fill="#9e4818"/>
+  <polygon points="850,588 847,582 853,582" fill="#9e4818"/>
+  <text x="858" y="505" fill="#9e4818" font-size="10" font-weight="bold">35mm</text>
+
+  <rect x="460" y="615" width="600" height="140" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="472" y="633" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM BLOCK V2.4 specs:</text>
+  <text x="472" y="651" fill="#333" font-size="10">- 1x 6001-2RS radial (slip 0.10 + Loctite 603)</text>
+  <text x="472" y="667" fill="#333" font-size="10">- 2x stacked Koyo AS1226 washers ABOVE + BELOW 51101</text>
+  <text x="472" y="683" fill="#333" font-size="10">- Wave spring + spacer ring + spacer tube = 30N preload (V2.4)</text>
+  <text x="472" y="699" fill="#333" font-size="10">- Spacer tube length 29.40mm = deterministic preload</text>
+  <text x="472" y="715" fill="#333" font-size="10">- Block gap 11mm LOCKED (6mm Al plate + 5mm clearance)</text>
+  <text x="472" y="731" fill="#333" font-size="10">- 80x80x35mm bottom block (unchanged from V2.3)</text>
+  <text x="472" y="747" fill="#333" font-size="10">- Shaft bore D12.3mm, outer chamfer 1mm</text>
+
+  <!-- CENTER: V2.2 change -->
+  <line x1="440" y1="80" x2="440" y2="600" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="4,3"/>
+  <text x="455" y="95" fill="#1a1a1a" font-size="10" font-weight="bold">V2.2 CHANGE</text>
+  <text x="455" y="112" fill="#065f46" font-size="8">TOP pocket 8.5 -> 8.8mm</text>
+  <text x="455" y="122" fill="#065f46" font-size="8">Bearing sits 0.3mm</text>
+  <text x="455" y="132" fill="#065f46" font-size="8">below top surface</text>
+
+  <text x="455" y="155" fill="#1a1a1a" font-size="10" font-weight="bold">FROM V2.1</text>
+  <text x="455" y="172" fill="#065f46" font-size="8">A: PNG dirs fixed</text>
+  <text x="455" y="184" fill="#065f46" font-size="8">B: SLIP 0.10</text>
+  <text x="455" y="196" fill="#065f46" font-size="8">C: SHAFT 12.3</text>
+  <text x="455" y="208" fill="#065f46" font-size="8">D: CSK 3.0mm</text>
+  <text x="455" y="220" fill="#065f46" font-size="8">E: BBox chamfer</text>
+
+  <text x="455" y="245" fill="#1a1a1a" font-size="10" font-weight="bold">KEPT FROM V2</text>
+  <text x="455" y="262" fill="#065f46" font-size="8">Washer pockets (2x)</text>
+  <text x="455" y="274" fill="#065f46" font-size="8">Loctite 603 locking</text>
+  <text x="455" y="286" fill="#065f46" font-size="8">One radial per block</text>
+  <text x="455" y="298" fill="#065f46" font-size="8">90deg CSK cone</text>
+  <text x="455" y="310" fill="#065f46" font-size="8">80x80x35 bottom</text>
+
+  <text x="455" y="340" fill="#1a1a1a" font-size="10" font-weight="bold">REJECTED</text>
+  <text x="455" y="357" fill="#dc2626" font-size="8">Protruding bearing</text>
+  <text x="455" y="367" fill="#dc2626" font-size="8">(no real retention)</text>
+  <text x="455" y="385" fill="#dc2626" font-size="8">Anti-rotate ribs</text>
+  <text x="455" y="395" fill="#dc2626" font-size="8">(Loctite sufficient)</text>
+
+  <line x1="40" y1="772" x2="1060" y2="772" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>

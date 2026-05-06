@@ -1,0 +1,148 @@
+<svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1000" height="700" fill="#fafaf8"/>
+
+  <text x="500" y="32" text-anchor="middle" fill="#1a1a1a" font-size="17" font-weight="bold">BEARING HOUSING BLOCKS V1 — BLUEPRINT</text>
+  <text x="500" y="50" text-anchor="middle" fill="#666" font-size="11">Top + Bottom blocks · PETG · shaft Ø12mm</text>
+  <line x1="40" y1="62" x2="960" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP BLOCK (left) -->
+  <text x="240" y="82" text-anchor="middle" fill="#184e9e" font-size="13" font-weight="bold">TOP BLOCK</text>
+  <text x="240" y="98" text-anchor="middle" fill="#666" font-size="10">60×60×20mm · holds 1× 6001-2RS</text>
+
+  <!-- Top view of TOP block -->
+  <text x="100" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="100" y="120" width="280" height="280" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <circle cx="240" cy="260" r="65.2" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="240" y="257" text-anchor="middle" fill="#333" font-size="9">Bearing pocket</text>
+  <text x="240" y="270" text-anchor="middle" fill="#333" font-size="9">Ø27.95</text>
+  <circle cx="240" cy="260" r="30.3" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="240" y="280" text-anchor="middle" fill="#993556" font-size="8">shaft Ø13</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="319" cy="181" r="7"/>
+    <circle cx="319" cy="339" r="7"/>
+    <circle cx="161" cy="339" r="7"/>
+    <circle cx="161" cy="181" r="7"/>
+  </g>
+  <text x="335" y="178" fill="#791F1F" font-size="9">M5 ×4</text>
+  <text x="335" y="190" fill="#791F1F" font-size="8">PCD 48</text>
+  <!-- Dimensions -->
+  <line x1="100" y1="105" x2="380" y2="105" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="102,105 108,102 108,108" fill="#184e9e"/>
+  <polygon points="378,105 372,102 372,108" fill="#184e9e"/>
+  <text x="240" y="100" text-anchor="middle" fill="#184e9e" font-size="10" font-weight="bold">60mm</text>
+
+  <!-- Side view of TOP block -->
+  <text x="100" y="425" fill="#666" font-size="9">SIDE VIEW</text>
+  <rect x="100" y="430" width="280" height="93" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <rect x="175" y="430" width="130" height="39" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="240" y="450" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="240" y="461" text-anchor="middle" fill="#333" font-size="9">8.5 deep</text>
+  <line x1="240" y1="430" x2="240" y2="523" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <!-- Height dim -->
+  <line x1="395" y1="430" x2="395" y2="523" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="395,432 392,438 398,438" fill="#184e9e"/>
+  <polygon points="395,521 392,515 398,515" fill="#184e9e"/>
+  <text x="405" y="480" fill="#184e9e" font-size="10" font-weight="bold">20mm</text>
+  <!-- Countersinks -->
+  <polygon points="130,523 130,510 142,510" fill="#e24b4a" opacity="0.5"/>
+  <polygon points="338,523 338,510 350,510" fill="#e24b4a" opacity="0.5"/>
+  <text x="130" y="540" fill="#791F1F" font-size="8">csk bottom</text>
+
+  <!-- Info box TOP -->
+  <rect x="40" y="560" width="400" height="115" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="52" y="578" fill="#184e9e" font-size="11" font-weight="bold">TOP block specs:</text>
+  <text x="52" y="596" fill="#333" font-size="10">• 1× 6001-2RS (28×12×8mm) press-fit from top</text>
+  <text x="52" y="612" fill="#333" font-size="10">• Bearing pocket: Ø27.95 × 8.5mm deep</text>
+  <text x="52" y="628" fill="#333" font-size="10">• Shaft clearance bore: Ø13 (never touches block)</text>
+  <text x="52" y="644" fill="#333" font-size="10">• 4× M5 bolts PCD 48, countersink on mount face</text>
+  <text x="52" y="662" fill="#333" font-size="10">• Purpose: radial support at top of shaft</text>
+
+  <!-- BOTTOM BLOCK (right) -->
+  <text x="760" y="82" text-anchor="middle" fill="#9e4818" font-size="13" font-weight="bold">BOTTOM BLOCK</text>
+  <text x="760" y="98" text-anchor="middle" fill="#666" font-size="10">70×70×30mm · 2× 6001-2RS + 1× 51101 thrust</text>
+
+  <text x="620" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="620" y="120" width="280" height="280" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <circle cx="760" cy="260" r="55.9" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="760" y="255" text-anchor="middle" fill="#333" font-size="9">radial pocket</text>
+  <text x="760" y="267" text-anchor="middle" fill="#333" font-size="9">Ø27.95</text>
+  <circle cx="760" cy="260" r="26.0" fill="#fff8f2" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="760" y="282" text-anchor="middle" fill="#993556" font-size="8">shaft Ø13</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="838.6" cy="181.4" r="7"/>
+    <circle cx="838.6" cy="338.6" r="7"/>
+    <circle cx="681.4" cy="338.6" r="7"/>
+    <circle cx="681.4" cy="181.4" r="7"/>
+  </g>
+  <text x="855" y="178" fill="#791F1F" font-size="9">M5 ×4</text>
+  <text x="855" y="190" fill="#791F1F" font-size="8">PCD 56</text>
+  <!-- Dimensions -->
+  <line x1="620" y1="105" x2="900" y2="105" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="622,105 628,102 628,108" fill="#9e4818"/>
+  <polygon points="898,105 892,102 892,108" fill="#9e4818"/>
+  <text x="760" y="100" text-anchor="middle" fill="#9e4818" font-size="10" font-weight="bold">70mm</text>
+
+  <!-- Side view of BOTTOM block -->
+  <text x="620" y="425" fill="#666" font-size="9">SIDE VIEW (section)</text>
+  <rect x="620" y="430" width="280" height="140" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <!-- Thrust pocket (bottom) -->
+  <rect x="685" y="556" width="150" height="42" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="760" y="580" text-anchor="middle" fill="#333" font-size="9">thrust 51101</text>
+  <text x="760" y="592" text-anchor="middle" fill="#333" font-size="8">9mm deep</text>
+  <!-- Radial pocket (upper) -->
+  <rect x="687" y="484" width="146" height="72" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="760" y="510" text-anchor="middle" fill="#333" font-size="9">2× 6001-2RS</text>
+  <text x="760" y="523" text-anchor="middle" fill="#333" font-size="8">stacked</text>
+  <text x="760" y="536" text-anchor="middle" fill="#333" font-size="8">16mm deep</text>
+
+  <!-- Shaft centerline -->
+  <line x1="760" y1="430" x2="760" y2="598" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Height dim -->
+  <line x1="920" y1="430" x2="920" y2="570" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="920,432 917,438 923,438" fill="#9e4818"/>
+  <polygon points="920,568 917,562 923,562" fill="#9e4818"/>
+  <text x="930" y="505" fill="#9e4818" font-size="10" font-weight="bold">30mm</text>
+
+  <!-- Info box BOTTOM -->
+  <rect x="560" y="580" width="400" height="95" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="572" y="598" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM block specs:</text>
+  <text x="572" y="614" fill="#333" font-size="10">• 2× 6001-2RS stacked (radial, upper pocket)</text>
+  <text x="572" y="628" fill="#333" font-size="10">• 1× 51101 thrust (axial, lower pocket)</text>
+  <text x="572" y="642" fill="#333" font-size="10">• Carries full cassette weight + belt tension</text>
+  <text x="572" y="656" fill="#333" font-size="10">• 4× M5 bolts PCD 56, countersink on top face</text>
+  <text x="572" y="670" fill="#333" font-size="10">• Purpose: full shaft support + axial load</text>
+
+  <!-- ASSEMBLY DIAGRAM (center) -->
+  <line x1="460" y1="80" x2="460" y2="660" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="4,3"/>
+  <text x="500" y="110" text-anchor="middle" fill="#1a1a1a" font-size="11" font-weight="bold">ASSEMBLY</text>
+
+  <!-- Simplified assembly schematic -->
+  <g transform="translate(500,120)">
+    <!-- Top plate -->
+    <rect x="-50" y="0" width="100" height="6" fill="#c0c0c0" stroke="#666" stroke-width="1"/>
+    <text x="55" y="5" fill="#666" font-size="8">Al plate 6mm</text>
+    <!-- Top block -->
+    <rect x="-30" y="6" width="60" height="20" fill="#d8e8f5" stroke="#184e9e" stroke-width="1"/>
+    <circle cx="0" cy="16" r="14" fill="none" stroke="#999" stroke-width="0.8"/>
+    <text x="35" y="20" fill="#184e9e" font-size="8">TOP</text>
+    <!-- Shaft -->
+    <rect x="-3" y="6" width="6" height="350" fill="#ddd" stroke="#666" stroke-width="0.5"/>
+    <!-- Cassette indicator -->
+    <rect x="-40" y="80" width="80" height="160" fill="#fff3c4" stroke="#eab308" stroke-width="1" opacity="0.4"/>
+    <text x="0" y="160" text-anchor="middle" fill="#854d0e" font-size="9">CASSETTE</text>
+    <text x="0" y="173" text-anchor="middle" fill="#854d0e" font-size="8">(separate)</text>
+    <!-- Bottom block -->
+    <rect x="-35" y="320" width="70" height="30" fill="#f5e1d8" stroke="#9e4818" stroke-width="1"/>
+    <circle cx="0" cy="335" r="14" fill="none" stroke="#999" stroke-width="0.8"/>
+    <text x="40" y="338" fill="#9e4818" font-size="8">BOTTOM</text>
+    <!-- Bottom plate -->
+    <rect x="-50" y="350" width="100" height="6" fill="#c0c0c0" stroke="#666" stroke-width="1"/>
+    <text x="55" y="355" fill="#666" font-size="8">Al plate 6mm</text>
+    <!-- Labels -->
+    <text x="0" y="-5" text-anchor="middle" fill="#333" font-size="9">Shaft Ø12mm × 280mm</text>
+  </g>
+
+  <line x1="40" y1="687" x2="960" y2="687" stroke="#1e3a5f" stroke-width="0.3"/>
+  <text x="40" y="697" fill="#666" font-size="8">CSM V3 | BearingHousings V1 | April 2026</text>
+</svg>

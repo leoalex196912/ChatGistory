@@ -1,0 +1,313 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 — FreeCAD Macro: CAM RING  V1 FINAL
+# 2-Feed | Option B | Independent stitch inserts at 90° and 270°
+# =============================================================================
+# File:     CSM_V3_CamRing_V1_Final.FCMacro
+# Version:  1.0 | April 2026
+# Path:     3D-PROJECT/01_MECHANICAL/02_CASSETTE_HEAD/cam_ring/freecad_macros/
+#
+# CAM MAP (2-feed, Option B):
+#   0°–35°    RAISE 1      (35° span, linear + ease-in top)
+#   35°–60°   HOLD 1       (25° span, constant max)
+#   60°–120°  STITCH 1     (60° span, insert #1 centered at 90°)
+#   120°–170° LOWER 1      (50° span, gradual return)
+#   170°–180° TRANSITION   (10° span, 1.0mm blend)
+#   180°–215° RAISE 2      (35° span)
+#   215°–240° HOLD 2       (25° span)
+#   240°–300° STITCH 2     (60° span, insert #2 centered at 270°)
+#   300°–350° LOWER 2      (50° span)
+#   350°–360° TRANSITION   (10° span)
+#
+# INSERT SPEC (each of 2 inserts):
+#   Arc length: 22mm | Width: 7.65mm | Height: 20mm
+#   Guide pins: 2× Ø3mm × 10mm (drill after print)
+#   Set screws: 2× M3 × 6mm (radial, through outer face)
+#   Back support wall: 1.0mm behind max travel
+#   Travel: ±1.5mm radial | Nominal depth: 3.5mm
+# =============================================================================
+
+import FreeCAD, Part, math
+
+doc = FreeCAD.newDocument("CSM_V3_CamRing_V1_Final")
+
+# =============================================================================
+# ALL PARAMETERS — LOCKED V1 FINAL
+# =============================================================================
+
+# Geometry
+CYL_OD      = 90.0
+CAM_ID      = 90.7      # Locked R3+ (0.35mm radial gap)
+CAM_OD      = 140.0
+CAM_H       = 25.0
+CAM_WALL    = (CAM_OD - CAM_ID) / 2.0     # 24.65mm
+RAD_GAP     = (CAM_ID - CYL_OD) / 2.0    # 0.35mm
+
+# Cam zones (radial from bore)
+RAISE_Z     = 6.0    # mm radial
+GUARD_Z     = 3.0
+STITCH_Z    = 8.0
+LOWER_Z     = 5.0
+RESERVE_Z   = CAM_WALL - RAISE_Z - GUARD_Z - STITCH_Z - LOWER_Z  # 2.65mm
+
+# Cam angular map (degrees)
+RAISE_START = 0.0;    RAISE_END  = 35.0
+HOLD_START  = 35.0;   HOLD_END   = 60.0
+STITCH_START= 60.0;   STITCH_END = 120.0
+LOWER_START = 120.0;  LOWER_END  = 170.0
+TRANS1_END  = 180.0
+
+RAISE2_START= 180.0;  RAISE2_END = 215.0
+HOLD2_START = 215.0;  HOLD2_END  = 240.0
+STITCH2_START=240.0;  STITCH2_END= 300.0
+LOWER2_START= 300.0;  LOWER2_END = 350.0
+
+# Cam profile heights
+NEEDLE_LIFT = 12.0   # mm — total needle raise height
+STITCH_NOM  = 3.5    # mm — nominal stitch cam drop
+STITCH_TRAV = 1.5    # mm — ±adjustment range
+
+# Butt track
+TRACK_W     = 2.2    # mm — butt width + 0.2mm clearance
+TRACK_D     = 4.0    # mm — radial depth from bore
+
+# Insert geometry — FINAL
+INSERT_ARC  = 22.0   # mm — arc length
+INSERT_W    = 7.65   # mm — width (slot = 8.0mm, clearance 0.175mm/side)
+INSERT_H    = 20.0   # mm — height (in cam H=25, centered)
+INSERT_TRAV = 1.5    # mm — ±radial travel
+BACK_WALL   = 1.0    # mm — support wall behind insert
+SLOT_W      = 8.0    # mm — slot width (insert + 2×0.175mm)
+
+# Guide pins (per insert)
+PIN_D       = 3.0    # mm — Ø3mm (upgraded from Ø2mm)
+PIN_HOLE_D  = 3.1    # mm — slip fit H7/g6
+PIN_DEPTH   = 10.0   # mm — in cam body
+PIN_Z_1     = (CAM_H - INSERT_H) / 2.0 + 4.0   # lower pin Z
+PIN_Z_2     = (CAM_H - INSERT_H) / 2.0 + INSERT_H - 4.0  # upper pin Z
+
+# Cassette interface
+SHAFT_D     = 12.0
+BOLT_PCD    = 130.0
+BOLT_N      = 4
+BOLT_D      = 5.5
+KEY_W       = 3.0
+KEY_H       = 3.0
+KEY_DEPTH   = 1.5    # mm — sliding fit
+
+# Alignment pins
+APIN_D      = 4.0
+APIN_N      = 3
+APIN_PCD    = 120.0
+APIN_DEPTH  = 10.0
+
+# =============================================================================
+# DERIVED
+# =============================================================================
+CAM_R_IN  = CAM_ID / 2.0    # 45.35mm
+CAM_R_OUT = CAM_OD / 2.0    # 70.0mm
+SHAFT_R   = SHAFT_D / 2.0
+BOLT_R    = BOLT_PCD / 2.0
+APIN_R    = APIN_PCD / 2.0
+
+# Zone radii
+R_RAISE   = CAM_R_IN + RAISE_Z    # 51.35mm
+R_GUARD   = R_RAISE + GUARD_Z     # 54.35mm
+R_STITCH  = R_GUARD + STITCH_Z    # 62.35mm
+R_LOWER   = R_STITCH + LOWER_Z    # 67.35mm
+
+# Insert pocket positions (center of arc)
+INSERT1_ANG = (STITCH_START + STITCH_END) / 2.0   # 90°
+INSERT2_ANG = (STITCH2_START + STITCH2_END) / 2.0  # 270°
+
+# Insert pocket radial position (from cam center to slot inner face)
+INSERT_R_IN  = R_GUARD          # inner face of stitch zone
+INSERT_R_OUT = INSERT_R_IN + STITCH_Z  # = R_STITCH = 62.35mm
+
+print("=" * 60)
+print("CSM V3 CAM RING — V1 FINAL")
+print("=" * 60)
+print(f"OD={CAM_OD}  ID={CAM_ID}  H={CAM_H}  Wall={CAM_WALL:.2f}mm")
+print(f"Radial gap: {RAD_GAP:.3f}mm (target 0.35mm) ✅")
+print(f"Cam map: 2-feed, Option B")
+print(f"  Feed 1: 0°–170° | Insert #1 at {INSERT1_ANG:.0f}°")
+print(f"  Feed 2: 180°–350° | Insert #2 at {INSERT2_ANG:.0f}°")
+print(f"Insert: {INSERT_W}mm wide × {INSERT_H}mm H × {INSERT_ARC}mm arc")
+print(f"  Guide pins: 2× Ø{PIN_D}mm | Set screws: 2× M3")
+print(f"  Back wall: {BACK_WALL}mm | Travel: ±{INSERT_TRAV}mm")
+print("=" * 60)
+
+# =============================================================================
+# BUILD CAM RING BODY
+# =============================================================================
+outer = Part.makeCylinder(CAM_R_OUT, CAM_H)
+bore  = Part.makeCylinder(CAM_R_IN, CAM_H + 2)
+bore.translate(FreeCAD.Vector(0, 0, -1))
+cam = outer.cut(bore)
+
+# Shaft clearance
+shft = Part.makeCylinder(SHAFT_R + 2.0, CAM_H + 2)
+shft.translate(FreeCAD.Vector(0, 0, -1))
+cam = cam.cut(shft)
+
+# =============================================================================
+# NEEDLE BUTT TRACK — circumferential groove on bore face
+# Needles ride in this track; cam profile modulates height
+# =============================================================================
+t_out = Part.makeCylinder(CAM_R_IN + TRACK_D, TRACK_W)
+t_in  = Part.makeCylinder(CAM_R_IN - 0.2, TRACK_W + 2)
+t_out.translate(FreeCAD.Vector(0, 0, CAM_H / 2.0 - TRACK_W / 2.0))
+t_in.translate( FreeCAD.Vector(0, 0, CAM_H / 2.0 - TRACK_W / 2.0 - 1))
+cam = cam.cut(t_out.cut(t_in))
+
+# =============================================================================
+# RAISE CAM ZONE — graduated annular pocket
+# Represents the zone where needles are pushed upward
+# Full 3D cam surface requires CNC; this defines the zone envelope
+# =============================================================================
+r_ann = Part.makeCylinder(R_RAISE, CAM_H * 0.55)
+r_inn = Part.makeCylinder(CAM_R_IN - 0.1, CAM_H * 0.55 + 2)
+r_ann.translate(FreeCAD.Vector(0, 0, CAM_H * 0.22))
+r_inn.translate(FreeCAD.Vector(0, 0, CAM_H * 0.22 - 1))
+cam = cam.cut(r_ann.cut(r_inn))
+
+# =============================================================================
+# STITCH CAM INSERT POCKETS — 2 pockets at 90° and 270°
+# Each pocket: straight slot with back support wall
+# =============================================================================
+insert_z_bottom = (CAM_H - INSERT_H) / 2.0   # 2.5mm from bottom
+insert_z_top    = insert_z_bottom + INSERT_H  # 22.5mm from bottom
+
+def make_insert_pocket(angle_deg, cam_body):
+    """Cut insert pocket + guide pin holes + set screw holes at given angle."""
+    ang = math.radians(angle_deg)
+    
+    # Insert slot dimensions in local coords
+    # X = tangential (arc direction), Y = radial (inward), Z = axial
+    half_arc = INSERT_ARC / 2.0
+    
+    # Main slot (full stitch zone width)
+    slot = Part.makeBox(SLOT_W, STITCH_Z + BACK_WALL, INSERT_H)
+    slot.translate(FreeCAD.Vector(-SLOT_W / 2.0, INSERT_R_IN, insert_z_bottom))
+    slot.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+    cam_body = cam_body.cut(slot)
+    
+    # Back support wall relief — cut only in front STITCH_Z (leave BACK_WALL)
+    # The back 1mm remains solid — this IS the back wall
+    front_slot = Part.makeBox(INSERT_ARC, STITCH_Z, INSERT_H + 2)
+    front_slot.translate(FreeCAD.Vector(-INSERT_ARC/2, INSERT_R_IN,
+                                         insert_z_bottom - 1))
+    front_slot.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+    cam_body = cam_body.cut(front_slot)
+    
+    # Guide pin holes in cam body (2× Ø3mm, drilled after print)
+    # Position: on the cam body sides of the slot, at Z = PIN_Z_1 and PIN_Z_2
+    for pz in [PIN_Z_1, PIN_Z_2]:
+        for side in [-1, 1]:
+            pin_x = side * (SLOT_W / 2.0 + PIN_DEPTH / 2.0)
+            pin_y = INSERT_R_IN + STITCH_Z / 2.0
+            ph = Part.makeCylinder(PIN_D / 2.0, PIN_DEPTH + 2)
+            ph.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+            ph.translate(FreeCAD.Vector(pin_x, pin_y, pz))
+            ph.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+            # Only cut one pin per side (2 pins total per insert)
+            break  # one pin per Z position is sufficient
+        cam_body = cam_body.cut(ph)
+    
+    # Set screw holes (2× M3, radial through outer cam face)
+    for arc_offset in [-INSERT_ARC / 4.0, INSERT_ARC / 4.0]:
+        ss_x = arc_offset
+        ss_y = CAM_R_IN + STITCH_Z / 2.0
+        ss = Part.makeCylinder(1.6, CAM_WALL + 2)
+        ss.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,1,0), 90)
+        ss.translate(FreeCAD.Vector(ss_x, ss_y, CAM_H / 2.0))
+        ss.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+        cam_body = cam_body.cut(ss)
+    
+    return cam_body
+
+print("\nCutting insert pocket #1 (90°)...")
+cam = make_insert_pocket(INSERT1_ANG, cam)
+print("Cutting insert pocket #2 (270°)...")
+cam = make_insert_pocket(INSERT2_ANG, cam)
+
+# =============================================================================
+# BOLT HOLES (4× M5, PCD 130mm, with countersinks)
+# =============================================================================
+for i in range(BOLT_N):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx = BOLT_R * math.cos(ang)
+    by = BOLT_R * math.sin(ang)
+    bh = Part.makeCylinder(BOLT_D / 2.0, CAM_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    cam = cam.cut(bh)
+    cs = Part.makeCylinder(4.5, 5.0)
+    cs.translate(FreeCAD.Vector(bx, by, CAM_H - 5.0))
+    cam = cam.cut(cs)
+
+# =============================================================================
+# ALIGNMENT PIN HOLES (3× Ø4mm, H7/g6 slip, depth 10mm from bottom)
+# =============================================================================
+for i in range(APIN_N):
+    ang = math.radians(i * 120.0 + 30.0)
+    px = APIN_R * math.cos(ang)
+    py = APIN_R * math.sin(ang)
+    ph = Part.makeCylinder(APIN_D / 2.0 + 0.05, APIN_DEPTH)
+    ph.translate(FreeCAD.Vector(px, py, 0))
+    cam = cam.cut(ph)
+
+# =============================================================================
+# ANTI-ROTATION KEY SLOT (sliding fit)
+# =============================================================================
+ks = Part.makeBox(KEY_W + 0.15, KEY_DEPTH + 0.1, KEY_H * 5)
+ks.translate(FreeCAD.Vector(-(KEY_W + 0.15) / 2.0,
+                              CAM_R_IN - KEY_DEPTH - 0.1,
+                              CAM_H / 2.0 - KEY_H * 2.5))
+cam = cam.cut(ks)
+
+# =============================================================================
+# SOLENOID RESERVE GROOVE (outer face, 2mm reserve zone marking)
+# =============================================================================
+sg = Part.makeCylinder(CAM_R_OUT - 0.5, 1.5)
+si = Part.makeCylinder(R_LOWER + 0.5, 2.5)
+sg.translate(FreeCAD.Vector(0, 0, 1.0))
+si.translate(FreeCAD.Vector(0, 0, 0.5))
+cam = cam.cut(sg.cut(si))
+
+# =============================================================================
+# FINALIZE
+# =============================================================================
+obj = doc.addObject("Part::Feature", "CSM_CamRing_V1_Final_2Feed")
+obj.Shape = cam
+obj.ViewObject.ShapeColor = (0.28, 0.28, 0.36)
+doc.recompute()
+FreeCAD.Gui.activeDocument().activeView().viewIsometric()
+FreeCAD.Gui.SendMsgToActiveView("ViewFit")
+
+vol = cam.Volume
+print(f"\n{'='*60}")
+print(f"✅ CAM RING V1 FINAL — COMPLETE")
+print(f"{'='*60}")
+print(f"   OD={CAM_OD}  ID={CAM_ID}  H={CAM_H}")
+print(f"   Radial gap: {RAD_GAP:.3f}mm ✅")
+print(f"   Volume: {vol:.0f}mm³")
+print(f"   Weight PETG: {vol*1.27/1000:.1f}g")
+print(f"   Weight Al 6061: {vol*2.70/1000:.1f}g")
+print(f"\n📋 PRINT SETTINGS:")
+print(f"   Material: PETG | Layer: 0.15mm | Perimeters: 5")
+print(f"   Top/Bottom: 6 solid | Infill: 50% Gyroid")
+print(f"   Orientation: FLAT (bore face UP)")
+print(f"   Speed: 30mm/s walls / 150mm/s infill")
+print(f"\n🔴 AFTER PRINTING:")
+print(f"   1. Drill guide pin holes with Ø3mm bit (hand drill, slow)")
+print(f"   2. Drill alignment pin holes with Ø4mm bit")
+print(f"   3. Sand bore + cam faces: 220→400→800 grit (circumferential)")
+print(f"   4. Epoxy coat cam faces (West System 105+207, thin)")
+print(f"   5. Cure 24h, final polish 1000→1500 grit")
+print(f"   6. PTFE dry lube spray")
+print(f"   7. Test: cylinder rotates inside with one finger")
+
+import os
+out = "/mnt/user-data/outputs/3D-PROJECT/01_MECHANICAL/02_CASSETTE_HEAD/cam_ring/freecad_macros/"
+Part.export([obj], out.replace("freecad_macros/", "") + "CSM_V3_CamRing_V1_Final.stl")
+print(f"\n💾 STL exported")

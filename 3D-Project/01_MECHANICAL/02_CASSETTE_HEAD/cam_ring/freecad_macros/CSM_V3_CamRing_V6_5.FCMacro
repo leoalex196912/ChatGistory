@@ -1,0 +1,570 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CAM RING V6.5 (smoothstep-blended lip transitions)
+# =============================================================================
+# File:    CSM_V3_CamRing_V6_5.FCMacro
+# Date:    April 2026
+# Target:  C:\3D-Project\01_MECHANICAL\07_KNITTING\freecad_macros\
+#
+# CHANGES FROM V6.4 (fifth engineering review):
+#   1. SMOOTHSTEP BLENDING OF TOP LIP TRANSITIONS
+#      Problem: V6.4 lip drops 0.8mm instantly at theta=270 and rises
+#               0.8mm instantly at theta=325. Hard discontinuity could
+#               cause secondary impact if butt is high at those instants.
+#      Solution: blend lip in/out over LIP_BLEND_ANGLE degrees (3deg)
+#                using smoothstep function (same as cam profile).
+#                Lip ramps gradually 0->0.8mm at zone start
+#                and 0.8->0mm at zone end.
+#      Cost: minimal (function change only)
+#      Benefit: eliminates secondary impact at zone transitions
+#
+# REVIEWER POINT NOT FULLY ACCEPTED (with reasoning):
+#   "Real lip" with radial overhang vs my "shorter ceiling":
+#   For our geometry (butt anchored to rotating cylinder, can't move
+#   radially outward beyond cylinder OD), pure Z motion is what matters.
+#   Both designs constrain Z motion at same height. The radial-overhang
+#   advantage applies to designs where butt could escape radially - not
+#   ours. If post-test results show jump still happens, V7 can implement
+#   true overhang. For now V6.5 should be sufficient.
+#
+# CHANGES FROM V6.4 (kept):
+#   - TOP_LIP_HEIGHT 0.8mm in knit zone
+#   - TOP_LIP_ZONE 270-325deg (matches knit zone)
+#   - SMOOTHSTEP cubic easing for cam profile
+#   - LIFT 8mm (conservative)
+#   - SLOT_HEIGHT 6.0mm outside knit zone
+#   - 720 angular segments (0.5deg each)
+#   - Z_OFFSET tuning parameter
+#
+# CHANGES FROM V6 (which was completely broken):
+#   - Axial Z profile instead of radial depth
+#
+# DESIGN INTENT:
+#   Stationary cam ring around rotating cylinder.
+#   Needle butts ride on Z-varying ramp with smoothstep easing.
+#   Top lip in knit zone prevents butt jump at transitions.
+#   Outside knit zone: loose slot for tolerance forgiveness.
+#
+# CAM TRACK GEOMETRY:
+#   - Track is an annular SLOT cut into ring's inner surface
+#   - Slot height (axial): butt vertical + clearance = 4.5mm
+#   - Slot depth (radial): ~3mm (gives butt enough clearance radially)
+#   - Slot Z bottom edge: VARIES by angle (THIS IS THE CAM PROFILE)
+#   - Slot Z top edge:    VARIES by angle (parallel, offset by slot height)
+#
+# CAM PROFILE z_bottom(theta):
+#   theta=[0, 270deg]:    z_bot = z_rest          (REST)
+#   theta=[270, 292.5]:   z_bot rises linearly    (RISE 22.5deg)
+#   theta=[292.5, 297.5]: z_bot = z_rest + lift   (PEAK 5deg)
+#   theta=[297.5, 315]:   z_bot falls linearly    (FALL 17.5deg)
+#   theta=[315, 360]:     z_bot = z_rest          (REST)
+#
+# IMPLEMENTATION STRATEGY:
+#   Approximate the ramp as many small angular segments.
+#   Each segment is a thin angular slice with constant Z bottom.
+#   Step size of 1 degree gives smooth-enough profile for V1.
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cam_ring"
+
+PATH_STL_FULL  = os.path.join(BASE, "CSM_V3_CamRing_V6_5_FULL.stl")
+PATH_STL_SLICE = os.path.join(BASE, "CSM_V3_CamRing_V6_5_TESTSLICE.stl")
+PATH_SVG       = os.path.join(BASE, "blueprints", "CamRing_V6_5_Blueprint.svg")
+
+for p in [PATH_STL_FULL, PATH_STL_SLICE, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CORE PARAMETERS
+# =============================================================================
+
+# Ring dimensions
+RING_OD          = 165.0
+RING_ID          = 115.0
+RING_HEIGHT      = 35.0      # increased from 25 to accommodate full Z lift range
+WALL_THICKNESS   = (RING_OD - RING_ID) / 2.0
+
+# Cam profile - the CORRECT axial Z parameters
+Z_REST           = 5.0       # Z position of cam track bottom at rest
+LIFT             = 8.0       # vertical lift amount (V6.3: 10 -> 8 conservative)
+                             # First reviewer said 8-10mm range acceptable
+                             # 8mm = safer first build, can tune up via Z_OFFSET
+Z_PEAK           = Z_REST + LIFT   # 13.0mm
+Z_OFFSET         = 0.0       # Tuning parameter for post-print Z adjustment
+
+# Slot dimensions (the channel butt rides in)
+SLOT_HEIGHT      = 6.0       # axial - generous clearance outside knit zone
+SLOT_DEPTH       = 3.0       # radial - butt extends ~3mm into ring
+
+# V6.4: TOP LIP - prevents butt jump in knit zone
+# Cuts a small intrusion from the top of the slot, only in the knit zone
+# This narrows effective slot from 6.0mm to 5.2mm in knit zone
+# Per-side clearance in knit zone: (5.2 - 3.64) / 2 = 0.78mm
+# Still safely above binding threshold (~0.4mm/side)
+# Outside knit zone: full 1.18mm/side clearance (forgiving)
+TOP_LIP_HEIGHT     = 0.8     # mm - intrusion from top of slot
+TOP_LIP_ZONE_START = 270.0   # deg - lip begins at rise start
+TOP_LIP_ZONE_END   = 325.0   # deg - lip ends at fall end
+# Lip covers full knit zone (rise + peak + fall = 55deg total)
+
+# V6.5: LIP BLEND - smoothstep transition into and out of lip zone
+# Eliminates hard discontinuity at zone boundaries
+# Without blending: 0.8mm step at theta=270 and 325 (potential impact)
+# With blending: lip ramps in/out over LIP_BLEND_ANGLE degrees
+LIP_BLEND_ANGLE    = 3.0     # deg - angular range for lip blend in/out
+
+# Cam profile - angular zones (V6.2: longer rise/fall for gentler slope)
+ANGLE_RISE_START = 270.0
+ANGLE_RISE_END   = 300.0     # V6.2: was 292.5 (rise: 22.5 -> 30deg)
+ANGLE_PEAK_END   = 305.0     # V6.2: was 297.5 (peak: 5deg unchanged)
+ANGLE_FALL_END   = 325.0     # V6.2: was 315.0 (fall: 17.5 -> 20deg)
+# Total knit zone: 55deg (was 45deg in V6.1)
+# Slope: 0.333mm/deg (was 0.444mm/deg in V6.1) - 25% gentler
+
+# Profile resolution (V6.2: doubled for smoother surface)
+PROFILE_STEPS    = 720       # V6.2: was 360 (1deg -> 0.5deg steps)
+
+# Mounting
+PIN_COUNT        = 6
+PIN_PCD          = 145.0
+PIN_HOLE_D       = 4.10
+PIN_SLOT_LEN     = 4.50
+
+BOLT_COUNT       = 6
+BOLT_PCD         = 155.0
+BOLT_HOLE_D      = 5.4
+BOLT_CB_D        = 9.5
+BOLT_CB_H        = 5.0
+
+# Test slice for validation (V6.2: covers wider knit zone)
+TEST_SLICE_START = 260.0     # 10deg margin before rise zone
+TEST_SLICE_END   = 335.0     # 10deg margin after fall zone (75deg total)
+
+EDGE_CHAMFER     = 0.8
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+RING_OUTER_R     = RING_OD / 2.0
+RING_INNER_R     = RING_ID / 2.0
+SLOT_INNER_R     = RING_INNER_R + SLOT_DEPTH
+
+print("=" * 70)
+print("CSM V3 - CAM RING V6.5 (smoothstep-blended lip transitions)")
+print("=" * 70)
+print(f"  Ring OD:          {RING_OD}mm")
+print(f"  Ring ID:          {RING_ID}mm")
+print(f"  Ring height:      {RING_HEIGHT}mm")
+print(f"  Cam slot height:  {SLOT_HEIGHT}mm (outside knit zone)")
+print(f"  Cam slot in knit: {SLOT_HEIGHT - TOP_LIP_HEIGHT}mm (with full top lip)")
+print(f"  Top lip height:   {TOP_LIP_HEIGHT}mm")
+print(f"  Top lip zone:     {TOP_LIP_ZONE_START}-{TOP_LIP_ZONE_END}deg")
+print(f"  Lip blend angle:  {LIP_BLEND_ANGLE}deg (V6.5 NEW - smoothstep)")
+print(f"  Cam slot depth:   {SLOT_DEPTH}mm radial")
+print(f"  Z rest:           {Z_REST}mm")
+print(f"  Z peak:           {Z_PEAK}mm")
+print(f"  Z offset:         {Z_OFFSET}mm (tuning)")
+print(f"  Lift amount:      {LIFT}mm")
+print(f"  Profile steps:    {PROFILE_STEPS} (0.5deg each)")
+print(f"  Easing:           SMOOTHSTEP cubic (cam profile + lip transitions)")
+print(f"  Knit zone:        {ANGLE_FALL_END - ANGLE_RISE_START}deg")
+print()
+
+# =============================================================================
+# CAM PROFILE FUNCTION
+# =============================================================================
+
+def smoothstep(x):
+    """Cubic smoothstep easing function: f(x) = 3x^2 - 2x^3
+    Properties:
+      f(0) = 0, f(1) = 1
+      f'(0) = 0, f'(1) = 0   (zero slope at endpoints = no jerk)
+      Max derivative at x=0.5 (1.5 = 50% steeper than linear at midpoint)
+    Standard cam design easing - eliminates jerk at start/end of motion.
+    """
+    return 3 * x * x - 2 * x * x * x
+
+
+def cam_z_bot(theta_deg):
+    """Returns Z bottom of cam slot at given angle (in degrees).
+    V6.3: smoothstep easing in rise and fall zones (was linear in V6.2).
+    Smoothstep eliminates derivative discontinuity at zone boundaries.
+    """
+    if theta_deg < ANGLE_RISE_START:
+        return Z_REST + Z_OFFSET
+    elif theta_deg < ANGLE_RISE_END:
+        # Smoothstep rise from Z_REST to Z_PEAK
+        rise_progress = (theta_deg - ANGLE_RISE_START) / (ANGLE_RISE_END - ANGLE_RISE_START)
+        return Z_REST + Z_OFFSET + LIFT * smoothstep(rise_progress)
+    elif theta_deg < ANGLE_PEAK_END:
+        # Hold at peak
+        return Z_PEAK + Z_OFFSET
+    elif theta_deg < ANGLE_FALL_END:
+        # Smoothstep fall from Z_PEAK back to Z_REST
+        fall_progress = (theta_deg - ANGLE_PEAK_END) / (ANGLE_FALL_END - ANGLE_PEAK_END)
+        return Z_PEAK + Z_OFFSET - LIFT * smoothstep(fall_progress)
+    else:
+        return Z_REST + Z_OFFSET
+
+
+def lip_height_at(theta_deg):
+    """Returns the top lip intrusion at given angle (V6.5).
+    Lip ramps in over LIP_BLEND_ANGLE at zone start (smoothstep),
+    holds at TOP_LIP_HEIGHT through zone interior,
+    ramps out over LIP_BLEND_ANGLE at zone end.
+    Returns 0 outside lip zone.
+    """
+    # Outside lip zone entirely
+    if theta_deg < TOP_LIP_ZONE_START or theta_deg >= TOP_LIP_ZONE_END:
+        return 0.0
+    
+    # Distance into zone from start
+    dist_from_start = theta_deg - TOP_LIP_ZONE_START
+    # Distance from zone end
+    dist_to_end = TOP_LIP_ZONE_END - theta_deg
+    
+    # Blend in (start of zone)
+    if dist_from_start < LIP_BLEND_ANGLE:
+        progress = dist_from_start / LIP_BLEND_ANGLE
+        return TOP_LIP_HEIGHT * smoothstep(progress)
+    
+    # Blend out (end of zone)
+    if dist_to_end < LIP_BLEND_ANGLE:
+        progress = dist_to_end / LIP_BLEND_ANGLE
+        return TOP_LIP_HEIGHT * smoothstep(progress)
+    
+    # Full lip in zone interior
+    return TOP_LIP_HEIGHT
+
+# =============================================================================
+# DOCUMENT
+# =============================================================================
+doc = FreeCAD.newDocument("CSM_CamRing_V6_5")
+
+# =============================================================================
+# BUILD CAM RING WITH CORRECT AXIAL PROFILE
+# =============================================================================
+
+def build_cam_ring(start_angle_deg=0.0, end_angle_deg=360.0, name="CamRing"):
+    """
+    Build cam ring (or slice) with axial cam profile.
+    
+    For a ring (full or partial), build the base ring then cut the cam slot
+    by sweeping a varying-Z slot around the inner surface.
+    """
+    is_partial = (end_angle_deg - start_angle_deg) < 359.0
+    angular_extent = end_angle_deg - start_angle_deg
+    
+    print(f"  Building {name}: angles {start_angle_deg}-{end_angle_deg}deg")
+    
+    # Step 1: Build hollow ring (or partial sector)
+    if is_partial:
+        # Partial ring sector
+        outer = Part.makeCylinder(RING_OUTER_R, RING_HEIGHT,
+                                  FreeCAD.Vector(0, 0, 0),
+                                  FreeCAD.Vector(0, 0, 1),
+                                  angular_extent)
+        outer.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), start_angle_deg)
+        
+        inner = Part.makeCylinder(RING_INNER_R, RING_HEIGHT + 2,
+                                  FreeCAD.Vector(0, 0, -1),
+                                  FreeCAD.Vector(0, 0, 1),
+                                  angular_extent + 0.1)
+        inner.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), start_angle_deg - 0.05)
+        ring = outer.cut(inner)
+    else:
+        # Full ring
+        outer = Part.makeCylinder(RING_OUTER_R, RING_HEIGHT)
+        inner = Part.makeCylinder(RING_INNER_R, RING_HEIGHT + 2)
+        inner.translate(FreeCAD.Vector(0, 0, -1))
+        ring = outer.cut(inner)
+    
+    # Step 2: Cut the cam slot using angular segments
+    # V6.2: 720 segments at 0.5deg each (was 360 at 1deg)
+    # Smaller steps = smoother surface = better PETG print quality
+    print(f"  Cutting cam slot with {PROFILE_STEPS} angular segments (0.5deg each)...")
+    
+    # Determine angular range for this build
+    if is_partial:
+        seg_start_idx = int(start_angle_deg * 2)  # 0.5deg steps -> 2 per degree
+        seg_end_idx = int(end_angle_deg * 2)
+    else:
+        seg_start_idx = 0
+        seg_end_idx = PROFILE_STEPS
+    
+    # Build all segments and accumulate
+    cutters = []
+    seg_size = 0.5  # 0.5 degree per segment (V6.2)
+    
+    for i in range(seg_start_idx, seg_end_idx):
+        theta_deg = i * seg_size + (seg_size / 2.0)  # midpoint
+        z_bot = cam_z_bot(theta_deg)
+        
+        # V6.5: smoothstep-blended lip height
+        # Outside knit zone: lip = 0, full slot height
+        # Inside knit zone: lip ramps in/out smoothly over LIP_BLEND_ANGLE
+        lip = lip_height_at(theta_deg)
+        effective_slot_height = SLOT_HEIGHT - lip
+        
+        # Build a 0.5deg sector cutter at this Z range
+        seg_outer = Part.makeCylinder(SLOT_INNER_R, effective_slot_height,
+                                      FreeCAD.Vector(0, 0, z_bot),
+                                      FreeCAD.Vector(0, 0, 1),
+                                      seg_size)
+        seg_outer.rotate(FreeCAD.Vector(0,0,0),
+                        FreeCAD.Vector(0,0,1),
+                        i * seg_size)
+        
+        seg_inner = Part.makeCylinder(RING_INNER_R, effective_slot_height + 0.1,
+                                      FreeCAD.Vector(0, 0, z_bot - 0.05),
+                                      FreeCAD.Vector(0, 0, 1),
+                                      seg_size + 0.05)
+        seg_inner.rotate(FreeCAD.Vector(0,0,0),
+                        FreeCAD.Vector(0,0,1),
+                        i * seg_size - 0.025)
+        
+        seg_cutter = seg_outer.cut(seg_inner)
+        cutters.append(seg_cutter)
+    
+    # Fuse all cutters and apply once (faster than individual cuts)
+    if cutters:
+        all_cutters = cutters[0]
+        for c in cutters[1:]:
+            all_cutters = all_cutters.fuse(c)
+        ring = ring.cut(all_cutters)
+    
+    return ring
+
+
+print("[1/2] Building FULL cam ring...")
+ring_full = build_cam_ring(0, 360, "FullRing")
+
+# Cut alignment pin holes
+print("  Cutting alignment pin holes...")
+for i in range(PIN_COUNT):
+    angle = i * (360.0 / PIN_COUNT)
+    rad = PIN_PCD / 2.0
+    x = rad * math.cos(math.radians(angle))
+    y = rad * math.sin(math.radians(angle))
+
+    if i == 0:
+        # Locator: round hole
+        hole = Part.makeCylinder(PIN_HOLE_D / 2.0, RING_HEIGHT + 2)
+        hole.translate(FreeCAD.Vector(x, y, -1))
+    else:
+        # Orientator: slotted (tangential)
+        slot_offset = (PIN_SLOT_LEN - PIN_HOLE_D) / 2.0
+        tan_x = -math.sin(math.radians(angle)) * slot_offset
+        tan_y =  math.cos(math.radians(angle)) * slot_offset
+
+        hole_a = Part.makeCylinder(PIN_HOLE_D / 2.0, RING_HEIGHT + 2)
+        hole_a.translate(FreeCAD.Vector(x + tan_x, y + tan_y, -1))
+        hole_b = Part.makeCylinder(PIN_HOLE_D / 2.0, RING_HEIGHT + 2)
+        hole_b.translate(FreeCAD.Vector(x - tan_x, y - tan_y, -1))
+        hole = hole_a.fuse(hole_b)
+
+    ring_full = ring_full.cut(hole)
+
+# Cut bolt holes with counterbores
+print("  Cutting bolt holes...")
+for i in range(BOLT_COUNT):
+    angle = i * (360.0 / BOLT_COUNT) + 30.0
+    rad = BOLT_PCD / 2.0
+    x = rad * math.cos(math.radians(angle))
+    y = rad * math.sin(math.radians(angle))
+
+    hole = Part.makeCylinder(BOLT_HOLE_D / 2.0, RING_HEIGHT + 2)
+    hole.translate(FreeCAD.Vector(x, y, -1))
+    ring_full = ring_full.cut(hole)
+
+    cb = Part.makeCylinder(BOLT_CB_D / 2.0, BOLT_CB_H + 0.1)
+    cb.translate(FreeCAD.Vector(x, y, -0.05))
+    ring_full = ring_full.cut(cb)
+
+# Outer chamfer
+if EDGE_CHAMFER > 0:
+    try:
+        edges_to_chamfer = []
+        for e in ring_full.Edges:
+            v1 = e.Vertexes[0].Point
+            v2 = e.Vertexes[1].Point
+            if abs(v1.z - v2.z) < 0.01:
+                r1 = (v1.x ** 2 + v1.y ** 2) ** 0.5
+                if abs(r1 - RING_OUTER_R) < 0.05:
+                    if abs(v1.z - 0) < 0.05 or abs(v1.z - RING_HEIGHT) < 0.05:
+                        edges_to_chamfer.append(e)
+        if edges_to_chamfer:
+            ring_full = ring_full.makeChamfer(EDGE_CHAMFER, edges_to_chamfer)
+    except Exception as ex:
+        print(f"  Outer chamfer skipped: {ex}")
+
+obj_full = doc.addObject("Part::Feature", "CamRing_V6_5_FULL")
+obj_full.Shape = ring_full
+obj_full.ViewObject.ShapeColor = (0.55, 0.45, 0.35)
+print(f"  Full ring volume: {ring_full.Volume:.0f}mm^3")
+
+# =============================================================================
+# BUILD TEST SLICE (knit zone only, ~65 deg)
+# =============================================================================
+print(f"\n[2/2] Building test slice ({TEST_SLICE_START}-{TEST_SLICE_END}deg, knit zone)...")
+ring_slice = build_cam_ring(TEST_SLICE_START, TEST_SLICE_END, "TestSlice")
+
+# Position offset for visualization
+ring_slice.translate(FreeCAD.Vector(250, 0, 0))
+
+obj_slice = doc.addObject("Part::Feature", "CamRing_V6_5_TESTSLICE")
+obj_slice.Shape = ring_slice
+obj_slice.ViewObject.ShapeColor = (0.7, 0.5, 0.3)
+print(f"  Test slice volume: {ring_slice.Volume:.0f}mm^3 (~{ring_slice.Volume * 1.27 / 1000:.0f}g PETG)")
+
+doc.recompute()
+
+# =============================================================================
+# EXPORT STLs
+# =============================================================================
+print("\nExporting STLs...")
+
+try:
+    Part.export([obj_full], PATH_STL_FULL)
+    print(f"  [OK] Full STL: {PATH_STL_FULL}")
+except Exception as ex:
+    print(f"  Full STL export error: {ex}")
+
+try:
+    # Translate test slice back to origin for printing
+    slice_for_export = obj_slice.Shape.copy()
+    slice_for_export.translate(FreeCAD.Vector(-250, 0, 0))
+    tmp = doc.addObject("Part::Feature", "tmp_slice")
+    tmp.Shape = slice_for_export
+    Part.export([tmp], PATH_STL_SLICE)
+    doc.removeObject("tmp_slice")
+    print(f"  [OK] Test slice STL: {PATH_STL_SLICE}")
+except Exception as ex:
+    print(f"  Slice STL export error: {ex}")
+
+# =============================================================================
+# SVG BLUEPRINT
+# =============================================================================
+print("\nExporting blueprint...")
+svg = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700">
+  <style>
+    .title {{ font: bold 16px sans-serif; fill: #1e3a5f; }}
+    .label {{ font: 11px sans-serif; fill: #333; }}
+    .dim   {{ font: 12px sans-serif; fill: #b91c1c; }}
+    .note  {{ font: 10px sans-serif; fill: #666; font-style: italic; }}
+  </style>
+
+  <text x="450" y="30" text-anchor="middle" class="title">CSM V3 Cam Ring V6.1 - Cam Profile (UNROLLED)</text>
+
+  <!-- Unrolled cam profile (key visualization) -->
+  <g transform="translate(50, 80)">
+    <rect x="0" y="0" width="800" height="200" fill="#fafaf8" stroke="#888"/>
+    
+    <!-- Y axis: Z height labels -->
+    <text x="-30" y="40" class="label">Z=15</text>
+    <text x="-30" y="160" class="label">Z=5</text>
+    
+    <!-- X axis: angle labels -->
+    <text x="0" y="220" class="label">0°</text>
+    <text x="600" y="220" class="label">270°</text>
+    <text x="650" y="220" class="label">292.5°</text>
+    <text x="700" y="220" class="label">297.5°</text>
+    <text x="750" y="220" class="label">315°</text>
+    <text x="800" y="220" class="label">360°</text>
+    
+    <!-- Cam profile: rest at Y=160 (Z=5), peak at Y=40 (Z=15) -->
+    <!-- Scale: 800px = 360deg, 120px = 10mm lift -->
+    <polyline points="0,160 600,160 650,40 700,40 750,160 800,160"
+              fill="none" stroke="#b91c1c" stroke-width="3"/>
+    
+    <!-- Zone labels -->
+    <text x="300" y="180" text-anchor="middle" class="label">REST (270deg low)</text>
+    <text x="625" y="100" class="dim">RISE</text>
+    <text x="675" y="30" class="dim">PEAK</text>
+    <text x="725" y="100" class="dim">FALL</text>
+    <text x="780" y="180" text-anchor="middle" class="label">rest</text>
+    
+    <text x="400" y="-10" text-anchor="middle" class="dim">LIFT = {LIFT}mm</text>
+    
+    <!-- Highlight knit zone -->
+    <rect x="600" y="0" width="150" height="200" fill="#fff3cd" opacity="0.3"/>
+  </g>
+
+  <!-- Description -->
+  <g transform="translate(50, 350)">
+    <text x="0" y="0" class="title">V6.1 CORRECTION (vs V6 broken):</text>
+    <text x="0" y="25" class="label">V6 was WRONG: used radial depth variation (3mm to 9mm) to "lift" needles.</text>
+    <text x="0" y="42" class="label">Radial cuts don't lift needles - they just shift them inward/outward.</text>
+    <text x="0" y="59" class="label">V6.1 CORRECT: cam slot's BOTTOM EDGE varies in Z (vertical) by angle.</text>
+    <text x="0" y="76" class="label">Needle butt rides on this Z-varying edge, lifted physically as cylinder rotates.</text>
+  </g>
+  
+  <g transform="translate(50, 460)">
+    <text x="0" y="0" class="title">Test Slice Strategy:</text>
+    <text x="0" y="25" class="label">Print 65 deg test slice covering full knit zone (260-325 deg).</text>
+    <text x="0" y="42" class="label">Validate single needle motion before printing full ring.</text>
+    <text x="0" y="59" class="label">Print time: ~1 hour, ~30g PETG (vs 4-6 hours, 150g for full ring).</text>
+    <text x="0" y="76" class="label">If profile needs adjustment: change LIFT or angle parameters, regenerate.</text>
+  </g>
+  
+  <g transform="translate(50, 580)">
+    <text x="0" y="0" class="title">Test Protocol:</text>
+    <text x="0" y="22" class="label">1. Mount test slice over a section of cylinder (with needles installed)</text>
+    <text x="0" y="39" class="label">2. Slowly slide cylinder past slice - butt should lift smoothly</text>
+    <text x="0" y="56" class="label">3. Verify lift amount matches LIFT (10mm)</text>
+    <text x="0" y="73" class="label">4. Verify smooth transitions (no binding)</text>
+    <text x="0" y="90" class="label">5. If OK, print full ring</text>
+  </g>
+</svg>
+'''
+
+with open(PATH_SVG, 'w') as f:
+    f.write(svg)
+print(f"  [OK] SVG: {PATH_SVG}")
+
+# =============================================================================
+# FINAL SUMMARY
+# =============================================================================
+print()
+print("=" * 70)
+print("COMPLETE -- CAM RING V6.1 (CORRECTED)")
+print("=" * 70)
+print()
+print("CRITICAL CORRECTION FROM V6:")
+print("  V6 used radial cam depth (WRONG)")
+print("  V6.1 uses axial Z profile (CORRECT)")
+print()
+print("Cam slot bottom edge Z = Z_REST + LIFT * f(theta)")
+print(f"  Rest:  Z = {Z_REST}mm  ({ANGLE_RISE_START}deg of REST + 45deg post)")
+print(f"  Peak:  Z = {Z_PEAK}mm  (5deg, at theta = 295deg)")
+print(f"  Lift:  {LIFT}mm physical needle motion")
+print()
+print("HARDWARE NEEDED:")
+print("  - 6x M5 bolts (already have)")
+print("  - 6x 4mm dowel pins (already have)")
+print("  - Loctite 603 (already have)")
+print("  Nothing new to order.")
+print()
+print("PRINT INSTRUCTIONS:")
+print("  STEP 1 (CRITICAL): Print test slice FIRST")
+print("    File: CSM_V3_CamRing_V6_5_TESTSLICE.stl")
+print("    Time: ~1 hour, ~30g PETG")
+print("    Settings: 0.2mm layer, 5 perim, 40% Cubic infill, NO supports")
+print()
+print("  STEP 2: Validate motion")
+print("    Mount slice next to a few cylinder needles")
+print("    Manually rotate, verify needle lift = 10mm")
+print("    Verify smooth motion (no binding)")
+print()
+print("  STEP 3: If OK, print full ring")
+print("    File: CSM_V3_CamRing_V6_5_FULL.stl")
+print("    Time: 4-6 hours, ~150-180g PETG")
+print()
+print("STATUS: CAM RING V6.1 - VALIDATE WITH TEST SLICE BEFORE FULL PRINT")
+print("=" * 70)

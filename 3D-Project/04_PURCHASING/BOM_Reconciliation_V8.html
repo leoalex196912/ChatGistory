@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSM V3 - BOM Reconciliation V8 (V2.4 DETERMINISTIC PRELOAD)</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: #f5f5f7;
+    color: #1d1d1f;
+    margin: 0;
+    padding: 20px;
+    line-height: 1.5;
+  }
+  .container { max-width: 1500px; margin: 0 auto; }
+  header {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2c5282 100%);
+    color: white;
+    padding: 30px 40px;
+    border-radius: 12px;
+    margin-bottom: 30px;
+  }
+  header h1 { margin: 0 0 8px 0; font-size: 28px; font-weight: 600; }
+  header .subtitle { opacity: 0.85; font-size: 14px; margin-bottom: 20px; }
+  .cost-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+  }
+  .cost-box { background: rgba(255,255,255,0.15); padding: 15px 20px; border-radius: 8px; }
+  .cost-box .label { font-size: 10px; text-transform: uppercase; opacity: 0.85; margin-bottom: 5px; letter-spacing: 1px; }
+  .cost-box .value { font-size: 22px; font-weight: 700; }
+  .section { background: white; border-radius: 12px; padding: 25px 30px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+  .section h2 { margin: 0 0 5px 0; color: #1d1d1f; font-size: 20px; }
+  .section h3 { color: #1e3a5f; margin-top: 25px; font-size: 16px; }
+  .section-desc { color: #6e6e73; font-size: 13px; margin-bottom: 20px; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 12px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  .badge-ok { background: #d1fae5; color: #065f46; }
+  .badge-warn { background: #fef3c7; color: #92400e; }
+  .badge-error { background: #fee2e2; color: #991b1b; }
+  .badge-new { background: #ede9fe; color: #5b21b6; }
+  .badge-v24 { background: #dbeafe; color: #1e3a8a; border: 1px solid #3b82f6; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: #f9f9fb; color: #1d1d1f; text-align: left; padding: 10px 8px; font-weight: 600; border-bottom: 2px solid #e5e5ea; font-size: 10px; text-transform: uppercase; }
+  td { padding: 10px 8px; border-bottom: 1px solid #f0f0f3; vertical-align: top; }
+  tr:hover td { background: #fafafc; }
+  tr.ordered-ok td { background: #f0fdf4; }
+  tr.ordered-issue td { background: #fff7ed; }
+  tr.to-buy td { background: #eff6ff; }
+  tr.v24-new td { background: #dbeafe; }
+  td.price { font-weight: 600; white-space: nowrap; text-align: right; }
+  td.price-spent { color: #047857; }
+  td.price-todo { color: #1e40af; }
+  td.price-refund { color: #dc2626; text-decoration: line-through; }
+  td.price-new { color: #1e40af; }
+  td.url a { color: #2563eb; text-decoration: none; font-size: 11px; word-break: break-all; }
+  td.url a:hover { text-decoration: underline; }
+  td.item { font-weight: 500; min-width: 220px; }
+  td.notes { font-size: 11px; color: #4b5563; max-width: 280px; }
+  .alert { padding: 15px 20px; border-radius: 8px; margin-bottom: 15px; border-left-width: 4px; border-left-style: solid; }
+  .alert-critical { background: #fef2f2; border-color: #dc2626; color: #7f1d1d; }
+  .alert-warn { background: #fffbeb; border-color: #f59e0b; color: #78350f; }
+  .alert-info { background: #eff6ff; border-color: #3b82f6; color: #1e3a8a; }
+  .alert-success { background: #f0fdf4; border-color: #22c55e; color: #14532d; }
+  .alert-v24 { background: #eff6ff; border-color: #3b82f6; color: #1e3a8a; }
+  .product-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin: 10px 0; }
+  .product-card.recommended { background: #f0fdf4; border-color: #22c55e; }
+  .product-card.best { background: #eff6ff; border-color: #3b82f6; }
+  .product-card .prod-title { font-weight: 600; color: #1e3a5f; margin-bottom: 5px; }
+  .product-card .prod-details { font-size: 12px; color: #4b5563; margin: 5px 0; }
+  .product-card .prod-link { font-size: 12px; word-break: break-all; }
+  .product-card .prod-link a { color: #2563eb; }
+  .price-tag { display: inline-block; background: #dbeafe; color: #1e40af; padding: 3px 10px; border-radius: 4px; font-weight: 600; font-size: 13px; }
+  .verified-asin { background: #dcfce7; color: #14532d; padding: 2px 6px; border-radius: 3px; font-family: Menlo, monospace; font-size: 10px; font-weight: 600; }
+  footer { text-align: center; color: #6e6e73; font-size: 12px; padding: 20px; }
+  .action-required { background: #fef2f2; border-left: 4px solid #dc2626; padding: 15px 20px; margin: 15px 0; border-radius: 4px; }
+  .action-required h3 { margin: 0 0 10px 0; color: #991b1b; font-size: 15px; }
+  .highlight-box { background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; padding: 20px; border-radius: 10px; margin: 20px 0; }
+  .highlight-box .big-title { font-size: 20px; font-weight: 700; color: #1e3a8a; margin-bottom: 10px; }
+  @media print { body { background: white; } .section, header { box-shadow: none; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header>
+  <h1>CSM V3 - BOM Reconciliation V8</h1>
+  <div class="subtitle">Version 8.0 | April 2026 | V2.4 Deterministic Preload Architecture</div>
+  <div class="cost-grid">
+    <div class="cost-box"><div class="label">Total Orders</div><div class="value">57 items</div></div>
+    <div class="cost-box"><div class="label">Total Spent</div><div class="value">$1,263.84</div></div>
+    <div class="cost-box"><div class="label">Mandatory Returns</div><div class="value">-$58.99</div></div>
+    <div class="cost-box"><div class="label">V2.4 Hardware</div><div class="value">+$25-30</div></div>
+  </div>
+</header>
+
+<div class="highlight-box">
+  <div class="big-title">V2.4 UPGRADE: Deterministic preload via spacer tube</div>
+  <p style="color:#1e3a8a; font-size:14px; margin: 5px 0;">
+    <strong>Architectural shift from V2.3:</strong> Preload no longer depends on hand-tightening the top collar
+    to a specific position. Instead, a precision spacer tube (29.40mm long) on the shaft between the two
+    bearing inner races forces the wave spring into exactly 0.5mm of compression - delivering ~30N preload
+    automatically and repeatably. This is how industrial CNC spindles and Lonati-class knitting heads work.
+  </p>
+  <p style="color:#1e3a8a; font-size:13px; margin: 5px 0; font-weight:600;">
+    Top collar role changed: now retention only (light clamp), not preload setting.
+    Result: zero assembly variability, zero drift over time.
+  </p>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>V2.4 NEW Hardware Required (~$25-30)</h2>
+  <div class="section-desc">Three small parts complete the deterministic preload system. The spacer tube is the key new addition vs V2.3.</div>
+
+  <div class="alert alert-v24">
+    <strong>What changed from V2.3:</strong> V2.3 used wave spring + spacer ring with manual collar tightening. V2.4 keeps both, ADDS a rigid spacer tube on the shaft between bearing inner races. The spacer tube length (29.40mm) sets preload geometrically - no manual compression needed.
+  </div>
+
+  <h3 style="color:#1e40af;">Part 1: Wave Spring (V2.3 carryover - same as before)</h3>
+
+  <div class="product-card best">
+    <div class="prod-title">Recommended: McMaster-Carr Wave Disc Spring Washer</div>
+    <div class="prod-details"><strong>Specs:</strong> 12mm ID x ~25mm OD x ~0.45mm thick, 17-7PH stainless, single-turn 3-wave, ~30N at 0.5mm compression</div>
+    <div class="prod-details"><strong>URL:</strong> <a href="https://www.mcmaster.com/products/wave-disc-spring-washers/">mcmaster.com/products/wave-disc-spring-washers/</a></div>
+    <div class="prod-details"><strong>How to find:</strong> Filter by metric size, or call (630) 833-0300 with your specs</div>
+    <span class="price-tag">$6-12 single piece</span>
+  </div>
+
+  <div class="product-card recommended">
+    <div class="prod-title">Alternative: Enduro Bearings WA Wave 12/0.4</div>
+    <div class="prod-details"><strong>URL:</strong> <a href="https://cycling.endurobearings.com/products/wa-wave-12-0-3-12mm-id-spring-steel-wave-washer-0-3mm-light">cycling.endurobearings.com</a></div>
+    <div class="prod-details"><strong>Tip:</strong> Buy 0.3, 0.4, 0.5mm thicknesses to fine-tune preload</div>
+    <span class="price-tag">$2-5 per piece</span>
+  </div>
+
+  <h3 style="color:#1e40af;">Part 2: Spacer Ring (V2.3 carryover - same as before)</h3>
+
+  <div class="product-card best">
+    <div class="prod-title">Recommended: McMaster-Carr Metric Round Shim</div>
+    <div class="prod-details"><strong>Specs:</strong> 12mm ID x 18mm OD x 2mm thick, 18-8 stainless</div>
+    <div class="prod-details"><strong>URL:</strong> <a href="https://www.mcmaster.com/">mcmaster.com</a> (search "metric round shim 12mm 18mm 2mm")</div>
+    <span class="price-tag">$6-12 pack of 10</span>
+  </div>
+
+  <h3 style="color:#1e40af;">Part 3: Spacer TUBE - NEW for V2.4 (preload-defining part)</h3>
+
+  <div class="alert alert-warn">
+    <strong>This is the most important part of V2.4.</strong> Length tolerance ±0.05mm is critical.
+    Length too short = excessive preload (drag/heat). Length too long = no preload (click/play).
+  </div>
+
+  <div class="product-card best">
+    <div class="prod-title">Option A (RECOMMENDED for production): Aluminum Tube cut to 29.40mm</div>
+    <div class="prod-details"><strong>Specs:</strong> 18mm OD x 12mm ID x 29.40mm length (after cutting), 6061 aluminum</div>
+    <div class="prod-details"><strong>Source:</strong> Amazon search "18mm OD 12mm ID aluminum tube" or hobby metal supplier</div>
+    <div class="prod-link">URL: <a href="https://www.amazon.com/s?k=18mm+OD+12mm+ID+aluminum+tube">Amazon search</a></div>
+    <div class="prod-details"><strong>Cutting procedure:</strong> Hacksaw to ~30mm rough, then file ends square. Verify 29.40mm with calipers (you have NEIKO already). Sand ends flat on 400 grit on a granite surface plate or thick glass.</div>
+    <div class="prod-details"><strong>Alternative source:</strong> McMaster-Carr "aluminum tube 18mm OD" - usually $5-15 for a 12-inch length, enough for many spacers.</div>
+    <span class="price-tag">$5-15</span>
+  </div>
+
+  <div class="product-card recommended">
+    <div class="prod-title">Option B (SIMPLEST for prototype): 3D Printed PETG Spacer</div>
+    <div class="prod-details"><strong>Cost:</strong> $0 - the V2.4 macro generates the STL automatically</div>
+    <div class="prod-details"><strong>Print settings:</strong> 0.1mm layer (precision), 100% infill (rigidity), 8 perimeters, vertical orientation (length axis up)</div>
+    <div class="prod-details"><strong>Caveat:</strong> PETG creeps under load over time (~0.1-0.2mm in months). Acceptable for testing/prototype, NOT for final production.</div>
+    <div class="prod-details"><strong>Recommended:</strong> Print PETG first to validate fit, then upgrade to aluminum.</div>
+    <span class="price-tag">$0</span>
+  </div>
+
+  <div class="product-card">
+    <div class="prod-title">Option C (ELITE level): Ground Steel Tube</div>
+    <div class="prod-details"><strong>Specs:</strong> Ground 18mm OD x 12mm ID x 29.40mm hardened steel tube</div>
+    <div class="prod-details"><strong>Source:</strong> McMaster-Carr or local machine shop with surface grinder</div>
+    <div class="prod-details"><strong>Why elite:</strong> Zero creep, exact length, lifetime durability. Industrial standard.</div>
+    <span class="price-tag">$15-30</span>
+  </div>
+
+  <h3 style="color:#1e40af;">Optional: Shim Kit for Fine-Tuning Preload</h3>
+
+  <div class="product-card recommended">
+    <div class="prod-title">Mixed thickness shim washer kit (12mm ID)</div>
+    <div class="prod-details"><strong>Specs:</strong> 12mm ID x 18mm OD x various thicknesses (0.1, 0.2, 0.3mm)</div>
+    <div class="prod-details"><strong>Why useful:</strong> If first assembly is too tight or too loose, slip a shim above/below the spring to adjust preload by ~5N per 0.1mm. Avoids reprinting/recutting spacer tube.</div>
+    <div class="prod-details"><strong>Source:</strong> Amazon search "shim washer 12mm assortment" or <a href="https://accu-components.com/us/shim-washers/">accu-components.com</a></div>
+    <span class="price-tag">$8-15</span>
+  </div>
+
+  <div class="alert alert-info">
+    <strong>Recommended V2.4 ordering plan:</strong>
+    <ol style="margin: 5px 0 5px 20px;">
+      <li>McMaster wave spring + spacer ring: ~$20</li>
+      <li>3D print PETG spacer first ($0) to test geometry</li>
+      <li>If geometry works: order aluminum tube (~$10) for permanent install</li>
+      <li>Optional: shim kit for tuning ($10)</li>
+    </ol>
+    Total realistic spend: <strong>$25-30</strong>
+  </div>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>V2.4 Assembly Procedure</h2>
+
+  <div class="alert alert-v24">
+    <strong>Key difference from V2.3:</strong> No more "push shaft 1mm and tighten collar" step.
+    The spacer tube does the compression automatically. Assembly is simpler and more repeatable.
+  </div>
+
+  <h3 style="color:#1e40af;">Block Gap Verification (CRITICAL)</h3>
+  <div class="action-required">
+    <h3>Block gap MUST be 11mm</h3>
+    <p>The spacer tube length (29.40mm) was calculated based on:</p>
+    <ul style="margin: 5px 0 5px 20px;">
+      <li>6mm aluminum mounting plate</li>
+      <li>5mm assembly clearance (for fasteners and access)</li>
+      <li><strong>Total: 11mm gap between top of bottom block and bottom of top block</strong></li>
+    </ul>
+    <p><strong>If your actual block gap differs from 11mm, recalculate the spacer length:</strong></p>
+    <p style="font-family: monospace; background: #fff; padding: 8px; border-radius: 4px;">
+      Spacer length = (Block gap) + 18.4mm
+    </p>
+    <p>Examples: gap = 10mm → spacer 28.4mm. gap = 12mm → spacer 30.4mm.</p>
+  </div>
+
+  <h3 style="color:#1e40af;">Step-by-step Assembly</h3>
+  <ol style="margin-left: 20px; line-height: 1.8;">
+    <li>Print all 3 STLs from V2.4 macro (top block, bottom block, spacer tube)</li>
+    <li>Apply Loctite 603 to bearing pockets, install:
+      <ul>
+        <li>51101 thrust bearing in bottom block lower pocket</li>
+        <li>6001-2RS radial bearing in bottom block upper pocket</li>
+        <li>6001-2RS radial bearing in top block</li>
+      </ul>
+    </li>
+    <li>Cure Loctite 24 hours at room temperature</li>
+    <li>In bottom block, stack: lower 2x AS1226 washers → wave spring → spacer ring (no Loctite on spring/spacer/washers)</li>
+    <li>Mount bottom block to aluminum plate using M5 flathead screws</li>
+    <li>Mount top block to a separate plate using M5 flathead screws</li>
+    <li>Verify 11mm gap between blocks (use spacer tube as gauge - it should JUST barely touch both bearing inner races when unloaded)</li>
+    <li>Install bottom shaft collar at Z = -2mm (clamped tightly)</li>
+    <li>Insert shaft through bottom block</li>
+    <li><strong>Slide spacer tube onto shaft</strong> (sits on bottom radial bearing inner race)</li>
+    <li>Lower top block onto shaft (top bearing slides over shaft, contacts top of spacer tube)</li>
+    <li>Bolt top plate to frame (this defines block gap)</li>
+    <li>Install top shaft collar - <strong>LIGHTLY clamp (retention only, no compression force)</strong></li>
+  </ol>
+
+  <h3 style="color:#1e40af;">Test Protocol (Verify Preload Works)</h3>
+  <ol style="margin-left: 20px;">
+    <li><strong>Rotation test:</strong> Spin shaft by hand. Should feel smooth with slight resistance.</li>
+    <li><strong>Axial play test:</strong> Try to lift/push shaft. Should be ZERO movement.</li>
+    <li><strong>Click test:</strong> Rotate slowly listening for clicks. Should be silent.</li>
+    <li><strong>Drag test:</strong> Spin shaft, time to coastdown. Should rotate freely 5+ seconds.</li>
+    <li><strong>Runout test:</strong> Use dial indicator. <0.2mm TIR at shaft end.</li>
+    <li><strong>Heat test:</strong> Run 30 RPM for 10 minutes. Should remain cool to touch.</li>
+  </ol>
+
+  <h3 style="color:#1e40af;">Fine-Tuning (if any test fails)</h3>
+  <table>
+    <thead><tr><th>Symptom</th><th>Cause</th><th>Fix</th></tr></thead>
+    <tbody>
+      <tr><td>Click/rattle on rotation</td><td>Spacer tube too LONG (insufficient preload)</td><td>Shorten spacer 0.1-0.2mm OR remove a shim from the wave spring stack</td></tr>
+      <tr><td>Heavy drag, stiff rotation</td><td>Spacer tube too SHORT (excessive preload)</td><td>Add 0.1mm shim above the spacer ring</td></tr>
+      <tr><td>Heat buildup</td><td>Excessive preload</td><td>Same as above - reduce preload</td></tr>
+      <tr><td>Axial play (~0.1-0.5mm)</td><td>Spacer too long OR spring damaged</td><td>Shorten spacer; inspect spring for plastic deformation</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>Section 1 - All 57 Existing Orders (Status Unchanged)</h2>
+  <div class="alert alert-success">
+    <strong>All 57 existing orders remain valid.</strong> V2.4 is purely additive - no existing parts need to be returned or replaced. The new spacer tube is the only NEW part type added; all other V2.4 hardware (wave spring, spacer ring) was already needed for V2.3.
+  </div>
+
+  <h3>Mandatory Returns (unchanged from prior versions)</h3>
+  <table>
+    <thead><tr><th>Status</th><th>Item</th><th>Refund</th><th>Reason</th></tr></thead>
+    <tbody>
+      <tr class="ordered-issue"><td><span class="badge badge-error">RETURN</span></td><td class="item">NEMA 23 5A standalone (B0DSD9YF72)</td><td class="price price-refund">$45.00</td><td class="notes">Exceeds TB6600 4A limit</td></tr>
+      <tr class="ordered-issue"><td><span class="badge badge-error">RETURN</span></td><td class="item">8mm linear rods (B0DRRTY96V)</td><td class="price price-refund">$13.99</td><td class="notes">Wrong diameter (need 12mm)</td></tr>
+    </tbody>
+  </table>
+  <p><strong>Total mandatory refund: $58.99</strong></p>
+
+  <h3>Optional Returns (~$31.89 additional refund)</h3>
+  <ul>
+    <li>Duplicate rocker switch (either B0778PG8P2 or B0FVSS8RDR) - $7.99</li>
+    <li>Duplicate Hall sensors B0GMJ1NXS9 - $9.99</li>
+    <li>Redundant Pi 4 metal case B0GXCLXVBR - $13.91</li>
+  </ul>
+
+  <h3>Existing Order Categories (all valid)</h3>
+  <ul>
+    <li><strong>Mechanical:</strong> Latch needles, FEYRINX shaft, bearings (6001-2RS, 51101, 608-2RS), shaft collars, aluminum plate, AS1226 washers</li>
+    <li><strong>Drive system:</strong> NEMA 23 + 5:1 gearbox, HTD 5M pulleys + belt, TB6600 driver</li>
+    <li><strong>Frame:</strong> 2020 extrusion, brackets, T-nuts, screws, dowel pins, heat-set inserts</li>
+    <li><strong>Electronics:</strong> Arduino Mega, CanaKit Pi 4 kit, ELECROW touchscreen, S-250-24 PSU, buck converter, fuse kit, limit switches, Hall sensors</li>
+    <li><strong>Yarn system:</strong> Ceramic pigtails, springs, magnets</li>
+    <li><strong>Wiring:</strong> Crimp tool, jumpers, silicone wire, terminal blocks, heat shrink</li>
+    <li><strong>Consumables:</strong> PETG, filament dryer (S1 Plus), Loctite 603</li>
+    <li><strong>Post-processing:</strong> West System epoxy, sandpaper, gloves, PTFE lube, IPA</li>
+    <li><strong>Tools:</strong> NEIKO caliper, dial indicator, soldering iron</li>
+  </ul>
+  <p>For complete itemized list with ASINs, see V7 BOM (BOM_Reconciliation_V7.html). All status unchanged.</p>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>Section 2 - Final Cost Summary (V2.4)</h2>
+
+  <table style="max-width: 750px;">
+    <tbody>
+      <tr><td style="font-weight:600;">Total orders (57 items)</td><td class="price price-spent">$1,263.84</td></tr>
+      <tr><td style="font-weight:600;">Mandatory returns</td><td class="price price-refund">-$58.99</td></tr>
+      <tr><td style="font-weight:600;">Optional duplicate returns</td><td class="price price-refund">up to -$31.89</td></tr>
+      <tr><td style="font-weight:600;">Net kept after all returns</td><td class="price">$1,172.96</td></tr>
+      <tr style="background: #dbeafe;"><td style="font-weight:600; color:#1e3a8a;"><strong>V2.4 - Wave spring</strong></td><td class="price price-new">+$10</td></tr>
+      <tr style="background: #dbeafe;"><td style="font-weight:600; color:#1e3a8a;"><strong>V2.4 - Spacer ring</strong></td><td class="price price-new">+$10</td></tr>
+      <tr style="background: #dbeafe;"><td style="font-weight:600; color:#1e3a8a;"><strong>V2.4 - Aluminum spacer tube</strong></td><td class="price price-new">+$10</td></tr>
+      <tr><td style="font-weight:600;">Wood base (Home Depot)</td><td class="price price-todo">+$22</td></tr>
+      <tr><td style="font-weight:600;">Optional: PETG 2kg more</td><td class="price price-todo">+$36</td></tr>
+      <tr><td style="font-weight:600;">Optional: PA12 Nylon</td><td class="price price-todo">+$55</td></tr>
+      <tr style="border-top: 2px solid #1e3a5f; background: #fff7ed;">
+        <td style="font-weight:700; font-size:15px;">PROJECT TOTAL (V2.4 minimum)</td>
+        <td class="price" style="font-size:15px; color:#c2410c;">$1,224.96</td>
+      </tr>
+      <tr style="background: #fff7ed;">
+        <td style="font-weight:700; font-size:15px;">PROJECT TOTAL (with all optional)</td>
+        <td class="price" style="font-size:15px; color:#c2410c;">$1,315.96</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="alert alert-success" style="margin-top:20px;">
+    <strong>Project remains within original $1,230-1,500 budget.</strong>
+    V2.4 adds only ~$30 over V2.2 for industrial-grade preload.
+  </div>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>Section 3 - Design Status</h2>
+  <table>
+    <thead><tr><th>CAD Part</th><th>Status</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Cam ring V5</strong></td><td><span class="badge badge-ok">Print-Ready</span></td><td>Previously delivered</td></tr>
+      <tr><td><strong>Bearing housings V2.4</strong></td><td><span class="badge badge-v24">V2.4 Print-Ready</span></td><td><strong>Current macro - deterministic preload</strong></td></tr>
+      <tr><td><strong>Spacer tube V2.4 (NEW)</strong></td><td><span class="badge badge-v24">Print-Ready</span></td><td><strong>NEW: 29.40mm, generated by V2.4 macro</strong></td></tr>
+      <tr><td>Motor mount bracket</td><td><span class="badge badge-warn">Next CAD task</span></td><td>Pending</td></tr>
+      <tr><td>Drive hub (60T pulley mount)</td><td><span class="badge badge-warn">Pending</span></td><td>After motor mount</td></tr>
+      <tr><td>Cylinder R3+</td><td><span class="badge badge-warn">Waiting on needle measurements</span></td><td>Measure blade with calipers</td></tr>
+      <tr><td>Sinker ring</td><td><span class="badge badge-warn">Pending</span></td><td>Phase 2</td></tr>
+      <tr><td>Retainer ring (PA12)</td><td><span class="badge badge-warn">Pending</span></td><td>Phase 2</td></tr>
+      <tr><td>Cassette base</td><td><span class="badge badge-warn">Pending</span></td><td>Phase 2</td></tr>
+      <tr><td>Yarn guide arm</td><td><span class="badge badge-warn">Phase 4</span></td><td>Later in build</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<!-- ==================================================================== -->
+<div class="section">
+  <h2>Section 4 - V2.4 Quick Reference Card</h2>
+
+  <div class="alert alert-v24">
+    <strong>Pin this for reference during assembly</strong>
+  </div>
+
+  <table style="max-width: 800px;">
+    <tbody>
+      <tr><td style="font-weight:600; min-width:200px;">Bottom shaft collar position</td><td>Z = -2mm (hard stop, below bottom block)</td></tr>
+      <tr><td style="font-weight:600;">Top shaft collar role</td><td>Retention only (light clamp, no preload force)</td></tr>
+      <tr><td style="font-weight:600;">Block gap</td><td>11mm (6mm Al plate + 5mm clearance) - LOCKED</td></tr>
+      <tr><td style="font-weight:600;">Spacer tube length</td><td>29.40mm ±0.05mm (preload-defining dimension)</td></tr>
+      <tr><td style="font-weight:600;">Wave spring compression</td><td>0.5mm (free 1.0mm → loaded 0.5mm)</td></tr>
+      <tr><td style="font-weight:600;">Resulting preload</td><td>~30N constant (geometric, deterministic)</td></tr>
+      <tr><td style="font-weight:600;">Bottom radial inner race</td><td>Z = 27.4mm (from bottom face of bottom block)</td></tr>
+      <tr><td style="font-weight:600;">Top radial inner race</td><td>Z = 57.7mm (with 11mm block gap)</td></tr>
+      <tr><td style="font-weight:600;">Wave spring spec</td><td>12mm ID, 25mm OD, 0.45mm thick, 17-7PH, single-turn 3-wave</td></tr>
+      <tr><td style="font-weight:600;">Spacer ring spec</td><td>12mm ID, 18mm OD, 2mm thick, stainless steel</td></tr>
+      <tr><td style="font-weight:600;">Spacer tube spec</td><td>12.2mm ID, 18mm OD, 29.40mm long, aluminum (or PETG for proto)</td></tr>
+    </tbody>
+  </table>
+</div>
+
+<footer>
+  CSM V3 | BOM Reconciliation V8 (V2.4 DETERMINISTIC PRELOAD) | April 2026<br>
+  57 orders + 3 small new V2.4 items (~$30) for industrial-grade preload<br>
+  Save to: C:\3D-Project\04_PURCHASING\
+</footer>
+
+</div>
+</body>
+</html>

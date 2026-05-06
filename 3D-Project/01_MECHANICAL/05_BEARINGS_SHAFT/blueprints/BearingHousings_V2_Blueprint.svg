@@ -1,0 +1,145 @@
+<svg viewBox="0 0 1100 750" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="750" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">BEARING HOUSING BLOCKS V2 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">All 7 review fixes applied. PETG with Loctite 603. Shaft D12mm.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP BLOCK LEFT -->
+  <text x="230" y="82" text-anchor="middle" fill="#184e9e" font-size="13" font-weight="bold">TOP BLOCK (60x60x20mm)</text>
+  <text x="230" y="98" text-anchor="middle" fill="#666" font-size="10">1x 6001-2RS slip fit + Loctite</text>
+
+  <!-- TOP block top view -->
+  <text x="100" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="100" y="120" width="260" height="260" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <circle cx="230" cy="250" r="65.2" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="230" y="247" text-anchor="middle" fill="#333" font-size="9">Bearing pocket</text>
+  <text x="230" y="260" text-anchor="middle" fill="#333" font-size="9">D28.05 (slip)</text>
+  <circle cx="230" cy="250" r="29" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="230" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.5</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="300" cy="180" r="6"/>
+    <circle cx="300" cy="320" r="6"/>
+    <circle cx="160" cy="320" r="6"/>
+    <circle cx="160" cy="180" r="6"/>
+  </g>
+  <text x="320" y="178" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="320" y="190" fill="#791F1F" font-size="8">PCD 48</text>
+  <text x="320" y="202" fill="#791F1F" font-size="8">90 deg CSK</text>
+
+  <!-- TOP side section -->
+  <text x="100" y="410" fill="#666" font-size="9">SIDE SECTION</text>
+  <rect x="100" y="415" width="260" height="90" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <rect x="175" y="415" width="110" height="40" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="230" y="430" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="230" y="443" text-anchor="middle" fill="#333" font-size="8">8.5mm deep</text>
+  <line x1="230" y1="415" x2="230" y2="505" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <!-- Retaining lip callout -->
+  <rect x="175" y="455" width="110" height="10" fill="#fff0cc" stroke="#b8860b" stroke-width="0.8"/>
+  <text x="230" y="463" text-anchor="middle" fill="#92400e" font-size="8">Retaining LIP (7.77mm radial)</text>
+  <!-- Countersinks with proper cone shape -->
+  <polygon points="125,505 125,495 138,505" fill="#e24b4a" opacity="0.6"/>
+  <polygon points="322,505 322,495 335,505" fill="#e24b4a" opacity="0.6"/>
+  <text x="130" y="520" fill="#791F1F" font-size="7">90 CSK (cone)</text>
+
+  <!-- TOP info -->
+  <rect x="40" y="540" width="380" height="180" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="52" y="558" fill="#184e9e" font-size="11" font-weight="bold">TOP BLOCK V2 specs:</text>
+  <text x="52" y="576" fill="#333" font-size="10">- 1x 6001-2RS (28x12x8mm) SLIP fit + Loctite 603</text>
+  <text x="52" y="592" fill="#333" font-size="10">- Bearing pocket: D28.05 x 8.5mm deep</text>
+  <text x="52" y="608" fill="#333" font-size="10">- Natural shoulder = retaining lip (Fix 2)</text>
+  <text x="52" y="624" fill="#333" font-size="10">- Shaft clearance: D12.5mm</text>
+  <text x="52" y="640" fill="#333" font-size="10">- 4x M5 bolts PCD 48, 90deg conical CSK on bottom</text>
+  <text x="52" y="656" fill="#333" font-size="10">- Outer chamfer 1mm (Fix 8)</text>
+  <text x="52" y="672" fill="#333" font-size="10">- Purpose: radial support at top of shaft</text>
+  <text x="52" y="696" fill="#666" font-size="9" font-style="italic">Install: press bearing lightly, 1 drop Loctite 603</text>
+  <text x="52" y="710" fill="#666" font-size="9" font-style="italic">around outer race before seating. Cure 24h.</text>
+
+  <!-- BOTTOM BLOCK (right) -->
+  <text x="810" y="82" text-anchor="middle" fill="#9e4818" font-size="13" font-weight="bold">BOTTOM BLOCK (80x80x35mm)</text>
+  <text x="810" y="98" text-anchor="middle" fill="#666" font-size="10">1x radial + 1x thrust + 2x washers</text>
+
+  <text x="680" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="680" y="120" width="260" height="260" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <circle cx="810" cy="250" r="56" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="810" y="247" text-anchor="middle" fill="#333" font-size="9">radial pocket</text>
+  <text x="810" y="260" text-anchor="middle" fill="#333" font-size="9">D28.05</text>
+  <circle cx="810" cy="250" r="29" fill="#fff8f2" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="810" y="277" text-anchor="middle" fill="#993556" font-size="8">shaft D12.5</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="893" cy="167" r="6"/>
+    <circle cx="893" cy="333" r="6"/>
+    <circle cx="727" cy="333" r="6"/>
+    <circle cx="727" cy="167" r="6"/>
+  </g>
+  <text x="905" y="165" fill="#791F1F" font-size="9">M5x4</text>
+  <text x="905" y="177" fill="#791F1F" font-size="8">PCD 64</text>
+  <text x="905" y="189" fill="#791F1F" font-size="8">90 deg CSK</text>
+
+  <!-- BOTTOM side section (detailed stack) -->
+  <text x="470" y="410" fill="#666" font-size="9">SIDE SECTION (showing stack)</text>
+  <rect x="470" y="415" width="360" height="175" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+
+  <!-- Stack layers from bottom to top -->
+  <!-- Floor -->
+  <rect x="470" y="575" width="360" height="15" fill="#f5e1d8" stroke="none"/>
+  <text x="835" y="586" fill="#666" font-size="7">3mm floor</text>
+
+  <!-- Lower washer -->
+  <rect x="580" y="568" width="140" height="7" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="573" fill="#666" font-size="7">washer 1.5mm</text>
+
+  <!-- Thrust bearing -->
+  <rect x="580" y="523" width="140" height="45" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="650" y="548" text-anchor="middle" fill="#333" font-size="9">51101 thrust</text>
+  <text x="650" y="560" text-anchor="middle" fill="#333" font-size="8">9mm</text>
+  <text x="835" y="550" fill="#666" font-size="7">thrust 9mm</text>
+
+  <!-- Upper washer -->
+  <rect x="580" y="516" width="140" height="7" fill="#c0c0c0" stroke="#666" stroke-width="0.5"/>
+  <text x="835" y="522" fill="#666" font-size="7">washer 1.5mm</text>
+
+  <!-- Radial bearing -->
+  <rect x="580" y="476" width="140" height="40" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="650" y="495" text-anchor="middle" fill="#333" font-size="9">6001-2RS</text>
+  <text x="650" y="508" text-anchor="middle" fill="#333" font-size="8">8mm slip+Loctite</text>
+  <text x="835" y="500" fill="#666" font-size="7">radial 8mm</text>
+
+  <!-- Solid top -->
+  <rect x="470" y="415" width="360" height="61" fill="#f5e1d8" stroke="none"/>
+  <text x="650" y="445" text-anchor="middle" fill="#666" font-size="8">solid PETG top (12mm)</text>
+
+  <!-- Shaft centerline -->
+  <line x1="650" y1="415" x2="650" y2="590" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Height dim -->
+  <line x1="850" y1="415" x2="850" y2="590" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="850,417 847,423 853,423" fill="#9e4818"/>
+  <polygon points="850,588 847,582 853,582" fill="#9e4818"/>
+  <text x="858" y="505" fill="#9e4818" font-size="10" font-weight="bold">35mm</text>
+
+  <!-- BOTTOM info box -->
+  <rect x="460" y="615" width="600" height="120" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="472" y="633" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM BLOCK V2 specs (ALL 7 FIXES):</text>
+  <text x="472" y="651" fill="#333" font-size="10">- 1x 6001-2RS radial (Fix 4: simplified from 2) slip fit + Loctite</text>
+  <text x="472" y="667" fill="#333" font-size="10">- 2x steel thrust washers above + below 51101 (Fix 3: no PETG creep)</text>
+  <text x="472" y="683" fill="#333" font-size="10">- 1x 51101 thrust bearing (axial load)</text>
+  <text x="472" y="699" fill="#333" font-size="10">- Enlarged 80x80x35mm (Fix 6: more rigid, better thread engagement)</text>
+  <text x="472" y="715" fill="#333" font-size="10">- 90deg conical CSK (Fix 5) for proper M5 flathead seating</text>
+  <text x="472" y="731" fill="#333" font-size="10">- Outer chamfer 1mm (Fix 8) + reduced shaft bore D12.5 (Fix 9)</text>
+
+  <!-- CENTER: Assembly preview -->
+  <line x1="440" y1="80" x2="440" y2="600" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="4,3"/>
+  <text x="455" y="95" fill="#1a1a1a" font-size="10" font-weight="bold">FIXES KEY</text>
+  <text x="455" y="110" fill="#065f46" font-size="8">Fix 1: slip fit + Loctite</text>
+  <text x="455" y="122" fill="#065f46" font-size="8">Fix 2: retaining lip</text>
+  <text x="455" y="134" fill="#065f46" font-size="8">Fix 3: thrust washers</text>
+  <text x="455" y="146" fill="#065f46" font-size="8">Fix 4: 1 radial per block</text>
+  <text x="455" y="158" fill="#065f46" font-size="8">Fix 5: proper CSK cones</text>
+  <text x="455" y="170" fill="#065f46" font-size="8">Fix 6: larger bottom block</text>
+  <text x="455" y="182" fill="#065f46" font-size="8">Fix 7: Loctite anti-rotate</text>
+  <text x="455" y="194" fill="#065f46" font-size="8">Fix 8: outer chamfer</text>
+  <text x="455" y="206" fill="#065f46" font-size="8">Fix 9: tighter shaft bore</text>
+
+  <line x1="40" y1="742" x2="1060" y2="742" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>

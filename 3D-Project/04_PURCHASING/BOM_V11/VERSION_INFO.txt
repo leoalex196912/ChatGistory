@@ -1,0 +1,46 @@
+CSM V3 BOM Evolution
+====================
+
+V9 (April 2026):  Initial BOM with best-guess estimates
+V10 (April 2026): Updated with architectural decisions (Legare-compatible, 6-feeder ready)
+V11 (May 2026):   FINAL - With actual Orders.xlsx data, locked servos/springs decisions
+
+KEY DECISIONS BY ITERATION:
+
+V10 → V11 Changes:
+  • Servo: SG90 (4-pack) → MG90S (8-pack metal gear)
+    Cost +$147, but eliminates 50-100 hour failure window
+  • Springs: Updated to actual sources (McMaster 3741N653, FlyDesigns)
+  • Washers: M20 stainless from Amazon (easier to source than custom)
+  • Wood base: 420×400 → 500×400mm (for 6-feeder layout)
+  • Base material: Stick with wood for prototype (upgrade to aluminum later)
+
+ENGINEERING DECISIONS LOCKED:
+
+Cam Ring V6.5 FINAL:
+  • Smoothstep cubic easing (jerk-free transitions)
+  • 8mm lift (conservative, tunable up via Z_OFFSET)
+  • 6.0mm slot (full clearance outside knit zone)
+  • 5.2mm slot with smoothstep-blended lip in knit zone
+  • Mandatory finishing: sand 400→1000 grit + PTFE lubricant
+  
+Servo Choice:
+  • MG90S metal-gear (100k+ cycles, 800+ hours)
+  • vs SG90 plastic (10-20k cycles, 50-100 hours failure)
+  • 8× total: 6 for feeders + 2 spares
+
+Spring Sources:
+  • Cylinder Springs: FlyDesigns (authentic, from machine supplier)
+  • Wave Springs: McMaster 3741N653 (equivalent to Smalley CM25-L1)
+  • Both confirmed by engineering review
+
+BASE DECISION:
+  • Keep wood for V1.0 prototype
+  • Can upgrade to aluminum 10mm later if warping becomes issue
+  • 500×400mm locked (supports 6-feeder layout)
+
+BUDGET:
+  • Original: $1,230-1,500
+  • V11 Final: $1,104.88
+  • Status: WITHIN BUDGET ✓
+

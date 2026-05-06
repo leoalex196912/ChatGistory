@@ -1,0 +1,583 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- DRIVE HUB  V1.3
+# =============================================================================
+# File:    CSM_V3_DriveHub_V1_3.FCMacro
+# Date:    April 2026
+# Target:  C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\freecad_macros\
+#
+# VERSIONING NOTE:
+#   Drive hub has its own independent version counter (per new project policy).
+#   Earlier macros named V2.4, V2.4.1, V2.4.2 were really V1.0, V1.1, V1.2.
+#   Going forward this part follows V1.x lineage only.
+#
+#   V1.0 = original (slot terminating at shaft center - functional but
+#          comment didn't match geometry)
+#   V1.1 = PETG-tuned dimensions (bore 12.15, nut traps, CSK margins)
+#   V1.2 = slot geometry corrected (crosses bore with -Y spine)
+#   V1.3 = THIS FILE (production-perfect surgical fixes)
+#
+# CHANGES IN V1.3 (production-perfect refinements):
+#   1. Slot root relief hole (3mm dia)
+#      Eliminates sharp internal corner stress riser at slot end.
+#      Drilled at the -Y end of slot. Prevents crack initiation.
+#      Standard machining practice for any slot terminating in solid material.
+#
+#   2. Chamfer filter bug fixed
+#      Old filter: r > 8mm (caught nut pocket hex edges in error)
+#      New filter: edges must be at known Z-levels AND on outer cylindrical
+#                  surfaces. Nut pocket edges no longer get chamfered.
+#
+#   3. Dead code removed
+#      CLAMP_BOLT_Y_OFFSET was defined but never used. Removed for clarity.
+#
+#   4. SVG corrected
+#      Blueprint now shows CSK 3.2mm (matches code, V1.1 update was missed
+#      in SVG text).
+#
+# REJECTED FROM REVIEW:
+#   - Slot stopping inside outer wall (would prevent clamp action)
+#   - Bolt offset architecture change (different clamp design, not needed)
+#
+# CHANGES INHERITED FROM V1.2 (slot geometry fix):
+#   - Slot now crosses shaft bore cleanly with proper -Y material spine
+#   - Slot Y range: -8.075 to +26 (slot crosses bore + 17mm spine remains)
+#
+# CHANGES INHERITED FROM V1.1 (PETG print quality):
+#   - SHAFT_BORE 12.10 -> 12.15mm
+#   - CLAMP_NUT_FLAT 8.5 -> 8.6mm
+#   - CLAMP_NUT_H 4.5 -> 4.8mm
+#   - CSK_TOP_D 10.0 -> 10.2mm
+#   - CSK_DEPTH 3.0 -> 3.2mm
+#   - CLAMP_SLOT_W 2.0 -> 2.2mm
+#
+# PURPOSE:
+#   Couples the CASSETTE to the rotating SHAFT.
+#   Provides concentric mounting + secure clamping of cassette to shaft.
+#
+# ARCHITECTURE (Path A - chosen for simplicity, no pulley drilling):
+#
+#   Cassette base (above)
+#     ↑ 4x M5 flathead screws (UP into cassette M5 inserts)
+#   [DRIVE HUB] (this part - clamps to shaft)
+#     ↓ shaft passes through 12mm bore
+#   60T HTD 5M pulley (already ordered, clamps to shaft separately via its own set screws)
+#     ↓ shaft continues down
+#   Top bearing housing (V2.4)
+#
+# DESIGN PHILOSOPHY:
+#   - Top-hat shape: small clamp section + wide bolt-mount flange
+#   - Split-clamp shaft coupling (like shaft collar design)
+#   - Center boss for concentricity (registration feature)
+#   - Uses M5 hardware throughout (matches existing inventory)
+#   - 100% printable PETG, no special tools needed
+#
+# HARDWARE USED (ALL ALREADY ORDERED):
+#   - 12mm shaft (FEYRINX h8) - hub bore matches
+#   - M5 brass heat-set inserts (B0DPQJ4W3Z) - in cassette base
+#   - M5 flathead screws (from B0FFSNFK3Y assortment)
+#   - M5 socket head cap screws (clamp bolts, from same assortment)
+#   - 60T HTD 5M pulley (B0C6Y1462P) - mounts on shaft below hub via its
+#     own set screw (NO modification needed)
+#   - PETG filament (already have)
+#
+# NOTE: No drilling of the 60T pulley required. The pulley uses its own
+#       set screw to clamp to the shaft. Drive hub is SEPARATE from pulley.
+#
+# WHY THIS DESIGN VALIDATES YOUR PRELOAD SYSTEM:
+#   - Drive hub directly loads the bearings via cassette weight
+#   - Shows real-world concentricity of shaft + bearings + cassette
+#   - Reveals any wobble/runout introduced by V2.4 spacer tube length
+#   - Test before motor mount: ensures clean rotation chain works
+#
+# AUTO-EXPORT ON RUN:
+#   STL:           C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\
+#   PNG view:      C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\images\
+#   SVG blueprint: C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM\blueprints\
+# =============================================================================
+
+import FreeCAD, FreeCADGui, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\06_DRIVE_SYSTEM"
+
+PATH_STL  = os.path.join(BASE, "CSM_V3_DriveHub_V1_3.stl")
+PATH_PNG  = os.path.join(BASE, "images", "DriveHub_V1_3_View.png")
+PATH_SVG  = os.path.join(BASE, "blueprints", "DriveHub_V1_3_Blueprint.svg")
+
+for p in [PATH_STL, PATH_PNG, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+doc = FreeCAD.newDocument("CSM_DriveHub_V1_3")
+
+# =============================================================================
+# DESIGN PARAMETERS
+# =============================================================================
+# Shaft interface
+SHAFT_D            = 12.0     # FEYRINX 12mm h8 shaft
+SHAFT_BORE         = 12.15    # V2.4.1: 12.10 -> 12.15 (PETG hole shrinkage compensation)
+
+# Hub geometry (top-hat shape)
+HUB_BODY_OD        = 50.0     # lower portion (clamp + shaft interface)
+HUB_BODY_H         = 18.0     # height of clamp section
+
+FLANGE_OD          = 90.0     # upper flange (cassette mount surface)
+FLANGE_H           = 7.0      # flange thickness
+TOTAL_H            = HUB_BODY_H + FLANGE_H   # 25mm total
+
+# Center boss (concentricity registration - mates with cassette counterbore)
+BOSS_OD            = 18.0     # outer diameter
+BOSS_H             = 3.0      # protrusion above flange top
+
+# Clamp slot (split-clamp design)
+CLAMP_SLOT_W       = 2.2      # V2.4.1: 2.0 -> 2.2 (more clamp travel before bottoming)
+# V2.4.2: slot geometry now correctly crosses bore with proper spine
+CLAMP_SLOT_OVERSHOOT = 2.0    # mm past shaft bore edge into -Y material
+CLAMP_SLOT_DEPTH   = HUB_BODY_OD / 2.0 - 6.0  # leaves ~6mm bridge below shaft
+
+# Clamp bolts (horizontal M5 bolts pulling slot closed)
+CLAMP_BOLT_D       = 5.5      # M5 clearance hole
+CLAMP_BOLT_HEAD_D  = 9.5      # M5 socket head cap
+CLAMP_BOLT_HEAD_H  = 5.0      # head pocket depth
+CLAMP_NUT_FLAT     = 8.6      # V2.4.1: 8.5 -> 8.6 (tighter nut grip)
+CLAMP_NUT_H        = 4.8      # V2.4.1: 4.5 -> 4.8 (deeper nut trap, fully captures M5 nut)
+CLAMP_BOLT_Z1      = 5.0      # lower bolt height
+CLAMP_BOLT_Z2      = 13.0     # upper bolt height
+# V1.3: removed unused CLAMP_BOLT_Y_OFFSET variable (was dead code)
+
+# V1.3 NEW: Slot root relief hole (eliminates stress concentration)
+RELIEF_D           = 3.0      # 3mm diameter relief hole at slot root
+
+# Cassette mount bolts (vertical M5 flathead, threading UP into cassette inserts)
+CASSETTE_BOLT_D    = 5.5      # M5 clearance
+CASSETTE_BOLT_PCD  = 70.0     # bolt circle diameter
+CASSETTE_BOLT_COUNT = 4       # 4 bolts at 90 degree spacing
+CSK_TOP_D          = 10.2     # V2.4.1: 10.0 -> 10.2 (margin for flathead seating)
+CSK_DEPTH          = 3.2      # V2.4.1: 3.0 -> 3.2 (head fully flush despite print roughness)
+
+CHAMFER_SIZE       = 1.0      # outer edge chamfer
+
+# =============================================================================
+# HELPER FUNCTIONS
+# =============================================================================
+def make_csk_cone(r_head, r_shank, depth):
+    """90 degree countersink cone (large radius at top, small at bottom)"""
+    return Part.makeCone(r_head, r_shank, depth)
+
+def hex_prism(flat_to_flat, height):
+    """Make a hexagonal prism from a 6-sided polygon"""
+    pts = []
+    R = flat_to_flat / 2.0 / math.cos(math.radians(30))  # vertex distance
+    for i in range(6):
+        ang = math.radians(i * 60.0)
+        pts.append(FreeCAD.Vector(R * math.cos(ang), R * math.sin(ang), 0))
+    pts.append(pts[0])  # close polygon
+    poly = Part.makePolygon(pts)
+    face = Part.Face(Part.Wire(poly))
+    return face.extrude(FreeCAD.Vector(0, 0, height))
+
+# =============================================================================
+# BUILD DRIVE HUB
+# =============================================================================
+print("=" * 65)
+print("CSM V3 -- DRIVE HUB V1.3")
+print("=" * 65)
+print(f"\nBuilding drive hub...")
+
+# 1. Body cylinder (lower portion - clamp section)
+body = Part.makeCylinder(HUB_BODY_OD / 2.0, HUB_BODY_H)
+
+# 2. Flange disc (upper portion - cassette mount)
+flange = Part.makeCylinder(FLANGE_OD / 2.0, FLANGE_H)
+flange.translate(FreeCAD.Vector(0, 0, HUB_BODY_H))
+
+# 3. Center boss (concentricity feature on top of flange)
+boss = Part.makeCylinder(BOSS_OD / 2.0, BOSS_H)
+boss.translate(FreeCAD.Vector(0, 0, TOTAL_H))
+
+# 4. Combine into single solid
+hub = body.fuse(flange).fuse(boss)
+
+# 5. Shaft bore through entire hub (12.1mm slip fit)
+shaft_bore = Part.makeCylinder(SHAFT_BORE / 2.0, TOTAL_H + BOSS_H + 2)
+shaft_bore.translate(FreeCAD.Vector(0, 0, -1))
+hub = hub.cut(shaft_bore)
+
+# 6. Clamp slot (vertical slot from one side, through clamp section only)
+# Slot extends from outer edge through to past shaft, allowing clamp action
+slot_w = CLAMP_SLOT_W
+slot_h = HUB_BODY_H + 0.1  # slightly above body section
+# Slot starts from outer edge of hub body (Y = HUB_BODY_OD/2)
+# Cuts inward toward shaft, stops 6mm short of shaft for material bridge
+# V2.4.2 FIX: slot crosses shaft bore cleanly, with proper material spine on -Y side
+# Slot Y range: from -(SHAFT_BORE/2 + overshoot) to +(HUB_BODY_OD/2 + 1)
+# This means slot starts 2mm past shaft bore edge on -Y side, extends past +Y outer edge
+# Result: slot fully crosses the bore (clamp action works) but ~17mm of -Y material
+#         remains as the structural 'spine' holding the part together
+slot_y_start = -(SHAFT_BORE / 2.0 + CLAMP_SLOT_OVERSHOOT)  # = -8.075mm
+slot_y_end = HUB_BODY_OD / 2.0 + 1.0                       # = 26.0mm
+slot_length_y = slot_y_end - slot_y_start                  # = 34.075mm
+slot = Part.makeBox(slot_w, slot_length_y, slot_h)
+slot.translate(FreeCAD.Vector(-slot_w / 2.0, slot_y_start, 0))
+hub = hub.cut(slot)
+
+# V1.3 FIX 1: Slot root relief hole (eliminates stress concentration)
+# Drilled at the -Y end of slot where flat termination would create a sharp
+# internal corner. Standard practice for slots terminating in solid material.
+relief = Part.makeCylinder(RELIEF_D / 2.0, HUB_BODY_H + 0.1)
+relief.translate(FreeCAD.Vector(0, slot_y_start, 0))
+hub = hub.cut(relief)
+
+# 7. Clamp bolts - 2x M5 horizontal, perpendicular to slot
+# Bolts thread along Y axis, pulling clamp closed
+# Bolt path: from -Y side (head) through slot to +Y side (nut pocket)
+for z_pos in [CLAMP_BOLT_Z1, CLAMP_BOLT_Z2]:
+    # M5 clearance through-hole along Y axis
+    bolt_hole = Part.makeCylinder(CLAMP_BOLT_D / 2.0, HUB_BODY_OD + 4)
+    bolt_hole.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)  # rotate to Y axis
+    bolt_hole.translate(FreeCAD.Vector(0, -HUB_BODY_OD / 2.0 - 2, z_pos))
+    hub = hub.cut(bolt_hole)
+
+    # Socket head pocket on -Y side (bolt head)
+    head_pocket = Part.makeCylinder(CLAMP_BOLT_HEAD_D / 2.0, CLAMP_BOLT_HEAD_H + 2)
+    head_pocket.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)
+    head_pocket.translate(FreeCAD.Vector(0, -HUB_BODY_OD / 2.0 - 2, z_pos))
+    hub = hub.cut(head_pocket)
+
+    # M5 hex nut pocket on +Y side (captures nut, prevents rotation)
+    nut_pocket = hex_prism(CLAMP_NUT_FLAT + 0.3, CLAMP_NUT_H + 1.0)
+    nut_pocket.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), -90)
+    nut_pocket.translate(FreeCAD.Vector(0, HUB_BODY_OD / 2.0 - CLAMP_NUT_H - 1.0, z_pos))
+    hub = hub.cut(nut_pocket)
+
+# 8. Cassette mount bolts (4x M5 flathead, threading UP from below into cassette inserts)
+# Bolt heads sit FLUSH on bottom face of flange (countersink on flange bottom)
+# Through-holes pass through flange thickness
+for i in range(CASSETTE_BOLT_COUNT):
+    ang = math.radians(i * 360.0 / CASSETTE_BOLT_COUNT + 45.0)  # offset by 45 deg
+    bx = (CASSETTE_BOLT_PCD / 2.0) * math.cos(ang)
+    by = (CASSETTE_BOLT_PCD / 2.0) * math.sin(ang)
+
+    # Through-hole for M5 shank
+    bh = Part.makeCylinder(CASSETTE_BOLT_D / 2.0, FLANGE_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, HUB_BODY_H - 1))
+    hub = hub.cut(bh)
+
+    # 90 degree countersink on BOTTOM of flange (head sits flush from below)
+    csk = make_csk_cone(CSK_TOP_D / 2.0, CASSETTE_BOLT_D / 2.0, CSK_DEPTH)
+    csk.translate(FreeCAD.Vector(bx, by, HUB_BODY_H))
+    hub = hub.cut(csk)
+
+# 9. Apply chamfer to outer edges (V1.3 FIX 2: stricter filter)
+# Old filter (V1.2 and earlier): r > 8.0 only - this caught nut pocket hex edges
+# in error because the hex nut pockets were rotated -90 around X axis, which put
+# their edges at constant Z with r ~17-20mm.
+#
+# New filter (V1.3): edges must be at KNOWN outer cylindrical boundaries:
+#   1. Edge is horizontal (Z constant)
+#   2. Edge is at one of the part's structural Z-levels (where ODs change)
+#   3. Edge radius matches one of the structural ODs (body/flange/boss)
+# This guarantees only the true outer edges of the top-hat get chamfered.
+try:
+    edges_to_chamfer = []
+    tol = 0.1  # 0.1mm tolerance for geometry matching
+    # Z-levels where chamfer-able edges exist (top/bottom of each cylinder)
+    valid_z_levels = [
+        0.0,                                  # bottom of body
+        HUB_BODY_H,                           # top of body / bottom of flange
+        HUB_BODY_H + FLANGE_H,                # top of flange / bottom of boss
+        HUB_BODY_H + FLANGE_H + BOSS_H,       # top of boss
+    ]
+    # Radii where chamfer-able edges exist (outer cylindrical surfaces)
+    valid_radii = [
+        HUB_BODY_OD / 2.0,
+        FLANGE_OD / 2.0,
+        BOSS_OD / 2.0,
+    ]
+
+    for edge in hub.Edges:
+        v1, v2 = edge.Vertexes[0].Point, edge.Vertexes[1].Point
+        # Filter 1: must be horizontal (Z constant)
+        if abs(v1.z - v2.z) >= 0.01:
+            continue
+        z_avg = (v1.z + v2.z) / 2.0
+        # Filter 2: must be at a known structural Z-level
+        if not any(abs(z_avg - z) < tol for z in valid_z_levels):
+            continue
+        # Filter 3: must be on a known outer cylindrical surface
+        r = (v1.x ** 2 + v1.y ** 2) ** 0.5
+        if not any(abs(r - vr) < tol for vr in valid_radii):
+            continue
+        # All filters passed - this is a true outer edge
+        edges_to_chamfer.append(edge)
+
+    if edges_to_chamfer:
+        hub = hub.makeChamfer(CHAMFER_SIZE, edges_to_chamfer)
+        print(f"  Chamfered {len(edges_to_chamfer)} outer edges")
+except Exception as e:
+    print(f"  Chamfer warning: {e}")
+
+# Add to document
+obj_hub = doc.addObject("Part::Feature", "DriveHub_V1_3")
+obj_hub.Shape = hub
+obj_hub.ViewObject.ShapeColor = (0.85, 0.65, 0.25)  # gold/brass tone
+print(f"  Hub body OD:       {HUB_BODY_OD}mm")
+print(f"  Hub body height:   {HUB_BODY_H}mm")
+print(f"  Flange OD:         {FLANGE_OD}mm")
+print(f"  Flange thickness:  {FLANGE_H}mm")
+print(f"  Center boss:       D{BOSS_OD}mm x {BOSS_H}mm tall")
+print(f"  Total height:      {TOTAL_H + BOSS_H}mm")
+print(f"  Shaft bore:        D{SHAFT_BORE}mm")
+print(f"  Clamp bolts:       2x M5 at Z={CLAMP_BOLT_Z1}, {CLAMP_BOLT_Z2}mm")
+print(f"  Cassette bolts:    {CASSETTE_BOLT_COUNT}x M5 PCD {CASSETTE_BOLT_PCD}mm")
+print(f"  Volume:            {hub.Volume:.0f}mm^3")
+
+doc.recompute()
+
+# =============================================================================
+# EXPORT STL
+# =============================================================================
+print(f"\nExporting STL...")
+try:
+    Part.export([obj_hub], PATH_STL)
+    print(f"  [OK] STL: {PATH_STL}")
+except Exception as e:
+    print(f"  [FAIL] STL export: {e}")
+
+# =============================================================================
+# EXPORT PNG
+# =============================================================================
+print(f"\nExporting PNG view...")
+try:
+    view = FreeCADGui.activeDocument().activeView()
+    view.viewIsometric()
+    view.fitAll()
+    view.saveImage(PATH_PNG, 1600, 1200, "Current")
+    print(f"  [OK] PNG: {PATH_PNG}")
+except Exception as e:
+    print(f"  [WARN] PNG skipped: {e}")
+
+# =============================================================================
+# EXPORT SVG BLUEPRINT
+# =============================================================================
+print(f"\nGenerating SVG blueprint...")
+
+svg_content = '''<svg viewBox="0 0 1100 800" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1100" height="800" fill="#fafaf8"/>
+
+  <text x="550" y="32" text-anchor="middle" fill="#1a1a1a" font-size="18" font-weight="bold">DRIVE HUB V1.3 -- BLUEPRINT</text>
+  <text x="550" y="50" text-anchor="middle" fill="#666" font-size="11">Production-perfect: slot relief + filter fix. PETG-tuned.</text>
+  <line x1="40" y1="62" x2="1060" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP VIEW (left) -->
+  <text x="280" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">TOP VIEW</text>
+  <text x="280" y="98" text-anchor="middle" fill="#666" font-size="10">Looking down at flange face</text>
+
+  <!-- Flange outer (90mm OD scaled) -->
+  <circle cx="280" cy="280" r="180" fill="#fff8e8" stroke="#9e6a18" stroke-width="2"/>
+  <!-- Hub body OD (50mm scaled, hidden) -->
+  <circle cx="280" cy="280" r="100" fill="none" stroke="#aaaaaa" stroke-width="0.8" stroke-dasharray="4,3"/>
+  <!-- Center boss (18mm OD scaled) -->
+  <circle cx="280" cy="280" r="36" fill="#ffd57a" stroke="#9e6a18" stroke-width="1.5"/>
+  <!-- Shaft bore (12.1mm scaled) -->
+  <circle cx="280" cy="280" r="24.2" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="280" y="285" text-anchor="middle" fill="#993556" font-size="9">D12.15</text>
+
+  <!-- 4 cassette bolts at PCD 70mm -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <!-- 45 deg offset, PCD 70mm scaled to 140 radius -->
+    <circle cx="379" cy="181" r="9"/>
+    <circle cx="379" cy="379" r="9"/>
+    <circle cx="181" cy="379" r="9"/>
+    <circle cx="181" cy="181" r="9"/>
+  </g>
+  <text x="395" y="178" fill="#791F1F" font-size="10">M5 x4</text>
+  <text x="395" y="190" fill="#791F1F" font-size="9">PCD 70</text>
+  <text x="395" y="202" fill="#791F1F" font-size="9">90 CSK 3.2</text>
+
+  <!-- Clamp slot (2.2mm wide, crosses bore with -Y spine) -->
+  <rect x="278" y="263" width="4" height="197" fill="#fff" stroke="#9e6a18" stroke-width="0.8"/>
+  <text x="320" y="430" fill="#666" font-size="9">clamp slot 2.2mm</text>
+  <text x="320" y="442" fill="#666" font-size="8">crosses bore + spine on -Y</text>
+  <!-- V1.3: Slot root relief hole at -Y end of slot -->
+  <circle cx="280" cy="263" r="6" fill="#fff" stroke="#9e6a18" stroke-width="0.8"/>
+  <text x="295" y="262" fill="#9e6a18" font-size="8" font-weight="bold">V1.3 relief D3.0</text>
+  <text x="295" y="272" fill="#666" font-size="7">stress riser fix</text>
+
+  <!-- Clamp bolt indication (top view shows 2 bolts perpendicular to slot) -->
+  <g fill="#5a8d3e" stroke="#1f3a14" stroke-width="0.8">
+    <circle cx="280" cy="120" r="4"/>
+    <circle cx="280" cy="80" r="4"/>
+  </g>
+  <text x="290" y="80" fill="#1f3a14" font-size="9">M5 clamp x2</text>
+  <text x="290" y="92" fill="#1f3a14" font-size="8">(side view)</text>
+
+  <!-- Dimension lines top view -->
+  <line x1="100" y1="64" x2="460" y2="64" stroke="#9e6a18" stroke-width="0.8"/>
+  <polygon points="102,64 108,61 108,67" fill="#9e6a18"/>
+  <polygon points="458,64 452,61 452,67" fill="#9e6a18"/>
+  <text x="280" y="60" text-anchor="middle" fill="#9e6a18" font-size="11" font-weight="bold">D90mm flange</text>
+
+  <line x1="180" y1="500" x2="380" y2="500" stroke="#aaa" stroke-width="0.8"/>
+  <text x="280" y="515" text-anchor="middle" fill="#666" font-size="10">D50mm body (below flange)</text>
+
+  <!-- SIDE SECTION VIEW (right) -->
+  <text x="800" y="82" text-anchor="middle" fill="#9e6a18" font-size="13" font-weight="bold">SIDE SECTION</text>
+  <text x="800" y="98" text-anchor="middle" fill="#666" font-size="10">Cross-section showing top-hat profile</text>
+
+  <!-- Cassette base (above) -->
+  <rect x="650" y="115" width="300" height="20" fill="#e8d8b8" stroke="#666" stroke-width="0.8"/>
+  <text x="800" y="128" text-anchor="middle" fill="#666" font-size="9">[Cassette base above - M5 inserts here]</text>
+
+  <!-- Center boss (18mm OD x 3mm) protrudes UP into cassette counterbore -->
+  <rect x="773" y="135" width="54" height="9" fill="#ffd57a" stroke="#9e6a18" stroke-width="1.2"/>
+  <text x="855" y="142" fill="#9e6a18" font-size="9">boss D18 x 3mm</text>
+
+  <!-- Flange (90mm OD x 7mm) -->
+  <rect x="620" y="144" width="360" height="21" fill="#fff8e8" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="610" y="158" fill="#9e6a18" font-size="9" text-anchor="end">flange</text>
+  <text x="990" y="158" fill="#9e6a18" font-size="9">7mm</text>
+
+  <!-- Body (50mm OD x 18mm) -->
+  <rect x="700" y="165" width="200" height="54" fill="#fff8e8" stroke="#9e6a18" stroke-width="1.5"/>
+  <text x="610" y="195" fill="#9e6a18" font-size="9" text-anchor="end">body</text>
+  <text x="990" y="195" fill="#9e6a18" font-size="9">18mm</text>
+
+  <!-- Shaft bore through entire hub -->
+  <rect x="788" y="115" width="24" height="104" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="800" y="240" text-anchor="middle" fill="#993556" font-size="9">shaft D12.15</text>
+
+  <!-- Clamp slot indication -->
+  <rect x="797" y="165" width="6" height="54" fill="#fff" stroke="#aaa" stroke-width="0.5"/>
+
+  <!-- Clamp bolt 1 (Z=5mm from bottom) -->
+  <rect x="700" y="208" width="200" height="5" fill="none" stroke="#5a8d3e" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="910" y="213" fill="#1f3a14" font-size="9">M5 clamp #1</text>
+  <text x="910" y="223" fill="#1f3a14" font-size="8">(Z=5)</text>
+
+  <!-- Clamp bolt 2 (Z=13mm from bottom) -->
+  <rect x="700" y="184" width="200" height="5" fill="none" stroke="#5a8d3e" stroke-width="1" stroke-dasharray="2,2"/>
+  <text x="910" y="189" fill="#1f3a14" font-size="9">M5 clamp #2</text>
+  <text x="910" y="199" fill="#1f3a14" font-size="8">(Z=13)</text>
+
+  <!-- Cassette mount bolts (vertical, threading UP from below) -->
+  <g fill="#E24B4A" stroke="#501313" stroke-width="0.8">
+    <rect x="675" y="140" width="3" height="25"/>
+    <rect x="922" y="140" width="3" height="25"/>
+  </g>
+  <text x="630" y="155" fill="#791F1F" font-size="9" text-anchor="end">M5 thru</text>
+  <!-- Countersinks on flange bottom -->
+  <polygon points="672,165 680,165 676,159" fill="#E24B4A" opacity="0.6"/>
+  <polygon points="920,165 928,165 924,159" fill="#E24B4A" opacity="0.6"/>
+  <text x="630" y="178" fill="#791F1F" font-size="8" text-anchor="end">90 CSK</text>
+
+  <!-- Below hub: 60T pulley indication -->
+  <line x1="700" y1="219" x2="900" y2="219" stroke="#666" stroke-width="0.5" stroke-dasharray="2,2"/>
+  <text x="800" y="235" text-anchor="middle" fill="#666" font-size="9">[60T HTD pulley below, separate part on shaft]</text>
+  <text x="800" y="248" text-anchor="middle" fill="#666" font-size="8">(clamps to shaft via own set screw)</text>
+
+  <!-- Total height dimension -->
+  <line x1="600" y1="135" x2="600" y2="219" stroke="#9e6a18" stroke-width="0.8"/>
+  <polygon points="600,137 597,143 603,143" fill="#9e6a18"/>
+  <polygon points="600,217 597,211 603,211" fill="#9e6a18"/>
+  <text x="585" y="180" fill="#9e6a18" font-size="10" font-weight="bold" transform="rotate(-90 585 180)">28mm total</text>
+
+  <!-- Info box BOTTOM -->
+  <rect x="40" y="540" width="500" height="220" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="55" y="565" fill="#9e6a18" font-size="13" font-weight="bold">DRIVE HUB V1.3 SPECIFICATIONS</text>
+  <text x="55" y="585" fill="#333" font-size="10">- Top-hat profile: 50mm body + 90mm flange + 18mm boss</text>
+  <text x="55" y="600" fill="#333" font-size="10">- Total height: 25mm + 3mm boss = 28mm</text>
+  <text x="55" y="615" fill="#333" font-size="10">- Shaft bore: D12.15mm slip fit on FEYRINX 12mm h8 (PETG safe)</text>
+  <text x="55" y="630" fill="#333" font-size="10">- Split-clamp design: 2mm slot + 2x M5 clamp bolts</text>
+  <text x="55" y="645" fill="#333" font-size="10">- Cassette mount: 4x M5 flathead through flange (PCD 70mm)</text>
+  <text x="55" y="660" fill="#333" font-size="10">- Concentricity: 18mm boss seats in cassette counterbore</text>
+  <text x="55" y="678" fill="#9e6a18" font-size="11" font-weight="bold">HARDWARE NEEDED (ALL ALREADY ORDERED):</text>
+  <text x="55" y="693" fill="#333" font-size="9">- 2x M5 socket head cap screws (clamp) + 2x M5 hex nuts</text>
+  <text x="55" y="706" fill="#333" font-size="9">- 4x M5 flathead screws (cassette mount)</text>
+  <text x="55" y="719" fill="#333" font-size="9">- 4x M5 brass heat-set inserts (in cassette base)</text>
+  <text x="55" y="732" fill="#333" font-size="9">All from your existing assortment kit B0FFSNFK3Y + B0DPQJ4W3Z</text>
+  <text x="55" y="752" fill="#666" font-size="9" font-style="italic">No new hardware required. No drilling of pulley needed.</text>
+
+  <!-- ASSEMBLY ORDER (right) -->
+  <rect x="560" y="540" width="500" height="220" rx="6" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.8"/>
+  <text x="575" y="565" fill="#9e6a18" font-size="13" font-weight="bold">ASSEMBLY ORDER (PATH A)</text>
+  <text x="575" y="585" fill="#333" font-size="10">Bottom to top on shaft:</text>
+  <text x="575" y="603" fill="#333" font-size="10">1. Bottom shaft collar (Z=-2mm hard stop)</text>
+  <text x="575" y="617" fill="#333" font-size="10">2. Bottom bearing housing (V2.4)</text>
+  <text x="575" y="631" fill="#333" font-size="10">3. Aluminum mounting plate (6mm)</text>
+  <text x="575" y="645" fill="#333" font-size="10">4. Top bearing housing (V2.4)</text>
+  <text x="575" y="659" fill="#333" font-size="10">5. 60T HTD pulley (set screw to shaft)</text>
+  <text x="575" y="673" fill="#9e6a18" font-size="10" font-weight="bold">6. DRIVE HUB (clamp to shaft, this part)</text>
+  <text x="575" y="687" fill="#333" font-size="10">7. Cassette base (4x M5 bolts UP into hub)</text>
+  <text x="575" y="701" fill="#333" font-size="10">8. Cassette stack (sinker, cam, cylinder, retainer)</text>
+  <text x="575" y="715" fill="#333" font-size="10">9. Top shaft collar (light retention)</text>
+  <text x="575" y="735" fill="#1f3a14" font-size="10" font-weight="bold">Print: PETG, 5 perimeters, 40-50% infill, 0.2mm layer</text>
+  <text x="575" y="750" fill="#1f3a14" font-size="9">Orient flange-up (smooth top face = cassette mating surface)</text>
+
+  <line x1="40" y1="780" x2="1060" y2="780" stroke="#1e3a5f" stroke-width="0.3"/>
+</svg>'''
+
+try:
+    with open(PATH_SVG, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    print(f"  [OK] SVG: {PATH_SVG}")
+except Exception as e:
+    print(f"  [FAIL] SVG: {e}")
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+print(f"\n{'='*65}")
+print(f"COMPLETE -- DRIVE HUB V1.3")
+print(f"{'='*65}")
+print(f"\n  PATH A ARCHITECTURE (no pulley drilling):")
+print(f"   Drive hub clamps to shaft INDEPENDENTLY of the pulley.")
+print(f"   The 60T HTD 5M pulley sits BELOW the hub on the same shaft,")
+print(f"   secured by its OWN set screw (factory standard).")
+print(f"   The 4 cassette mount bolts thread UP into M5 inserts in the")
+print(f"   cassette base (already designed in cassette parts).")
+print(f"\n  HARDWARE - ALL ALREADY OWNED (no new orders needed):")
+print(f"   - 2x M5 socket head cap screws ~12mm (clamp bolts)")
+print(f"   - 2x M5 hex nuts (clamp nut pockets - press in before assembly)")
+print(f"   - 4x M5 flathead countersunk screws ~16mm (cassette mount)")
+print(f"   - 4x M5 brass heat-set inserts (in cassette base, future part)")
+print(f"   All available in your B0FFSNFK3Y assortment + B0DPQJ4W3Z inserts")
+print(f"\n  PRINT SETTINGS:")
+print(f"   Material:     PETG (DRY)")
+print(f"   Layer height: 0.2mm")
+print(f"   Perimeters:   5 (CRITICAL for clamp strength)")
+print(f"   Top/bottom:   6 solid layers")
+print(f"   Infill:       50% Gyroid (high stiffness)")
+print(f"   Orientation:  flange face DOWN on bed")
+print(f"                 (smooth top boss = mating surface to cassette)")
+print(f"   Supports:     NONE if oriented flange-down")
+print(f"   Speed:        40mm/s walls, 100mm/s infill")
+print(f"\n  POST-PROCESSING:")
+print(f"   1. Test fit on shaft - should slide on with hand pressure")
+print(f"      (clamp bolts NOT tight yet - just verify bore sizing)")
+print(f"   2. If too tight: ream bore lightly with 12mm reamer or sandpaper")
+print(f"   3. Press 2x M5 hex nuts into nut pockets (hex shape captures them)")
+print(f"   4. Verify clamp slot is clear (no print artifacts)")
+print(f"\n  ASSEMBLY:")
+print(f"   1. Insert M5 hex nuts into nut pockets (fit by hand or vise)")
+print(f"   2. Slide drive hub onto shaft from cassette side")
+print(f"   3. Position hub at correct Z height for cassette to seat properly")
+print(f"   4. Tighten 2x M5 clamp bolts to 3-4 Nm (firm but not crushing)")
+print(f"   5. Verify shaft cannot rotate independently of hub")
+print(f"   6. Bolt cassette base to hub flange (4x M5 flathead from below)")
+print(f"\n  TEST PROTOCOL (validates V2.4 preload + drive system):")
+print(f"   1. Spin shaft + hub by hand - should rotate smoothly")
+print(f"   2. Apply 2-3 kg hanging weight on cassette mount face")
+print(f"      (simulates loaded cassette)")
+print(f"   3. Spin again - should still rotate smoothly")
+print(f"   4. Listen for click/rattle - if any, V2.4 preload is wrong")
+print(f"   5. Dial indicator on cassette mounting boss while rotating:")
+print(f"      Target: <0.3mm TIR (radial runout at boss surface)")
+print(f"   6. If runout >0.5mm, check shaft straightness + bearing alignment")
+print(f"\n  WHY THIS PART VALIDATES THE WHOLE PRELOAD CHAIN:")
+print(f"   - Loads bearings axially (cassette weight transfers via hub)")
+print(f"   - Loads bearings radially (any imbalance amplifies via 90mm flange)")
+print(f"   - Tests concentricity of: shaft + bearings + spacer tube + hub")
+print(f"   - First chance to catch hidden misalignment BEFORE motor mount")

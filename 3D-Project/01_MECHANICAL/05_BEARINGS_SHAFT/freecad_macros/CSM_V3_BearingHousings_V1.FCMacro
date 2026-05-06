@@ -1,0 +1,470 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 — BEARING HOUSING BLOCKS  V1
+# Both TOP and BOTTOM blocks, with auto-export
+# =============================================================================
+# File:    CSM_V3_BearingHousings_V1.FCMacro
+# Date:    April 2026
+# Target:  C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT\freecad_macros\
+#
+# WHAT THIS MAKES:
+#   1. TOP bearing housing block — holds 1× 6001-2RS bearing
+#      (shaft passes through to cassette above)
+#   2. BOTTOM bearing housing block — holds 2× 6001-2RS + 1× 51101 thrust
+#      (carries all axial load + cassette weight + belt tension)
+#
+# BEARINGS USED:
+#   6001-2RS:  OD 28mm  ID 12mm  Width 8mm  (radial, sealed)
+#   51101:     OD 26mm  ID 12mm  Height 9mm (thrust, axial load only)
+#
+# FIT STRATEGY:
+#   Bearing OD in PETG pocket: -0.05mm (slip-press, hand pressure only)
+#   Shaft clearance through block: +1.0mm (never rubs on plastic)
+#   Alignment keeps bearings concentric with shaft axis
+#
+# MOUNTING:
+#   Both blocks bolt to 6mm aluminum plate with 4× M5 through bolts
+#   Aluminum plate bolts to 2020 extrusion via T-nuts
+#   Block M5 holes have countersinks on the mounting face
+#
+# AUTO-EXPORT ON RUN:
+#   STL:        C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT\
+#   PNG view:   C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT\images\
+#   SVG blueprint: C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT\blueprints\
+# =============================================================================
+
+import FreeCAD, FreeCADGui, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT"
+
+PATH_STL_TOP    = os.path.join(BASE, "CSM_V3_BearingHousing_TOP_V1.stl")
+PATH_STL_BOT    = os.path.join(BASE, "CSM_V3_BearingHousing_BOTTOM_V1.stl")
+PATH_STL_PAIR   = os.path.join(BASE, "CSM_V3_BearingHousings_PAIR_V1.stl")
+PATH_PNG_TOP    = os.path.join(BASE, "images", "BearingHousing_TOP_View.png")
+PATH_PNG_BOT    = os.path.join(BASE, "images", "BearingHousing_BOTTOM_View.png")
+PATH_PNG_BOTH   = os.path.join(BASE, "images", "BearingHousings_Both_View.png")
+PATH_SVG        = os.path.join(BASE, "blueprints", "BearingHousings_V1_Blueprint.svg")
+
+for p in [PATH_STL_TOP, PATH_STL_BOT, PATH_PNG_TOP, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+doc = FreeCAD.newDocument("CSM_BearingHousings_V1")
+
+# =============================================================================
+# BEARING SPECIFICATIONS
+# =============================================================================
+BEARING_OD      = 28.0    # 6001-2RS outer
+BEARING_ID      = 12.0    # 6001-2RS inner (matches shaft)
+BEARING_W       = 8.0     # 6001-2RS width
+
+THRUST_OD       = 26.0    # 51101 outer
+THRUST_ID       = 12.0    # 51101 inner
+THRUST_H        = 9.0     # 51101 height
+
+SHAFT_D         = 12.0    # main shaft diameter
+SHAFT_CLEAR     = 13.0    # hole in block, NOT in bearing (shaft only rubs bearings)
+
+# Fit tolerances
+PRESS_FIT       = -0.05   # bearing OD press fit (PETG)
+POCKET_SLIP     = 0.30    # thrust bearing pocket clearance
+
+# =============================================================================
+# TOP BLOCK PARAMETERS
+# =============================================================================
+TOP_W           = 60.0    # outer dimension X
+TOP_D           = 60.0    # outer dimension Y
+TOP_H           = 20.0    # height Z
+TOP_BEARING_POCKET_D = BEARING_OD + PRESS_FIT   # 27.95mm
+TOP_BEARING_POCKET_H = BEARING_W + 0.5          # 8.5mm deep
+TOP_BOLT_PCD    = 48.0
+TOP_BOLT_D      = 5.5     # M5 clearance
+TOP_BOLT_CS_D   = 10.0    # M5 countersink
+
+# =============================================================================
+# BOTTOM BLOCK PARAMETERS (larger, more load)
+# =============================================================================
+BOT_W           = 70.0
+BOT_D           = 70.0
+BOT_H           = THRUST_H + BEARING_W * 2 + 5.0   # 30mm total
+
+BOT_RADIAL_POCKET_D = BEARING_OD + PRESS_FIT        # 27.95mm (radial bearings)
+BOT_RADIAL_POCKET_H = BEARING_W * 2                 # 16mm (2 stacked)
+BOT_THRUST_POCKET_D = THRUST_OD + POCKET_SLIP       # 26.3mm (thrust, not press)
+BOT_THRUST_POCKET_H = THRUST_H                      # 9mm
+BOT_BOLT_PCD        = 56.0
+BOT_BOLT_D          = 5.5
+BOT_BOLT_CS_D       = 10.0
+
+# Both blocks — common features
+CHAMFER_SIZE    = 1.0    # outer edge chamfer for print quality
+
+# =============================================================================
+# BUILD TOP BLOCK
+# =============================================================================
+print("=" * 60)
+print("CSM V3 — BEARING HOUSING BLOCKS V1")
+print("=" * 60)
+print(f"\nBuilding TOP block...")
+
+top = Part.makeBox(TOP_W, TOP_D, TOP_H)
+top.translate(FreeCAD.Vector(-TOP_W / 2.0, -TOP_D / 2.0, 0))
+
+# Bearing pocket (top face, open top — bearing press-fits from above)
+pocket = Part.makeCylinder(TOP_BEARING_POCKET_D / 2.0, TOP_BEARING_POCKET_H)
+pocket.translate(FreeCAD.Vector(0, 0, TOP_H - TOP_BEARING_POCKET_H))
+top = top.cut(pocket)
+
+# Shaft through-hole (full height, clearance for shaft)
+through = Part.makeCylinder(SHAFT_CLEAR / 2.0, TOP_H + 2)
+through.translate(FreeCAD.Vector(0, 0, -1))
+top = top.cut(through)
+
+# 4× M5 bolt holes with countersink on bottom (mount face)
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx = (TOP_BOLT_PCD / 2.0) * math.cos(ang)
+    by = (TOP_BOLT_PCD / 2.0) * math.sin(ang)
+    bh = Part.makeCylinder(TOP_BOLT_D / 2.0, TOP_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    top = top.cut(bh)
+    cs = Part.makeCylinder(TOP_BOLT_CS_D / 2.0, 3.5)
+    cs.translate(FreeCAD.Vector(bx, by, 0))
+    top = top.cut(cs)
+
+# Position TOP block separately for visualization
+top.translate(FreeCAD.Vector(-50, 0, 0))
+
+obj_top = doc.addObject("Part::Feature", "BearingHousing_TOP")
+obj_top.Shape = top
+obj_top.ViewObject.ShapeColor = (0.25, 0.55, 0.85)
+print(f"  TOP: {TOP_W}x{TOP_D}x{TOP_H}mm")
+print(f"  Bearing pocket: Ø{TOP_BEARING_POCKET_D}mm × {TOP_BEARING_POCKET_H}mm")
+print(f"  Shaft bore: Ø{SHAFT_CLEAR}mm")
+print(f"  Volume: {top.Volume:.0f}mm³")
+
+# =============================================================================
+# BUILD BOTTOM BLOCK
+# =============================================================================
+print(f"\nBuilding BOTTOM block...")
+
+bot = Part.makeBox(BOT_W, BOT_D, BOT_H)
+bot.translate(FreeCAD.Vector(-BOT_W / 2.0, -BOT_D / 2.0, 0))
+
+# Thrust bearing pocket (BOTTOM, deepest) — slip fit, not press
+#
+# STACK FROM BOTTOM UP:
+#   Z=0 to Z=3: solid floor (3mm)
+#   Z=3 to Z=12: thrust bearing pocket (9mm)
+#   Z=12 to Z=28: radial bearing pocket (16mm = 2 stacked bearings)
+#   Z=28 to Z=30: top face
+
+thrust_pocket = Part.makeCylinder(BOT_THRUST_POCKET_D / 2.0, BOT_THRUST_POCKET_H)
+thrust_pocket.translate(FreeCAD.Vector(0, 0, 3.0))
+bot = bot.cut(thrust_pocket)
+
+# Radial bearing pocket (stacked 2× bearings) — press fit
+radial_pocket = Part.makeCylinder(BOT_RADIAL_POCKET_D / 2.0, BOT_RADIAL_POCKET_H)
+radial_pocket.translate(FreeCAD.Vector(0, 0, 3.0 + BOT_THRUST_POCKET_H))
+bot = bot.cut(radial_pocket)
+
+# Shaft through-hole (full height)
+through = Part.makeCylinder(SHAFT_CLEAR / 2.0, BOT_H + 2)
+through.translate(FreeCAD.Vector(0, 0, -1))
+bot = bot.cut(through)
+
+# Small cutout in bottom for shaft end clearance (if shaft extends past thrust)
+shaft_clearance_bottom = Part.makeCylinder(SHAFT_D / 2.0 + 1.0, 4.0)
+shaft_clearance_bottom.translate(FreeCAD.Vector(0, 0, -1))
+bot = bot.cut(shaft_clearance_bottom)
+
+# 4× M5 bolt holes with countersink on top (mount face UP — bolts thread down through plate)
+# Bottom block mounts UNDER the aluminum plate, bolts come from above
+for i in range(4):
+    ang = math.radians(i * 90.0 + 45.0)
+    bx = (BOT_BOLT_PCD / 2.0) * math.cos(ang)
+    by = (BOT_BOLT_PCD / 2.0) * math.sin(ang)
+    bh = Part.makeCylinder(BOT_BOLT_D / 2.0, BOT_H + 2)
+    bh.translate(FreeCAD.Vector(bx, by, -1))
+    bot = bot.cut(bh)
+    # Countersink on TOP (facing up toward the plate)
+    cs = Part.makeCylinder(BOT_BOLT_CS_D / 2.0, 3.5)
+    cs.translate(FreeCAD.Vector(bx, by, BOT_H - 3.5))
+    bot = bot.cut(cs)
+
+# Position BOTTOM block for visualization
+bot.translate(FreeCAD.Vector(50, 0, 0))
+
+obj_bot = doc.addObject("Part::Feature", "BearingHousing_BOTTOM")
+obj_bot.Shape = bot
+obj_bot.ViewObject.ShapeColor = (0.85, 0.45, 0.25)
+print(f"  BOTTOM: {BOT_W}x{BOT_D}x{BOT_H}mm")
+print(f"  Thrust pocket: Ø{BOT_THRUST_POCKET_D}mm × {BOT_THRUST_POCKET_H}mm (bottom)")
+print(f"  Radial pocket: Ø{BOT_RADIAL_POCKET_D}mm × {BOT_RADIAL_POCKET_H}mm (above thrust)")
+print(f"  Shaft bore: Ø{SHAFT_CLEAR}mm")
+print(f"  Volume: {bot.Volume:.0f}mm³")
+
+doc.recompute()
+
+# =============================================================================
+# EXPORT 1 — STL (individual + pair)
+# =============================================================================
+print(f"\nExporting STL files...")
+
+# Reset positions for proper export (each part at origin)
+top_export = obj_top.Shape.copy()
+top_export.translate(FreeCAD.Vector(50, 0, 0))  # cancel the -50 offset
+
+bot_export = obj_bot.Shape.copy()
+bot_export.translate(FreeCAD.Vector(-50, 0, 0))  # cancel the +50 offset
+
+try:
+    # Individual STLs
+    tmp_top = doc.addObject("Part::Feature", "tmp_top")
+    tmp_top.Shape = top_export
+    Part.export([tmp_top], PATH_STL_TOP)
+    doc.removeObject("tmp_top")
+    print(f"  ✅ TOP STL:    {PATH_STL_TOP}")
+
+    tmp_bot = doc.addObject("Part::Feature", "tmp_bot")
+    tmp_bot.Shape = bot_export
+    Part.export([tmp_bot], PATH_STL_BOT)
+    doc.removeObject("tmp_bot")
+    print(f"  ✅ BOTTOM STL: {PATH_STL_BOT}")
+
+    # Pair STL (both together, as positioned in view)
+    Part.export([obj_top, obj_bot], PATH_STL_PAIR)
+    print(f"  ✅ PAIR STL:   {PATH_STL_PAIR}")
+
+except Exception as e:
+    print(f"  ❌ STL export error: {e}")
+
+# =============================================================================
+# EXPORT 2 — PNG views
+# =============================================================================
+print(f"\nExporting PNG views...")
+try:
+    view = FreeCADGui.activeDocument().activeView()
+
+    # Both blocks together
+    view.viewIsometric()
+    view.fitAll()
+    view.saveImage(PATH_PNG_BOTH, 1920, 1080, "Current")
+    print(f"  ✅ Both:   {PATH_PNG_BOTH}")
+
+    # Top only
+    obj_bot.ViewObject.Visibility = False
+    view.fitAll()
+    view.saveImage(PATH_PNG_TOP, 1200, 1200, "Current")
+    obj_bot.ViewObject.Visibility = True
+    print(f"  ✅ TOP:    {PATH_PNG_TOP}")
+
+    # Bottom only
+    obj_top.ViewObject.Visibility = False
+    view.fitAll()
+    view.saveImage(PATH_PNG_BOT, 1200, 1200, "Current")
+    obj_top.ViewObject.Visibility = True
+    view.fitAll()
+    print(f"  ✅ BOTTOM: {PATH_PNG_BOT}")
+
+except Exception as e:
+    print(f"  ⚠️  PNG export skipped: {e}")
+
+# =============================================================================
+# EXPORT 3 — SVG Blueprint (both blocks, dimensioned)
+# =============================================================================
+print(f"\nGenerating SVG blueprint...")
+
+svg_content = '''<svg viewBox="0 0 1000 700" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+  <rect width="1000" height="700" fill="#fafaf8"/>
+
+  <text x="500" y="32" text-anchor="middle" fill="#1a1a1a" font-size="17" font-weight="bold">BEARING HOUSING BLOCKS V1 — BLUEPRINT</text>
+  <text x="500" y="50" text-anchor="middle" fill="#666" font-size="11">Top + Bottom blocks · PETG · shaft Ø12mm</text>
+  <line x1="40" y1="62" x2="960" y2="62" stroke="#1e3a5f" stroke-width="0.8"/>
+
+  <!-- TOP BLOCK (left) -->
+  <text x="240" y="82" text-anchor="middle" fill="#184e9e" font-size="13" font-weight="bold">TOP BLOCK</text>
+  <text x="240" y="98" text-anchor="middle" fill="#666" font-size="10">60×60×20mm · holds 1× 6001-2RS</text>
+
+  <!-- Top view of TOP block -->
+  <text x="100" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="100" y="120" width="280" height="280" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <circle cx="240" cy="260" r="65.2" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="240" y="257" text-anchor="middle" fill="#333" font-size="9">Bearing pocket</text>
+  <text x="240" y="270" text-anchor="middle" fill="#333" font-size="9">Ø27.95</text>
+  <circle cx="240" cy="260" r="30.3" fill="#fffef0" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="240" y="280" text-anchor="middle" fill="#993556" font-size="8">shaft Ø13</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="319" cy="181" r="7"/>
+    <circle cx="319" cy="339" r="7"/>
+    <circle cx="161" cy="339" r="7"/>
+    <circle cx="161" cy="181" r="7"/>
+  </g>
+  <text x="335" y="178" fill="#791F1F" font-size="9">M5 ×4</text>
+  <text x="335" y="190" fill="#791F1F" font-size="8">PCD 48</text>
+  <!-- Dimensions -->
+  <line x1="100" y1="105" x2="380" y2="105" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="102,105 108,102 108,108" fill="#184e9e"/>
+  <polygon points="378,105 372,102 372,108" fill="#184e9e"/>
+  <text x="240" y="100" text-anchor="middle" fill="#184e9e" font-size="10" font-weight="bold">60mm</text>
+
+  <!-- Side view of TOP block -->
+  <text x="100" y="425" fill="#666" font-size="9">SIDE VIEW</text>
+  <rect x="100" y="430" width="280" height="93" fill="#d8e8f5" stroke="#184e9e" stroke-width="1.5"/>
+  <rect x="175" y="430" width="130" height="39" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="240" y="450" text-anchor="middle" fill="#333" font-size="9">bearing pocket</text>
+  <text x="240" y="461" text-anchor="middle" fill="#333" font-size="9">8.5 deep</text>
+  <line x1="240" y1="430" x2="240" y2="523" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <!-- Height dim -->
+  <line x1="395" y1="430" x2="395" y2="523" stroke="#184e9e" stroke-width="0.8"/>
+  <polygon points="395,432 392,438 398,438" fill="#184e9e"/>
+  <polygon points="395,521 392,515 398,515" fill="#184e9e"/>
+  <text x="405" y="480" fill="#184e9e" font-size="10" font-weight="bold">20mm</text>
+  <!-- Countersinks -->
+  <polygon points="130,523 130,510 142,510" fill="#e24b4a" opacity="0.5"/>
+  <polygon points="338,523 338,510 350,510" fill="#e24b4a" opacity="0.5"/>
+  <text x="130" y="540" fill="#791F1F" font-size="8">csk bottom</text>
+
+  <!-- Info box TOP -->
+  <rect x="40" y="560" width="400" height="115" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="52" y="578" fill="#184e9e" font-size="11" font-weight="bold">TOP block specs:</text>
+  <text x="52" y="596" fill="#333" font-size="10">• 1× 6001-2RS (28×12×8mm) press-fit from top</text>
+  <text x="52" y="612" fill="#333" font-size="10">• Bearing pocket: Ø27.95 × 8.5mm deep</text>
+  <text x="52" y="628" fill="#333" font-size="10">• Shaft clearance bore: Ø13 (never touches block)</text>
+  <text x="52" y="644" fill="#333" font-size="10">• 4× M5 bolts PCD 48, countersink on mount face</text>
+  <text x="52" y="662" fill="#333" font-size="10">• Purpose: radial support at top of shaft</text>
+
+  <!-- BOTTOM BLOCK (right) -->
+  <text x="760" y="82" text-anchor="middle" fill="#9e4818" font-size="13" font-weight="bold">BOTTOM BLOCK</text>
+  <text x="760" y="98" text-anchor="middle" fill="#666" font-size="10">70×70×30mm · 2× 6001-2RS + 1× 51101 thrust</text>
+
+  <text x="620" y="115" fill="#666" font-size="9">TOP VIEW</text>
+  <rect x="620" y="120" width="280" height="280" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <circle cx="760" cy="260" r="55.9" fill="#ffffff" stroke="#666" stroke-width="1.5"/>
+  <text x="760" y="255" text-anchor="middle" fill="#333" font-size="9">radial pocket</text>
+  <text x="760" y="267" text-anchor="middle" fill="#333" font-size="9">Ø27.95</text>
+  <circle cx="760" cy="260" r="26.0" fill="#fff8f2" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="760" y="282" text-anchor="middle" fill="#993556" font-size="8">shaft Ø13</text>
+  <g fill="#E24B4A" stroke="#501313" stroke-width="1">
+    <circle cx="838.6" cy="181.4" r="7"/>
+    <circle cx="838.6" cy="338.6" r="7"/>
+    <circle cx="681.4" cy="338.6" r="7"/>
+    <circle cx="681.4" cy="181.4" r="7"/>
+  </g>
+  <text x="855" y="178" fill="#791F1F" font-size="9">M5 ×4</text>
+  <text x="855" y="190" fill="#791F1F" font-size="8">PCD 56</text>
+  <!-- Dimensions -->
+  <line x1="620" y1="105" x2="900" y2="105" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="622,105 628,102 628,108" fill="#9e4818"/>
+  <polygon points="898,105 892,102 892,108" fill="#9e4818"/>
+  <text x="760" y="100" text-anchor="middle" fill="#9e4818" font-size="10" font-weight="bold">70mm</text>
+
+  <!-- Side view of BOTTOM block -->
+  <text x="620" y="425" fill="#666" font-size="9">SIDE VIEW (section)</text>
+  <rect x="620" y="430" width="280" height="140" fill="#f5e1d8" stroke="#9e4818" stroke-width="1.5"/>
+  <!-- Thrust pocket (bottom) -->
+  <rect x="685" y="556" width="150" height="42" fill="#fffacd" stroke="#666" stroke-width="1"/>
+  <text x="760" y="580" text-anchor="middle" fill="#333" font-size="9">thrust 51101</text>
+  <text x="760" y="592" text-anchor="middle" fill="#333" font-size="8">9mm deep</text>
+  <!-- Radial pocket (upper) -->
+  <rect x="687" y="484" width="146" height="72" fill="#ffffff" stroke="#666" stroke-width="1"/>
+  <text x="760" y="510" text-anchor="middle" fill="#333" font-size="9">2× 6001-2RS</text>
+  <text x="760" y="523" text-anchor="middle" fill="#333" font-size="8">stacked</text>
+  <text x="760" y="536" text-anchor="middle" fill="#333" font-size="8">16mm deep</text>
+
+  <!-- Shaft centerline -->
+  <line x1="760" y1="430" x2="760" y2="598" stroke="#D4537E" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Height dim -->
+  <line x1="920" y1="430" x2="920" y2="570" stroke="#9e4818" stroke-width="0.8"/>
+  <polygon points="920,432 917,438 923,438" fill="#9e4818"/>
+  <polygon points="920,568 917,562 923,562" fill="#9e4818"/>
+  <text x="930" y="505" fill="#9e4818" font-size="10" font-weight="bold">30mm</text>
+
+  <!-- Info box BOTTOM -->
+  <rect x="560" y="580" width="400" height="95" rx="4" fill="#ffffff" stroke="#D3D1C7" stroke-width="0.5"/>
+  <text x="572" y="598" fill="#9e4818" font-size="11" font-weight="bold">BOTTOM block specs:</text>
+  <text x="572" y="614" fill="#333" font-size="10">• 2× 6001-2RS stacked (radial, upper pocket)</text>
+  <text x="572" y="628" fill="#333" font-size="10">• 1× 51101 thrust (axial, lower pocket)</text>
+  <text x="572" y="642" fill="#333" font-size="10">• Carries full cassette weight + belt tension</text>
+  <text x="572" y="656" fill="#333" font-size="10">• 4× M5 bolts PCD 56, countersink on top face</text>
+  <text x="572" y="670" fill="#333" font-size="10">• Purpose: full shaft support + axial load</text>
+
+  <!-- ASSEMBLY DIAGRAM (center) -->
+  <line x1="460" y1="80" x2="460" y2="660" stroke="#1e3a5f" stroke-width="0.5" stroke-dasharray="4,3"/>
+  <text x="500" y="110" text-anchor="middle" fill="#1a1a1a" font-size="11" font-weight="bold">ASSEMBLY</text>
+
+  <!-- Simplified assembly schematic -->
+  <g transform="translate(500,120)">
+    <!-- Top plate -->
+    <rect x="-50" y="0" width="100" height="6" fill="#c0c0c0" stroke="#666" stroke-width="1"/>
+    <text x="55" y="5" fill="#666" font-size="8">Al plate 6mm</text>
+    <!-- Top block -->
+    <rect x="-30" y="6" width="60" height="20" fill="#d8e8f5" stroke="#184e9e" stroke-width="1"/>
+    <circle cx="0" cy="16" r="14" fill="none" stroke="#999" stroke-width="0.8"/>
+    <text x="35" y="20" fill="#184e9e" font-size="8">TOP</text>
+    <!-- Shaft -->
+    <rect x="-3" y="6" width="6" height="350" fill="#ddd" stroke="#666" stroke-width="0.5"/>
+    <!-- Cassette indicator -->
+    <rect x="-40" y="80" width="80" height="160" fill="#fff3c4" stroke="#eab308" stroke-width="1" opacity="0.4"/>
+    <text x="0" y="160" text-anchor="middle" fill="#854d0e" font-size="9">CASSETTE</text>
+    <text x="0" y="173" text-anchor="middle" fill="#854d0e" font-size="8">(separate)</text>
+    <!-- Bottom block -->
+    <rect x="-35" y="320" width="70" height="30" fill="#f5e1d8" stroke="#9e4818" stroke-width="1"/>
+    <circle cx="0" cy="335" r="14" fill="none" stroke="#999" stroke-width="0.8"/>
+    <text x="40" y="338" fill="#9e4818" font-size="8">BOTTOM</text>
+    <!-- Bottom plate -->
+    <rect x="-50" y="350" width="100" height="6" fill="#c0c0c0" stroke="#666" stroke-width="1"/>
+    <text x="55" y="355" fill="#666" font-size="8">Al plate 6mm</text>
+    <!-- Labels -->
+    <text x="0" y="-5" text-anchor="middle" fill="#333" font-size="9">Shaft Ø12mm × 280mm</text>
+  </g>
+
+  <line x1="40" y1="687" x2="960" y2="687" stroke="#1e3a5f" stroke-width="0.3"/>
+  <text x="40" y="697" fill="#666" font-size="8">CSM V3 | BearingHousings V1 | April 2026</text>
+</svg>'''
+
+try:
+    with open(PATH_SVG, 'w', encoding='utf-8') as f:
+        f.write(svg_content)
+    print(f"  ✅ SVG: {PATH_SVG}")
+except Exception as e:
+    print(f"  ❌ SVG error: {e}")
+
+# =============================================================================
+# SUMMARY
+# =============================================================================
+print(f"\n{'='*60}")
+print(f"COMPLETE — BEARING HOUSING BLOCKS V1")
+print(f"{'='*60}")
+print(f"\n  FILES SAVED:")
+print(f"  {PATH_STL_TOP}")
+print(f"  {PATH_STL_BOT}")
+print(f"  {PATH_STL_PAIR}")
+print(f"  {PATH_PNG_BOTH}")
+print(f"  {PATH_SVG}")
+print(f"\n  PRINT SETTINGS (both blocks):")
+print(f"   Material: PETG (dry)")
+print(f"   Layer: 0.2mm")
+print(f"   Perimeters: 5 (CRITICAL — bearing pocket needs rigid walls)")
+print(f"   Top/Bottom: 6 solid layers")
+print(f"   Infill: 40-50% Gyroid or Cubic")
+print(f"   Orientation: flat on bed (bolt holes vertical)")
+print(f"   Supports: NONE needed if oriented correctly")
+print(f"   Speed: 40mm/s walls, 120mm/s infill")
+print(f"\n  POST-PROCESS:")
+print(f"   1. Test fit bearing BY HAND — should press in with firm hand pressure")
+print(f"   2. If too tight: sand pocket lightly with 400 grit on wooden dowel")
+print(f"   3. If too loose: reprint with -0.1mm pocket diameter adjustment")
+print(f"   4. Bearing should spin freely after install with no axial play")
+print(f"\n  ASSEMBLY ORDER:")
+print(f"   1. Print both blocks")
+print(f"   2. Test-fit bearings (bearings should not be permanent yet)")
+print(f"   3. Install on aluminum plates (plate not yet designed — Phase 1 later)")
+print(f"   4. Insert shaft, verify rotation")
+print(f"\n  TESTING BEFORE CASSETTE INSTALL:")
+print(f"   - Spin shaft by hand: should rotate freely")
+print(f"   - Runout check: <0.2mm at shaft end (dial indicator)")
+print(f"   - No wobble, no binding")

@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="850" viewBox="0 0 1100 850">
+  <style>
+    .title { font: bold 18px sans-serif; fill: #1e3a5f; }
+    .subtitle { font: bold 14px sans-serif; fill: #1e3a5f; }
+    .label { font: 11px sans-serif; fill: #333; }
+    .dim   { font: 11px sans-serif; fill: #b91c1c; font-weight: bold; }
+    .note  { font: 10px sans-serif; fill: #666; font-style: italic; }
+    .frame { fill: none; stroke: #ccc; stroke-width: 1; }
+    .body  { fill: #d4e1ed; stroke: #1e3a5f; stroke-width: 1.5; }
+    .slot  { fill: #fff; stroke: #b91c1c; stroke-width: 0.5; }
+    .ctr   { stroke: #888; stroke-dasharray: 4 2; stroke-width: 0.5; fill: none; }
+    .spring{ fill: #ccc; stroke: #555; stroke-width: 0.8; }
+    .butt  { fill: #fee; stroke: #d97706; stroke-width: 0.5; }
+    .changed { fill: #d4f4dd; stroke: #5a8d3e; stroke-width: 1; }
+  </style>
+
+  <text x="550" y="30" text-anchor="middle" class="title">CSM V3 Cylinder V1.1.7 - Engineering Review Fixes Applied</text>
+  <text x="550" y="50" text-anchor="middle" class="note">72-slot, 12g Legare/AutoKnitter/Erlbacher-compatible | OD 114.3mm | Spring at TOP</text>
+
+  <!-- ===== TOP VIEW (left side) ===== -->
+  <text x="270" y="80" text-anchor="middle" class="subtitle">Top View (72 slots)</text>
+  
+  <g transform="translate(270, 280)">
+    <!-- Outer cylinder -->
+    <circle cx="0" cy="0" r="171.45" class="body"/>
+    <!-- Inner bore -->
+    <circle cx="0" cy="0" r="132.0" fill="#fafaf8" stroke="#888" stroke-width="0.5"/>
+    
+    <!-- 72 slot lines -->
+    <g stroke="#b91c1c" stroke-width="0.6">
+      <!-- Generated programmatically; sample 18 of 72 for SVG simplicity -->
+      <line x1="171" y1="0" x2="166" y2="0"/>
+      <line x1="0" y1="171" x2="0" y2="166"/>
+      <line x1="-171" y1="0" x2="-166" y2="0"/>
+      <line x1="0" y1="-171" x2="0" y2="-166"/>
+      <line x1="121.0" y1="121.0" x2="117.4" y2="117.4"/>
+      <line x1="-121.0" y1="121.0" x2="-117.4" y2="117.4"/>
+      <line x1="121.0" y1="-121.0" x2="117.4" y2="-117.4"/>
+      <line x1="-121.0" y1="-121.0" x2="-117.4" y2="-117.4"/>
+      <line x1="155.7" y1="63.3" x2="151.0" y2="61.4"/>
+      <line x1="63.3" y1="155.7" x2="61.4" y2="151.0"/>
+      <line x1="-63.3" y1="155.7" x2="-61.4" y2="151.0"/>
+      <line x1="-155.7" y1="63.3" x2="-151.0" y2="61.4"/>
+      <line x1="-155.7" y1="-63.3" x2="-151.0" y2="-61.4"/>
+      <line x1="-63.3" y1="-155.7" x2="-61.4" y2="-151.0"/>
+      <line x1="63.3" y1="-155.7" x2="61.4" y2="-151.0"/>
+      <line x1="155.7" y1="-63.3" x2="151.0" y2="-61.4"/>
+    </g>
+    
+    <!-- 4x M5 bolts -->
+    <circle cx="52.5" cy="52.5" r="4" fill="#fff" stroke="#5a8d3e" stroke-width="1"/>
+    <circle cx="52.5" cy="52.5" r="7.1" fill="none" stroke="#5a8d3e" stroke-width="0.5"/>
+    <circle cx="-52.5" cy="52.5" r="4" fill="#fff" stroke="#5a8d3e" stroke-width="1"/>
+    <circle cx="-52.5" cy="52.5" r="7.1" fill="none" stroke="#5a8d3e" stroke-width="0.5"/>
+    <circle cx="52.5" cy="-52.5" r="4" fill="#fff" stroke="#5a8d3e" stroke-width="1"/>
+    <circle cx="52.5" cy="-52.5" r="7.1" fill="none" stroke="#5a8d3e" stroke-width="0.5"/>
+    <circle cx="-52.5" cy="-52.5" r="4" fill="#fff" stroke="#5a8d3e" stroke-width="1"/>
+    <circle cx="-52.5" cy="-52.5" r="7.1" fill="none" stroke="#5a8d3e" stroke-width="0.5"/>
+    
+    <!-- Hub pocket -->
+    <circle cx="0" cy="0" r="13.6" fill="#ffe0a0" stroke="#a07020" stroke-width="0.8"/>
+    <text x="0" y="3" text-anchor="middle" class="label">Hub</text>
+    <text x="0" y="14" text-anchor="middle" class="label">Pocket</text>
+    
+    <!-- Annotations -->
+    <text x="0" y="-185" text-anchor="middle" class="dim">OD 114.3mm</text>
+    <text x="0" y="200" text-anchor="middle" class="dim">72 slots @ 5° pitch</text>
+    <text x="-160" y="-50" class="dim">ID 88mm</text>
+    <text x="80" y="40" class="label">4x M5</text>
+    <text x="80" y="52" class="label">PCD 70mm</text>
+  </g>
+
+  <!-- ===== SIDE VIEW (right side) ===== -->
+  <text x="780" y="80" text-anchor="middle" class="subtitle">Side Section (V1.1.7 corrected layout)</text>
+  
+  <g transform="translate(680, 110)">
+    <!-- Cylinder body -->
+    <rect x="0" y="0" width="200" height="300" class="body"/>
+    
+    <!-- Top chamfer indicator -->
+    <line x1="0" y1="3" x2="200" y2="3" stroke="#666" stroke-width="0.3" stroke-dasharray="2 2"/>
+    <text x="-50" y="10" class="dim">Z=75</text>
+    <text x="205" y="10" class="label">Cylinder TOP</text>
+    
+    <!-- Slot zone (top 52mm) -->
+    <rect x="0" y="3" width="200" height="207" fill="#fff" stroke="#b91c1c" stroke-width="0.5" stroke-dasharray="3 2"/>
+    <text x="100" y="100" text-anchor="middle" class="label">Slot zone (52mm tall)</text>
+    <text x="100" y="115" text-anchor="middle" class="label">72 slots @ 1.22 × 2.00mm</text>
+    <text x="100" y="130" text-anchor="middle" class="label">Chamfer 0.8mm at top</text>
+    
+    <!-- ===== SPRING GROOVE (V1.1.7 - moved to TOP) ===== -->
+    <rect x="0" y="45" width="200" height="13" class="changed"/>
+    <text x="-50" y="50" class="dim">Z=63.6</text>
+    <text x="-50" y="60" class="dim">Z=60.4</text>
+    <text x="100" y="55" text-anchor="middle" class="dim" font-weight="bold">SPRING GROOVE (V1.1.7)</text>
+    <text x="100" y="68" text-anchor="middle" class="label">Z=60.4-63.6mm | depth 1.8mm | width 3.2mm</text>
+    
+    <!-- Spring cross-section indicator -->
+    <circle cx="195" cy="51" r="3" class="spring"/>
+    <text x="205" y="55" class="label">Spring (0.110" wire)</text>
+    <text x="205" y="68" class="note">Protrusion 0.99mm</text>
+    
+    <!-- Material above groove indicator -->
+    <line x1="195" y1="3" x2="195" y2="45" stroke="#5a8d3e" stroke-width="2"/>
+    <text x="200" y="25" class="label" fill="#5a8d3e">11.4mm material above</text>
+    
+    <!-- Slot bottom -->
+    <line x1="0" y1="210" x2="200" y2="210" stroke="#b91c1c" stroke-width="0.8"/>
+    <text x="-50" y="215" class="dim">Z=23</text>
+    <text x="205" y="215" class="label">Slot bottom</text>
+    
+    <!-- Butt cavity zone -->
+    <rect x="0" y="210" width="200" height="20" class="butt"/>
+    <text x="100" y="223" text-anchor="middle" class="label">Butt cavity (8.5 × 4mm)</text>
+    <text x="-50" y="234" class="dim">Z=19</text>
+    <text x="205" y="227" class="label">CAM zone</text>
+    
+    <!-- Solid base -->
+    <rect x="0" y="230" width="200" height="70" fill="#f0f0e8" stroke="#888" stroke-width="0.5"/>
+    <text x="100" y="265" text-anchor="middle" class="label">Solid base + hub interface</text>
+    
+    <!-- Bottom -->
+    <line x1="0" y1="300" x2="200" y2="300" stroke="#1e3a5f" stroke-width="1"/>
+    <text x="-50" y="305" class="dim">Z=0</text>
+    <text x="205" y="305" class="label">Cylinder BOTTOM</text>
+  </g>
+
+  <!-- ===== FIX NOTES ===== -->
+  <g transform="translate(40, 460)">
+    <rect x="0" y="0" width="1020" height="200" fill="#d4f4dd" stroke="#5a8d3e" stroke-width="1.5"/>
+    <text x="510" y="25" text-anchor="middle" class="title">V1.1.7 ENGINEERING REVIEW FIXES</text>
+    
+    <text x="20" y="55" class="subtitle">Fix #1: Spring Z position 68 → 62mm</text>
+    <text x="40" y="73" class="label">Better stem leverage. Material above groove: 5.4mm → 11.4mm. Stronger top edge.</text>
+    
+    <text x="20" y="100" class="subtitle">Fix #2: Spring groove depth 1.2 → 1.8mm</text>
+    <text x="40" y="118" class="label">Spring protrusion: 1.59mm → 0.99mm. Reduces yarn carrier snag risk.</text>
+    
+    <text x="20" y="145" class="subtitle">Fix #3: Needle radial position - stem against back wall (visualization)</text>
+    <text x="40" y="163" class="label">Mechanically correct: spring tension naturally pushes needle stems inward.</text>
+    
+    <text x="20" y="190" class="note">Test wedge slot widths: 1.18 | 1.20 | 1.22 | 1.24 | 1.26 | 1.28 mm (test before printing full cylinder)</text>
+  </g>
+
+  <!-- ===== HARDWARE NOTE ===== -->
+  <g transform="translate(40, 690)">
+    <rect x="0" y="0" width="1020" height="135" fill="#fff3cd" stroke="#d97706" stroke-width="1"/>
+    <text x="510" y="25" text-anchor="middle" class="subtitle">Hardware Required</text>
+    <text x="20" y="50" class="label">• Cylinder spring: FlyDesigns Common Thickness 0.110" (2.79mm wire) - PURCHASED</text>
+    <text x="20" y="68" class="label">• Needles: 100x AutoKnitter/Legare 12G - PURCHASED (only 72 used)</text>
+    <text x="20" y="86" class="label">• 4× M5 socket head bolts - in screw assortment kit</text>
+    <text x="20" y="104" class="label">• Loctite 603 - in inventory</text>
+    <text x="20" y="122" class="note">Spring installation: wrap around cylinder OD groove, twist ends together to close ring (FlyDesigns instructions)</text>
+  </g>
+</svg>

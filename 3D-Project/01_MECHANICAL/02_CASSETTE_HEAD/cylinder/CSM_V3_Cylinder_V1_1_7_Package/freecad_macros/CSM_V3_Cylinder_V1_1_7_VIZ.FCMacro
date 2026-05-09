@@ -1,0 +1,635 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CYLINDER V1.1.7 VISUALIZATION (engineering review fixes)
+# =============================================================================
+# File:    CSM_V3_Cylinder_V1_1_7_VIZ.FCMacro
+# Date:    May 2026
+#
+# CHANGES FROM V1.1.6_VIZ:
+#
+#   FIX 1: Spring Z center 68 -> 62mm (more conservative, better leverage)
+#   FIX 2: Spring groove depth 1.2 -> 1.8mm (less protrusion past OD)
+#   FIX 3: Needle radial position - stems now sit against BACK WALL of slot
+#          (mechanically correct: spring tension pushes needles inward)
+#
+# CONTENT:
+#   - Cylinder V1.1.7 (40% transparent)
+#   - 9 needles in 3 lift states - now correctly positioned against back walls
+#   - FlyDesigns spring at Z=62mm, depth 1.8mm groove
+#   - Cross-section showing spring engaging stem properly
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
+
+PATH_STL_FULL    = os.path.join(BASE, "CSM_V3_Cylinder_V1_1_7_FULL.stl")
+
+PATH_PNG_ASSY_ISO     = os.path.join(BASE, "images", "Cylinder_V1_1_7_ASSY_ISO.png")
+PATH_PNG_ASSY_TOP     = os.path.join(BASE, "images", "Cylinder_V1_1_7_ASSY_TOP.png")
+PATH_PNG_ASSY_FRONT   = os.path.join(BASE, "images", "Cylinder_V1_1_7_ASSY_FRONT.png")
+PATH_PNG_CROSSSEC     = os.path.join(BASE, "images", "Cylinder_V1_1_7_CROSSSECTION.png")
+PATH_PNG_SPRING_DETAIL = os.path.join(BASE, "images", "Cylinder_V1_1_7_SPRING_DETAIL.png")
+
+for p in [PATH_STL_FULL, PATH_PNG_ASSY_ISO, PATH_PNG_ASSY_TOP,
+          PATH_PNG_ASSY_FRONT, PATH_PNG_CROSSSEC, PATH_PNG_SPRING_DETAIL]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CYLINDER PARAMETERS (V1.1.7)
+# =============================================================================
+CYL_OD       = 114.3
+CYL_ID       = 88.0
+CYL_HEIGHT   = 75.0
+
+SLOT_COUNT    = 72
+SLOT_WIDTH    = 1.22
+SLOT_DEPTH    = 2.00
+SLOT_LENGTH   = 52.0
+SLOT_CHAMFER  = 0.8
+
+BUTT_WIDTH    = 8.5
+BUTT_HEIGHT   = 4.0
+BUTT_DEPTH    = SLOT_DEPTH
+
+HUB_POCKET_D     = 18.20
+HUB_POCKET_H     = 3.0
+HUB_POCKET_CHAM  = 0.5
+
+BOLT_COUNT    = 4
+BOLT_PCD      = 70.0
+BOLT_HOLE_D   = 5.4
+BOLT_CB_D     = 9.5
+BOLT_CB_H     = 5.0
+
+EDGE_CHAMFER  = 0.6
+
+# *** SPRING GROOVE (V1.1.7 corrected) ***
+SPRING_GROOVE_W      = 3.2
+SPRING_GROOVE_DEPTH  = 1.8     # was 1.2
+SPRING_GROOVE_Z_CTR  = 62.0    # was 68
+SPRING_GROOVE_Z_BOT  = SPRING_GROOVE_Z_CTR - SPRING_GROOVE_W/2.0  # 60.4
+SPRING_GROOVE_Z_TOP  = SPRING_GROOVE_Z_CTR + SPRING_GROOVE_W/2.0  # 63.6
+
+# =============================================================================
+# NEEDLE PARAMETERS
+# =============================================================================
+NEEDLE_LENGTH    = 58.49
+STEM_W           = 1.15
+STEM_D           = 1.80
+BUTT_H_LEN       = 8.24
+BUTT_V_LEN       = 3.64
+HOOK_RADIUS      = 3.12
+HOOK_TO_PIVOT    = 7.00
+
+LATCH_LENGTH     = 6.0
+LATCH_W          = 1.0
+LATCH_T          = 0.6
+
+LIFT_REST        = 0.0
+LIFT_MID         = 6.0
+LIFT_PEAK        = 12.0
+
+NEEDLE_COUNT_VIZ = 9
+NEEDLE_ANGLE_STEP = 360.0 / NEEDLE_COUNT_VIZ
+
+# =============================================================================
+# SPRING PARAMETERS
+# =============================================================================
+SPRING_WIRE_DIAM = 2.79
+SPRING_COLOR     = (0.85, 0.85, 0.88)
+
+SPRING_INNER_RADIUS = (CYL_OD / 2.0) - SPRING_GROOVE_DEPTH       # 55.35
+SPRING_CENTER_RADIUS = SPRING_INNER_RADIUS + SPRING_WIRE_DIAM / 2.0  # 56.745
+SPRING_OUTER_RADIUS = SPRING_INNER_RADIUS + SPRING_WIRE_DIAM     # 58.14
+SPRING_PROTRUSION = SPRING_OUTER_RADIUS - (CYL_OD / 2.0)          # 0.99
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+CYL_OUTER_R = CYL_OD / 2.0
+CYL_INNER_R = CYL_ID / 2.0
+
+SLOT_PITCH_DEG = 360.0 / SLOT_COUNT
+SLOT_PITCH_MM  = math.pi * CYL_OD / SLOT_COUNT
+
+SLOT_BOT_Z  = CYL_HEIGHT - SLOT_LENGTH
+BUTT_BOT_Z  = SLOT_BOT_Z - BUTT_HEIGHT
+
+# *** FIX 3: Needle radial position - against back wall of slot ***
+# OLD: NEEDLE_RADIAL_CENTER = CYL_OUTER_R - (SLOT_DEPTH / 2.0)  (centered)
+# NEW: NEEDLE_RADIAL_CENTER = CYL_OUTER_R - SLOT_DEPTH + (STEM_D / 2.0) + 0.05
+NEEDLE_RADIAL_CENTER = CYL_OUTER_R - SLOT_DEPTH + (STEM_D / 2.0) + 0.05  # 56.10
+
+# Verify spring contacts stem
+STEM_OUTER_R = NEEDLE_RADIAL_CENTER + STEM_D / 2.0  # 57.00
+SPRING_OVERLAP = SPRING_OUTER_RADIUS - STEM_OUTER_R  # 1.14mm overlap = good engagement
+
+# =============================================================================
+# START
+# =============================================================================
+print("=" * 70)
+print("CSM V3 - CYLINDER V1.1.7 + NEEDLES + SPRING (review fixes applied)")
+print("=" * 70)
+print(f"  Spring Z center:        {SPRING_GROOVE_Z_CTR}mm  (was 68)")
+print(f"  Spring groove depth:    {SPRING_GROOVE_DEPTH}mm  (was 1.2)")
+print(f"  Spring protrusion:      {SPRING_PROTRUSION:.2f}mm past OD")
+print(f"  Needle position:        {NEEDLE_RADIAL_CENTER:.2f}mm (against back wall)")
+print(f"  Spring overlaps stem:   {SPRING_OVERLAP:.2f}mm (proper engagement)")
+print()
+
+# =============================================================================
+# DOCUMENT
+# =============================================================================
+doc = FreeCAD.newDocument("CSM_Cylinder_V1_1_7_VIZ")
+
+# =============================================================================
+# HELPER: Slot cutter
+# =============================================================================
+def build_slot_cutter(angle_deg, slot_width, slot_depth, slot_length,
+                      butt_width, butt_height, butt_depth,
+                      cyl_height, slot_chamfer):
+    slot_top_z = cyl_height
+    slot_bot_z = cyl_height - slot_length
+    butt_bot_z = slot_bot_z - butt_height
+
+    slot_x_outer = CYL_OUTER_R + 1.0
+    slot_x_inner = CYL_OUTER_R - slot_depth
+    slot_box = Part.makeBox(
+        slot_x_outer - slot_x_inner, slot_width, slot_length
+    )
+    slot_box.translate(FreeCAD.Vector(slot_x_inner, -slot_width/2.0, slot_bot_z))
+
+    butt_x_outer = CYL_OUTER_R + 1.0
+    butt_x_inner = CYL_OUTER_R - butt_depth
+    butt_box = Part.makeBox(
+        butt_x_outer - butt_x_inner, butt_width, butt_height
+    )
+    butt_box.translate(FreeCAD.Vector(butt_x_inner, -butt_width/2.0, butt_bot_z))
+
+    cutter = slot_box.fuse(butt_box)
+
+    if slot_chamfer > 0:
+        cham_x_outer = CYL_OUTER_R + 1.0
+        cham_x_inner = CYL_OUTER_R - slot_chamfer
+        cham_box = Part.makeBox(
+            cham_x_outer - cham_x_inner,
+            slot_width + 2 * slot_chamfer,
+            slot_chamfer + 0.1
+        )
+        cham_box.translate(FreeCAD.Vector(
+            cham_x_inner,
+            -(slot_width + 2 * slot_chamfer) / 2.0,
+            slot_top_z - slot_chamfer
+        ))
+        cutter = cutter.fuse(cham_box)
+
+    cutter.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+    return cutter
+
+
+# =============================================================================
+# HELPER: Build needle (uses corrected NEEDLE_RADIAL_CENTER)
+# =============================================================================
+def build_needle(angle_deg, lift_z, latch_open=True):
+    """
+    Build needle at corrected radial position - stem against back wall of slot.
+    Spring tension naturally pushes needle inward; we model that final position.
+    """
+    needle_parts = []
+
+    # Stem - using NEW NEEDLE_RADIAL_CENTER (against back wall)
+    stem_bot_z = BUTT_BOT_Z + BUTT_V_LEN + lift_z
+    stem_top_z = BUTT_BOT_Z + lift_z + NEEDLE_LENGTH - HOOK_RADIUS * 2
+    stem_length = stem_top_z - stem_bot_z
+
+    stem = Part.makeBox(STEM_D, STEM_W, stem_length)
+    stem.translate(FreeCAD.Vector(
+        NEEDLE_RADIAL_CENTER - STEM_D/2.0,
+        -STEM_W/2.0,
+        stem_bot_z
+    ))
+    needle_parts.append(stem)
+
+    # Butt vertical leg
+    butt_v_bot_z = BUTT_BOT_Z + lift_z
+    butt_v = Part.makeBox(STEM_D, STEM_W, BUTT_V_LEN)
+    butt_v.translate(FreeCAD.Vector(
+        NEEDLE_RADIAL_CENTER - STEM_D/2.0,
+        -STEM_W/2.0,
+        butt_v_bot_z
+    ))
+    needle_parts.append(butt_v)
+
+    # Butt horizontal leg (extends radially outward, engaged by CAM)
+    butt_h_inner_x = NEEDLE_RADIAL_CENTER - STEM_D/2.0
+    butt_h = Part.makeBox(BUTT_H_LEN, STEM_W, STEM_D)
+    butt_h.translate(FreeCAD.Vector(
+        butt_h_inner_x, -STEM_W/2.0, butt_v_bot_z
+    ))
+    needle_parts.append(butt_h)
+
+    # Hook base
+    hook_base_z = stem_top_z
+    hook_base = Part.makeBox(STEM_D, STEM_W, HOOK_RADIUS)
+    hook_base.translate(FreeCAD.Vector(
+        NEEDLE_RADIAL_CENTER - STEM_D/2.0,
+        -STEM_W/2.0,
+        hook_base_z
+    ))
+    needle_parts.append(hook_base)
+
+    # Hook torus
+    try:
+        hook_torus = Part.makeTorus(HOOK_RADIUS, STEM_W/2.0,
+                                     FreeCAD.Vector(NEEDLE_RADIAL_CENTER - HOOK_RADIUS,
+                                                    0,
+                                                    hook_base_z + HOOK_RADIUS),
+                                     FreeCAD.Vector(0, 1, 0),
+                                     0, 360, 180)
+        needle_parts.append(hook_torus)
+    except Exception:
+        pass
+
+    # Hook tip
+    hook_tip = Part.makeBox(HOOK_RADIUS * 0.3, STEM_W, HOOK_RADIUS * 0.3)
+    hook_tip.translate(FreeCAD.Vector(
+        NEEDLE_RADIAL_CENTER - HOOK_RADIUS * 2,
+        -STEM_W/2.0,
+        hook_base_z + HOOK_RADIUS - HOOK_RADIUS * 0.3
+    ))
+    needle_parts.append(hook_tip)
+
+    # Pivot pin
+    pivot_z = hook_base_z - HOOK_TO_PIVOT + HOOK_RADIUS * 2
+    pivot_pin = Part.makeCylinder(0.3, STEM_W + 0.4)
+    pivot_pin.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(1,0,0), 90)
+    pivot_pin.translate(FreeCAD.Vector(
+        NEEDLE_RADIAL_CENTER, -STEM_W/2.0 - 0.2, pivot_z
+    ))
+    needle_parts.append(pivot_pin)
+
+    # Latch (on bore side - swings inside cylinder)
+    if latch_open:
+        latch = Part.makeBox(LATCH_T, LATCH_W, LATCH_LENGTH)
+        latch.translate(FreeCAD.Vector(
+            NEEDLE_RADIAL_CENTER - LATCH_T/2.0,
+            -LATCH_W/2.0,
+            pivot_z
+        ))
+    else:
+        latch = Part.makeBox(LATCH_T, LATCH_W, LATCH_LENGTH)
+        latch.translate(FreeCAD.Vector(
+            NEEDLE_RADIAL_CENTER - LATCH_T/2.0,
+            -LATCH_W/2.0,
+            pivot_z - LATCH_LENGTH * 0.7
+        ))
+        latch.rotate(
+            FreeCAD.Vector(NEEDLE_RADIAL_CENTER, 0, pivot_z),
+            FreeCAD.Vector(0, 1, 0),
+            -25
+        )
+    needle_parts.append(latch)
+
+    needle = needle_parts[0]
+    for p in needle_parts[1:]:
+        try:
+            needle = needle.fuse(p)
+        except:
+            pass
+
+    needle.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+    return needle
+
+
+# =============================================================================
+# HELPER: Build cylinder spring (V1.1.7 position)
+# =============================================================================
+def build_cylinder_spring():
+    """
+    FlyDesigns Common Thickness spring at V1.1.7 corrected position.
+    Z center 62mm, depth 1.8mm, less protrusion (0.99mm).
+    """
+    spring = Part.makeTorus(
+        SPRING_CENTER_RADIUS,
+        SPRING_WIRE_DIAM / 2.0,
+        FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_CTR),
+        FreeCAD.Vector(0, 0, 1),
+        0, 360,
+        355
+    )
+    return spring
+
+
+# =============================================================================
+# BUILD CYLINDER
+# =============================================================================
+print("\n[1/4] Building cylinder...")
+
+outer_cyl = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+inner_cyl = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2)
+inner_cyl.translate(FreeCAD.Vector(0, 0, -1))
+cyl_body = outer_cyl.cut(inner_cyl)
+
+pocket = Part.makeCylinder(HUB_POCKET_D / 2.0, HUB_POCKET_H + 0.1)
+pocket.translate(FreeCAD.Vector(0, 0, -0.05))
+cyl_body = cyl_body.cut(pocket)
+
+if HUB_POCKET_CHAM > 0:
+    cham_outer = Part.makeCone(
+        HUB_POCKET_D / 2.0 + HUB_POCKET_CHAM,
+        HUB_POCKET_D / 2.0,
+        HUB_POCKET_CHAM
+    )
+    cham_outer.translate(FreeCAD.Vector(0, 0, -0.001))
+    cyl_body = cyl_body.cut(cham_outer)
+
+for i in range(BOLT_COUNT):
+    angle = i * (360.0 / BOLT_COUNT)
+    rad = BOLT_PCD / 2.0
+    x = rad * math.cos(math.radians(angle))
+    y = rad * math.sin(math.radians(angle))
+    hole = Part.makeCylinder(BOLT_HOLE_D / 2.0, CYL_HEIGHT + 2)
+    hole.translate(FreeCAD.Vector(x, y, -1))
+    cyl_body = cyl_body.cut(hole)
+    cb = Part.makeCylinder(BOLT_CB_D / 2.0, BOLT_CB_H + 0.1)
+    cb.translate(FreeCAD.Vector(x, y, -0.05))
+    cyl_body = cyl_body.cut(cb)
+
+print("  Building 72 slot cutters...")
+slot_cutters = []
+for i in range(SLOT_COUNT):
+    angle = i * SLOT_PITCH_DEG
+    cutter = build_slot_cutter(
+        angle, SLOT_WIDTH, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    slot_cutters.append(cutter)
+
+print("  Fusing cutters...")
+master_cutter = slot_cutters[0]
+for c in slot_cutters[1:]:
+    master_cutter = master_cutter.fuse(c)
+
+print("  Cutting slots...")
+cyl_body = cyl_body.cut(master_cutter)
+
+print(f"  Cutting spring groove (Z={SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}, depth {SPRING_GROOVE_DEPTH}mm)...")
+groove_outer = Part.makeCylinder(
+    CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT)
+)
+groove_inner = Part.makeCylinder(
+    CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05)
+)
+groove_cutter = groove_outer.cut(groove_inner)
+cyl_body = cyl_body.cut(groove_cutter)
+
+if EDGE_CHAMFER > 0:
+    try:
+        edges_to_chamfer = []
+        for e in cyl_body.Edges:
+            v1 = e.Vertexes[0].Point
+            v2 = e.Vertexes[1].Point
+            if abs(v1.z - v2.z) < 0.01:
+                r1 = (v1.x ** 2 + v1.y ** 2) ** 0.5
+                if abs(r1 - CYL_OUTER_R) < 0.05:
+                    if abs(v1.z - 0) < 0.05 or abs(v1.z - CYL_HEIGHT) < 0.05:
+                        edges_to_chamfer.append(e)
+        if edges_to_chamfer:
+            cyl_body = cyl_body.makeChamfer(EDGE_CHAMFER, edges_to_chamfer)
+    except Exception as ex:
+        print(f"  Chamfer skipped: {ex}")
+
+obj_cyl = doc.addObject("Part::Feature", "Cylinder_V1_1_7")
+obj_cyl.Shape = cyl_body
+obj_cyl.ViewObject.ShapeColor = (0.3, 0.5, 0.7)
+obj_cyl.ViewObject.Transparency = 40
+
+# =============================================================================
+# BUILD: 9 NEEDLES (with corrected radial position)
+# =============================================================================
+print(f"\n[2/4] Building {NEEDLE_COUNT_VIZ} needles (against back wall)...")
+
+states = []
+for i in range(NEEDLE_COUNT_VIZ):
+    state_idx = i % 3
+    if state_idx == 0:
+        states.append(("REST", LIFT_REST, True))
+    elif state_idx == 1:
+        states.append(("MID", LIFT_MID, False))
+    else:
+        states.append(("PEAK", LIFT_PEAK, False))
+
+needle_objects = []
+for i, (label, lift, latch_open) in enumerate(states):
+    angle = i * NEEDLE_ANGLE_STEP
+    print(f"  Needle {i+1}: angle={angle:.0f}deg, state={label}, lift={lift}mm")
+
+    try:
+        needle_shape = build_needle(angle, lift, latch_open)
+        obj_needle = doc.addObject("Part::Feature", f"Needle_{i+1}_{label}")
+        obj_needle.Shape = needle_shape
+
+        if label == "REST":
+            obj_needle.ViewObject.ShapeColor = (0.75, 0.75, 0.78)
+        elif label == "MID":
+            obj_needle.ViewObject.ShapeColor = (0.85, 0.85, 0.55)
+        else:
+            obj_needle.ViewObject.ShapeColor = (0.95, 0.55, 0.45)
+
+        needle_objects.append(obj_needle)
+    except Exception as ex:
+        print(f"    ERROR: {ex}")
+
+# =============================================================================
+# BUILD: SPRING
+# =============================================================================
+print(f"\n[3/4] Building cylinder spring at Z={SPRING_GROOVE_Z_CTR}mm...")
+
+try:
+    spring_shape = build_cylinder_spring()
+    obj_spring = doc.addObject("Part::Feature", "Cylinder_Spring_FlyDesigns")
+    obj_spring.Shape = spring_shape
+    obj_spring.ViewObject.ShapeColor = SPRING_COLOR
+    print(f"  [OK] Spring built (depth 1.8mm groove, {SPRING_PROTRUSION:.2f}mm protrusion)")
+    print(f"  Spring overlaps stem outer by {SPRING_OVERLAP:.2f}mm (proper tension contact)")
+except Exception as ex:
+    print(f"  Spring build error: {ex}")
+    obj_spring = None
+
+# =============================================================================
+# BUILD: CROSS-SECTION
+# =============================================================================
+print("\n[4/4] Building cross-section...")
+
+crosssec_cutter = Part.makeBox(300, 200, 200)
+crosssec_cutter.translate(FreeCAD.Vector(-150, 0, -50))
+
+# Cylinder cross-section
+crosssec_cyl_shape = cyl_body.copy()
+crosssec_cyl_shape = crosssec_cyl_shape.cut(crosssec_cutter)
+crosssec_cyl_shape.translate(FreeCAD.Vector(0, 0, -100))
+obj_crosssec_cyl = doc.addObject("Part::Feature", "CrossSection_Cylinder")
+obj_crosssec_cyl.Shape = crosssec_cyl_shape
+obj_crosssec_cyl.ViewObject.ShapeColor = (0.3, 0.5, 0.7)
+obj_crosssec_cyl.ViewObject.Visibility = False
+
+# Needle cross-section
+crosssec_needle_shape = build_needle(0, LIFT_REST, True)
+crosssec_needle_shape.translate(FreeCAD.Vector(0, 0, -100))
+obj_crosssec_needle = doc.addObject("Part::Feature", "CrossSection_Needle")
+obj_crosssec_needle.Shape = crosssec_needle_shape
+obj_crosssec_needle.ViewObject.ShapeColor = (0.75, 0.75, 0.78)
+obj_crosssec_needle.ViewObject.Visibility = False
+
+# Spring cross-section
+if obj_spring is not None:
+    crosssec_spring_shape = build_cylinder_spring()
+    crosssec_spring_shape = crosssec_spring_shape.cut(crosssec_cutter)
+    crosssec_spring_shape.translate(FreeCAD.Vector(0, 0, -100))
+    obj_crosssec_spring = doc.addObject("Part::Feature", "CrossSection_Spring")
+    obj_crosssec_spring.Shape = crosssec_spring_shape
+    obj_crosssec_spring.ViewObject.ShapeColor = SPRING_COLOR
+    obj_crosssec_spring.ViewObject.Visibility = False
+else:
+    obj_crosssec_spring = None
+
+doc.recompute()
+
+# =============================================================================
+# PNG EXPORT
+# =============================================================================
+print("\nExporting PNG renders...")
+png_success = False
+
+try:
+    import FreeCADGui
+
+    if FreeCAD.GuiUp:
+        gui_doc = FreeCADGui.getDocument(doc.Name)
+        view = gui_doc.activeView()
+        IMG_W, IMG_H, BG = 1920, 1080, 'White'
+
+        def hide_all():
+            for n in needle_objects:
+                n.ViewObject.Visibility = False
+            obj_cyl.ViewObject.Visibility = False
+            if obj_spring: obj_spring.ViewObject.Visibility = False
+            obj_crosssec_cyl.ViewObject.Visibility = False
+            obj_crosssec_needle.ViewObject.Visibility = False
+            if obj_crosssec_spring: obj_crosssec_spring.ViewObject.Visibility = False
+
+        def show_assembly():
+            hide_all()
+            for n in needle_objects:
+                n.ViewObject.Visibility = True
+            obj_cyl.ViewObject.Visibility = True
+            if obj_spring: obj_spring.ViewObject.Visibility = True
+
+        def show_crosssection():
+            hide_all()
+            obj_crosssec_cyl.ViewObject.Visibility = True
+            obj_crosssec_needle.ViewObject.Visibility = True
+            if obj_crosssec_spring: obj_crosssec_spring.ViewObject.Visibility = True
+
+        # 1. Assembly ISO
+        show_assembly()
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG_ASSY_ISO, IMG_W, IMG_H, BG)
+        print(f"  [OK] ASSY ISO:        {PATH_PNG_ASSY_ISO}")
+
+        # 2. Top
+        view.viewTop()
+        view.fitAll()
+        view.saveImage(PATH_PNG_ASSY_TOP, IMG_W, IMG_H, BG)
+        print(f"  [OK] ASSY TOP:        {PATH_PNG_ASSY_TOP}")
+
+        # 3. Front
+        view.viewFront()
+        view.fitAll()
+        view.saveImage(PATH_PNG_ASSY_FRONT, IMG_W, IMG_H, BG)
+        print(f"  [OK] ASSY FRONT:      {PATH_PNG_ASSY_FRONT}")
+
+        # 4. Cross-section
+        show_crosssection()
+        view.viewFront()
+        view.fitAll()
+        view.saveImage(PATH_PNG_CROSSSEC, IMG_W, IMG_H, BG)
+        print(f"  [OK] CROSSSECTION:    {PATH_PNG_CROSSSEC}")
+
+        # 5. Spring detail (zoomed)
+        try:
+            cam_node = view.getCameraNode()
+            if hasattr(cam_node, 'height'):
+                cam_node.height.setValue(cam_node.height.getValue() / 4.0)
+        except Exception:
+            pass
+        view.saveImage(PATH_PNG_SPRING_DETAIL, IMG_W, IMG_H, BG)
+        print(f"  [OK] SPRING DETAIL:   {PATH_PNG_SPRING_DETAIL}")
+
+        show_assembly()
+        view.viewIsometric()
+        view.fitAll()
+
+        png_success = True
+    else:
+        print("  [SKIP] FreeCAD GUI not available")
+        print("         Run macro from FreeCAD GUI (Macro -> Macros -> Execute)")
+
+except Exception as ex:
+    print(f"  PNG export error: {ex}")
+
+# =============================================================================
+# STL EXPORT
+# =============================================================================
+print("\nExporting cylinder STL...")
+try:
+    tmp = doc.addObject("Part::Feature", "tmp_full")
+    tmp.Shape = obj_cyl.Shape.copy()
+    Part.export([tmp], PATH_STL_FULL)
+    doc.removeObject("tmp_full")
+    print(f"  [OK] STL: {PATH_STL_FULL}")
+except Exception as ex:
+    print(f"  STL export error: {ex}")
+
+# =============================================================================
+# FINAL SUMMARY
+# =============================================================================
+print()
+print("=" * 70)
+print("COMPLETE -- V1.1.7 VISUALIZATION (all 3 review fixes applied)")
+print("=" * 70)
+print()
+print("ENGINEERING REVIEW FIXES:")
+print(f"  FIX 1: Spring Z center 68 -> 62mm")
+print(f"         Better stem leverage, 11.4mm material above (was 5.4)")
+print(f"  FIX 2: Spring groove depth 1.2 -> 1.8mm")
+print(f"         Protrusion 1.59 -> 0.99mm (no yarn carrier snag)")
+print(f"  FIX 3: Needle radial position - against back wall of slot")
+print(f"         Mechanically correct: spring tension pushes inward")
+print()
+print("MECHANICAL VERIFICATION:")
+print(f"  Spring at Z={SPRING_GROOVE_Z_CTR}mm engages stem near upper-mid")
+print(f"  Stem outer at radius {STEM_OUTER_R:.2f}mm")
+print(f"  Spring outer at radius {SPRING_OUTER_RADIUS:.2f}mm")
+print(f"  Spring overlaps stem by {SPRING_OVERLAP:.2f}mm (proper tension)")
+print(f"  Cam ring engages butt L-bend at Z=19-23mm (separate function)")
+print()
+print("FILES GENERATED:")
+print(f"  STL:                {PATH_STL_FULL}")
+if png_success:
+    print(f"  PNG ASSY ISO:       {PATH_PNG_ASSY_ISO}")
+    print(f"  PNG ASSY TOP:       {PATH_PNG_ASSY_TOP}")
+    print(f"  PNG ASSY FRONT:     {PATH_PNG_ASSY_FRONT}")
+    print(f"  PNG CROSSSECTION:   {PATH_PNG_CROSSSEC}")
+    print(f"  PNG SPRING DETAIL:  {PATH_PNG_SPRING_DETAIL}")
+print()
+print("STATUS: V1.1.7 VALIDATION READY")
+print("=" * 70)

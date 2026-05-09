@@ -1,0 +1,266 @@
+================================================================================
+CSM V3 - CYLINDER DESIGN EVOLUTION SESSION
+Session Date: May 9, 2026
+Topic: Cylinder V1.1.4 → V1.1.7 Engineering Review Iterations
+================================================================================
+
+This document records the cylinder design iteration session focused on getting
+the cylinder spring placement correct.
+
+PROJECT CONTEXT:
+- CSM V3 = Computerized Sock Machine Version 3
+- Automated Legare/AutoKnitter-compatible CSM
+- 72 needles, 12 gauge, motor-driven via Arduino + Raspberry Pi
+- Project location: C:\3D-Project\
+- This session focused on cylinder at: 
+  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\
+
+================================================================================
+SESSION TIMELINE
+================================================================================
+
+## Phase 1: V1.1.4 with Initial Engineering Review
+
+User shared V1.1.4 macro that included:
+- Slot depth 2.00mm (up from 1.90)
+- Wedge widths [1.18, 1.20, 1.22, 1.24, 1.26, 1.28]
+- Batch boolean cutter optimization
+- BUT: spring groove at Z=15.5-18.7mm (bottom of cylinder)
+
+User question: Will the visualization work? Concerns about understanding fit.
+
+## Phase 2: Cylinder + Needles Visualization (V1.1.4_VIZ)
+
+Created visualization macro showing cylinder with 9 needles in 3 lift states:
+- 3 needles REST (lift=0, latches open, silver)
+- 3 needles MID-LIFT (lift=6mm, latches closed, yellow)
+- 3 needles PEAK-LIFT (lift=12mm, latches closed, red)
+
+User question: "How will needles hold themselves without spring at top?"
+- USER WAS RIGHT TO ASK - this was a critical insight
+
+## Phase 3: Adding Cylinder Spring (V1.1.5_VIZ)
+
+Added FlyDesigns Common Thickness spring (0.110"/2.79mm wire) to visualization
+at the bottom groove (Z=15.5-18.7mm).
+User confirmed they purchased this exact spring.
+
+## Phase 4: User Identified Spring Position Wrong
+
+User observed: real Erlbacher cylinders have spring at TOP, not bottom.
+Provided authoritative reference about Erlbacher Knitting Machines:
+
+  "The spring is located at the TOP of the cylinder"
+  "Sits in horizontal groove just below needle hooks, above cams"  
+  "Spring sits approximately halfway between needle latch and top of cylinder"
+  "Function: tension band, presses needles firmly against back of slots"
+  "Holds needles upright, prevents them from falling out"
+
+## Phase 5: V1.1.6 - Spring Moved to Top
+
+Created V1.1.6 with:
+- Spring groove relocated from Z=15.5-18.7 (bottom) to Z=66.4-69.6 (top)
+- Spring center Z=68mm (calculated halfway between latch and cylinder top)
+- Bottom groove DELETED
+- Both production macro and viz macro updated
+
+## Phase 6: Engineering Review of V1.1.6
+
+Reviewer identified 5 problems with V1.1.6:
+
+PROBLEM 1: Spring too high (Z=68 only 7mm below top)
+  - Limited material above groove (top edge fragile)
+  - Concerns about hook/latch clearance
+  - RECOMMENDATION: Z=63.5 or Z=62
+
+PROBLEM 2: Spring protrusion too large (1.59mm past OD)
+  - May snag yarn carrier
+  - Real machines recess spring more
+  - RECOMMENDATION: Groove depth 1.8mm (protrusion 0.99mm)
+
+PROBLEM 3: Needle radial position oversimplified
+  - Currently centered in slot depth
+  - Reality: spring tension presses needle against BACK wall
+  - RECOMMENDATION: NEEDLE_RADIAL_CENTER = CYL_OUTER_R - SLOT_DEPTH + STEM_D/2 + 0.05
+
+PROBLEM 4: Spring is ideal torus (no split/clasp)
+  - DEFERRED - reviewer agreed this is acceptable for visualization
+
+PROBLEM 5: Slot geometry vertical-only (no fillets/sweeps)
+  - DEFERRED - reviewer agreed this is acceptable for prototype
+
+## Phase 7: V1.1.7 - All 3 Critical Fixes Applied
+
+User chose:
+- Z=62mm (most conservative, reviewer's second option)
+- Depth 1.8mm (reviewer's recommendation)
+- Apply needle position fix
+
+V1.1.7 final geometry:
+- Spring groove: Z=60.4-63.6mm (center Z=62)
+- Groove depth: 1.8mm
+- Spring protrusion past OD: 0.99mm
+- Material above groove: 11.4mm (was 5.4mm in V1.1.6)
+- Needle radial center: 56.10mm (against back wall)
+- Spring overlap with stem: 1.14mm (proper tension contact)
+
+================================================================================
+FINAL V1.1.7 CRITICAL DIMENSIONS
+================================================================================
+
+CYLINDER BODY:
+  CYL_OD          = 114.3 mm   (Legare 4.5" standard)
+  CYL_ID          = 88.0 mm    (clears drive hub)
+  CYL_HEIGHT      = 75.0 mm
+  
+SLOTS:
+  SLOT_COUNT      = 72         (5° pitch)
+  SLOT_WIDTH      = 1.22 mm    (1.15mm needle + 0.07 clearance)
+  SLOT_DEPTH      = 2.00 mm    (V1.1.4 fix from 1.90)
+  SLOT_LENGTH     = 52.0 mm    (axial)
+  SLOT_CHAMFER    = 0.8 mm     (V1.1.3 fix from 0.4)
+  
+BUTT CAVITY (engaged by CAM ring, NOT spring):
+  BUTT_WIDTH      = 8.5 mm     (8.24mm butt + clearance)
+  BUTT_HEIGHT     = 4.0 mm     (axial extent at Z=19-23)
+  BUTT_DEPTH      = 2.00 mm    (matches slot)
+
+SPRING GROOVE (V1.1.7 corrected):
+  SPRING_GROOVE_W      = 3.2 mm    (axial width for 2.79mm wire)
+  SPRING_GROOVE_DEPTH  = 1.8 mm    (V1.1.7 fix from 1.2)
+  SPRING_GROOVE_Z_CTR  = 62.0 mm   (V1.1.7 fix from 68)
+  SPRING_GROOVE_Z_BOT  = 60.4 mm
+  SPRING_GROOVE_Z_TOP  = 63.6 mm
+
+HUB INTERFACE:
+  HUB_POCKET_D    = 18.20 mm
+  HUB_POCKET_H    = 3.0 mm
+  HUB_POCKET_CHAM = 0.5 mm
+
+BOLT PATTERN:
+  4× M5 socket head at PCD 70mm
+  Counterbored from below (5mm deep × 9.5mm dia)
+
+EDGE CHAMFER:    0.6 mm (top and bottom outer edges)
+
+WEDGE TEST WIDTHS: [1.18, 1.20, 1.22, 1.24, 1.26, 1.28] mm
+
+================================================================================
+HARDWARE CONFIRMED
+================================================================================
+
+CYLINDER SPRING: FlyDesigns Common Thickness 0.110" (2.79mm wire)
+- USER HAS PURCHASED THIS
+- Wraps around cylinder OD in TOP groove
+- Function: tension band, presses needle stems against slot back walls
+- Installation: spring shipped open, twist ends together to close ring
+
+NEEDLES: 100x AutoKnitter/Legare 12G from FlyDesigns - PURCHASED
+- Only 72 used in cylinder, 28 spare
+- Specs: length 58.49mm, stem 1.15×1.80mm ribbon
+- Butt L: horizontal 8.24mm, vertical 3.64mm
+- Hook radius 3.12mm, hook to pivot 7.00mm
+
+================================================================================
+Z-AXIS LAYOUT (V1.1.7 FINAL)
+================================================================================
+
+Z=75.0   ━━━━━━━━━━━━━━━ Cylinder TOP
+Z=74.2   ━━ chamfer 0.6mm ━━
+         |
+         |  11.4mm solid material above spring groove
+         |  (was only 5.4mm in V1.1.6)
+         |
+Z=63.6   ┃━━━━━━━━━━━━━━━┃ Spring groove TOP
+Z=62.0   ┃    ●━━━━●      ┃ ← FlyDesigns spring (0.110" wire)
+Z=60.4   ┃━━━━━━━━━━━━━━━┃ Spring groove BOTTOM (depth 1.8mm)
+         |
+         |  Stem zone with stem against back wall
+         |  Spring presses inward at Z=62mm
+         |  ~37mm leverage arm to stem bottom
+         |
+Z=23.0   ━━━━━━━━━━━━━━━ Slot bottom
+Z=23.0   ┃   Butt   ┃ Butt cavity (CAM engagement)
+Z=19.0   ┃ cavity   ┃ Butt cavity bottom
+         |
+         |  Solid base + hub interface
+         |
+Z=0      ━━━━━━━━━━━━━━━ Cylinder BOTTOM (hub pocket 18.20×3mm)
+
+================================================================================
+KEY DESIGN INSIGHTS LEARNED
+================================================================================
+
+1. CYLINDER SPRING PURPOSE
+   The spring is a TENSION BAND around the OD that presses needle stems
+   against the back wall of slots. It's NOT a cam return mechanism.
+   
+2. SPRING vs CAM ROLES (separate functions):
+   - SPRING engages STEM near top → retention, holds needles in place
+   - CAM RING engages BUTT L-bend at Z=19-23 → lift mechanism
+   
+3. WHY SPRING NEAR TOP:
+   - Long thin stems flex outward without retention
+   - Spring at top gives maximum lever arm for stabilization
+   - Like a beam support: hold it where the deflection is largest
+   
+4. WHY NOT AT BOTTOM:
+   - Butt and L-bend are inherently constrained by butt cavity walls
+   - Bottom spring provides minimal stem retention
+   - Original V1.1.4-V1.1.5 design was fundamentally wrong
+
+5. AUTHORITATIVE REFERENCE: Erlbacher Knitting Machines
+   "Spring sits halfway between needle latch and top of cylinder"
+   "Just below needle hooks, above cams"
+   "Tension band pressing needles against back of slots"
+
+================================================================================
+WHAT'S NEXT
+================================================================================
+
+IMMEDIATE NEXT STEP:
+Print test wedge and verify slot fit + spring groove fit
+- File: CSM_V3_Cylinder_V1_1_7_TESTWEDGE.stl
+- Time: 30-45 minutes
+- Material: ~10g PETG
+
+THEN:
+Print full cylinder
+- File: CSM_V3_Cylinder_V1_1_7_FULL.stl  
+- Time: 4-6 hours
+- Material: ~120g PETG
+
+NEXT COMPONENT TO DESIGN:
+Retainer Ring V1.0 (if needed)
+- Sits above sinker ring
+- 6 cutouts at 60° intervals for yarn windows
+- PA12 material recommended
+
+OR:
+Cassette Base V1.0
+- OD 200mm, 6 flat pads at PCD 180mm
+- Requirements clear from sinker ring V1.2.1 specs
+- 3× dowel pin holes at PCD 125mm, angles 30°/150°/270°
+- 3× M3 heat-set insert holes at PCD 125mm, angles 90°/210°/330°
+
+================================================================================
+FILES IN THIS PACKAGE
+================================================================================
+
+CSM_V3_Cylinder_V1_1_7_Package/
+├── freecad_macros/
+│   ├── CSM_V3_Cylinder_V1_1_7.FCMacro        Production macro (STL output)
+│   └── CSM_V3_Cylinder_V1_1_7_VIZ.FCMacro    Visualization with needles + spring
+├── blueprints/
+│   └── Cylinder_V1_1_7_Blueprint.svg          Standalone reference SVG
+├── images/                                     (PNGs generated by macros)
+├── STL_outputs/                                (STLs generated by macros)
+└── documentation/
+    ├── README.md                              Full project README
+    ├── VERSION_HISTORY.md                     Version evolution
+    ├── CHAT_HISTORY_THROUGH_MAY_4.txt         Earlier sessions
+    └── SESSION_SUMMARY_MAY_9.txt              This file (latest session)
+
+================================================================================
+END OF SESSION SUMMARY
+================================================================================

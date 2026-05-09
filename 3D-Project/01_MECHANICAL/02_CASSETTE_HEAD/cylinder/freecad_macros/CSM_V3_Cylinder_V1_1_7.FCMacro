@@ -1,0 +1,539 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CYLINDER V1.1.7 (engineering review fixes)
+# =============================================================================
+# File:    CSM_V3_Cylinder_V1_1_7.FCMacro
+# Date:    May 2026
+# Target:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\freecad_macros\
+#
+# CHANGES FROM V1.1.6:
+#
+#   FIX #1: SPRING GROOVE Z CENTER 68.0 -> 62.0mm
+#     - Better stem leverage (spring pushes stem closer to its midpoint)
+#     - More cylinder material above groove (11.4mm vs 5.4mm)
+#     - Cleaner separation from hook arc and latch swing zones
+#     - Top edge integrity dramatically improved
+#
+#   FIX #2: SPRING GROOVE DEPTH 1.2 -> 1.8mm
+#     - Spring protrusion past cyl OD: 1.59mm -> 0.99mm
+#     - Reduces yarn carrier snag risk
+#     - Spring more recessed (real CSM pattern)
+#     - Still 1.14mm overlap with stem outer (proper engagement)
+#
+#   FIX #3: NEEDLE RADIAL POSITION (visualization macro only)
+#     - Stem now sits against BACK wall of slot (correct mechanical model)
+#     - Was: centered in slot depth (idealized)
+#     - Now: pressed inward by spring tension (real behavior)
+#
+# DESIGN INTENT:
+#   72-slot Legare/AutoKnitter/Erlbacher-compatible knitting cylinder for
+#   12 gauge needles. Cylinder spring at upper-mid position holds stems
+#   against back of slots, providing tension band retention.
+#
+# SPRING (FlyDesigns Common Thickness):
+#   Wire diameter:    0.110" / 2.79mm
+#   Material:         High-quality spring steel
+#   Position:         Top groove at Z=60.4-63.6mm (center Z=62)
+#   Function:         Tension band - holds needles inward against slot backs
+#
+# Z-AXIS LAYOUT (V1.1.7):
+#     Z=75.0   Cylinder TOP (with chamfer)
+#     Z=63.6   Spring groove TOP
+#     Z=62.0   Spring center
+#     Z=60.4   Spring groove BOTTOM
+#     Z=23.0   Slot bottom (top of butt cavity)
+#     Z=19.0   Butt cavity bottom (cam ring engagement zone)
+#     Z=0      Cylinder BOTTOM (hub pocket)
+#
+# IMPORTANT: Run from FreeCAD GUI for PNG renders.
+# =============================================================================
+
+import FreeCAD, Part, Mesh, MeshPart, math, os
+
+try:
+    import Draft
+except ImportError:
+    pass
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
+
+PATH_STL_FULL    = os.path.join(BASE, "CSM_V3_Cylinder_V1_1_7_FULL.stl")
+PATH_STL_WEDGE   = os.path.join(BASE, "CSM_V3_Cylinder_V1_1_7_TESTWEDGE.stl")
+
+PATH_PNG_FULL_ISO  = os.path.join(BASE, "images", "Cylinder_V1_1_7_FULL_ISO.png")
+PATH_PNG_FULL_TOP  = os.path.join(BASE, "images", "Cylinder_V1_1_7_FULL_TOP.png")
+PATH_PNG_WEDGE_ISO = os.path.join(BASE, "images", "Cylinder_V1_1_7_WEDGE_ISO.png")
+PATH_PNG_WEDGE_TOP = os.path.join(BASE, "images", "Cylinder_V1_1_7_WEDGE_TOP.png")
+
+PATH_SVG = os.path.join(BASE, "blueprints", "Cylinder_V1_1_7_Blueprint.svg")
+
+for p in [PATH_STL_FULL, PATH_STL_WEDGE,
+          PATH_PNG_FULL_ISO, PATH_PNG_FULL_TOP,
+          PATH_PNG_WEDGE_ISO, PATH_PNG_WEDGE_TOP, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CORE PARAMETERS
+# =============================================================================
+
+# Cylinder body
+CYL_OD       = 114.3
+CYL_ID       = 88.0
+CYL_HEIGHT   = 75.0
+
+# Slot geometry
+SLOT_COUNT    = 72
+SLOT_WIDTH    = 1.22
+SLOT_DEPTH    = 2.00
+SLOT_LENGTH   = 52.0
+SLOT_CHAMFER  = 0.8
+
+# Butt cavity (engaged by CAM ring, not spring)
+BUTT_WIDTH    = 8.5
+BUTT_HEIGHT   = 4.0
+BUTT_DEPTH    = SLOT_DEPTH
+
+# Hub pocket
+HUB_POCKET_D     = 18.20
+HUB_POCKET_H     = 3.0
+HUB_POCKET_CHAM  = 0.5
+
+# Bolt pattern
+BOLT_COUNT    = 4
+BOLT_PCD      = 70.0
+BOLT_HOLE_D   = 5.4
+BOLT_CB_D     = 9.5
+BOLT_CB_H     = 5.0
+
+# Chamfers
+EDGE_CHAMFER  = 0.6
+
+# *** CYLINDER SPRING GROOVE (V1.1.7 corrected per engineering review) ***
+SPRING_GROOVE_W      = 3.2     # mm axial width (for 2.79mm wire + clearance)
+SPRING_GROOVE_DEPTH  = 1.8     # mm radial depth - V1.1.7: was 1.2 (less protrusion)
+SPRING_GROOVE_Z_CTR  = 62.0    # mm Z center  - V1.1.7: was 68 (better leverage)
+SPRING_GROOVE_Z_BOT  = SPRING_GROOVE_Z_CTR - SPRING_GROOVE_W/2.0  # 60.4
+SPRING_GROOVE_Z_TOP  = SPRING_GROOVE_Z_CTR + SPRING_GROOVE_W/2.0  # 63.6
+
+# Wedge testing
+WEDGE_ANGLE_DEG = 30.0
+WEDGE_SLOT_WIDTHS = [1.18, 1.20, 1.22, 1.24, 1.26, 1.28]
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+CYL_OUTER_R = CYL_OD / 2.0
+CYL_INNER_R = CYL_ID / 2.0
+
+SLOT_PITCH_DEG = 360.0 / SLOT_COUNT
+SLOT_PITCH_MM  = math.pi * CYL_OD / SLOT_COUNT
+
+WALL_BETWEEN = SLOT_PITCH_MM - SLOT_WIDTH
+
+SLOT_BOT_Z  = CYL_HEIGHT - SLOT_LENGTH      # 23.0
+BUTT_BOT_Z  = SLOT_BOT_Z - BUTT_HEIGHT       # 19.0
+
+# Spring geometry verification
+SPRING_INNER_R = CYL_OUTER_R - SPRING_GROOVE_DEPTH       # 55.35
+SPRING_OUTER_R = SPRING_INNER_R + 2.79                   # wire OD = 58.14
+SPRING_PROTRUSION = SPRING_OUTER_R - CYL_OUTER_R         # 0.99mm
+
+# Sanity gaps
+MATERIAL_ABOVE_GROOVE = CYL_HEIGHT - SPRING_GROOVE_Z_TOP  # 11.4mm
+MATERIAL_BELOW_GROOVE_TO_SLOT = SPRING_GROOVE_Z_BOT - SLOT_BOT_Z  # 37.4mm
+
+# =============================================================================
+# START
+# =============================================================================
+print("=" * 70)
+print("CSM V3 - CYLINDER V1.1.7 (engineering review fixes)")
+print("=" * 70)
+print(f"  Cylinder OD:            {CYL_OD}mm")
+print(f"  Cylinder ID:            {CYL_ID}mm")
+print(f"  Cylinder height:        {CYL_HEIGHT}mm")
+print(f"  Slots:                  {SLOT_COUNT} @ W{SLOT_WIDTH} x D{SLOT_DEPTH}mm")
+print(f"  Slot chamfer:           {SLOT_CHAMFER}mm")
+print()
+print(f"  *** V1.1.7 CHANGES ***")
+print(f"  Spring groove Z:        {SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}mm")
+print(f"    (was Z=66.4-69.6mm in V1.1.6)")
+print(f"  Spring groove depth:    {SPRING_GROOVE_DEPTH}mm  (was 1.2mm)")
+print(f"  Material above groove:  {MATERIAL_ABOVE_GROOVE}mm  (was 5.4mm)")
+print(f"  Spring protrusion:      {SPRING_PROTRUSION:.2f}mm past OD  (was 1.59mm)")
+print()
+
+# Sanity checks
+if SPRING_GROOVE_Z_TOP > CYL_HEIGHT:
+    raise ValueError(f"Spring groove top exceeds cylinder top")
+if MATERIAL_ABOVE_GROOVE < 5.0:
+    print(f"  WARNING: Less than 5mm material above groove")
+if SPRING_GROOVE_Z_BOT < SLOT_BOT_Z:
+    raise ValueError("Spring groove conflicts with slot bottom zone")
+if SPRING_PROTRUSION < 0.4:
+    raise ValueError("Spring protrusion too small - won't engage stems")
+if SPRING_PROTRUSION > 1.5:
+    print(f"  WARNING: Protrusion may snag yarn carrier")
+print()
+
+# =============================================================================
+# DOCUMENT
+# =============================================================================
+doc = FreeCAD.newDocument("CSM_Cylinder_V1_1_7")
+
+# =============================================================================
+# SLOT CUTTER
+# =============================================================================
+def build_slot_cutter(angle_deg, slot_width, slot_depth, slot_length,
+                      butt_width, butt_height, butt_depth,
+                      cyl_height, slot_chamfer):
+    slot_top_z = cyl_height
+    slot_bot_z = cyl_height - slot_length
+    butt_bot_z = slot_bot_z - butt_height
+
+    slot_x_outer = CYL_OUTER_R + 1.0
+    slot_x_inner = CYL_OUTER_R - slot_depth
+    slot_box = Part.makeBox(
+        slot_x_outer - slot_x_inner, slot_width, slot_length
+    )
+    slot_box.translate(FreeCAD.Vector(slot_x_inner, -slot_width/2.0, slot_bot_z))
+
+    butt_x_outer = CYL_OUTER_R + 1.0
+    butt_x_inner = CYL_OUTER_R - butt_depth
+    butt_box = Part.makeBox(
+        butt_x_outer - butt_x_inner, butt_width, butt_height
+    )
+    butt_box.translate(FreeCAD.Vector(butt_x_inner, -butt_width/2.0, butt_bot_z))
+
+    cutter = slot_box.fuse(butt_box)
+
+    if slot_chamfer > 0:
+        cham_x_outer = CYL_OUTER_R + 1.0
+        cham_x_inner = CYL_OUTER_R - slot_chamfer
+        cham_box = Part.makeBox(
+            cham_x_outer - cham_x_inner,
+            slot_width + 2 * slot_chamfer,
+            slot_chamfer + 0.1
+        )
+        cham_box.translate(FreeCAD.Vector(
+            cham_x_inner,
+            -(slot_width + 2 * slot_chamfer) / 2.0,
+            slot_top_z - slot_chamfer
+        ))
+        cutter = cutter.fuse(cham_box)
+
+    cutter.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), angle_deg)
+    return cutter
+
+
+# =============================================================================
+# BUILD: FULL 72-SLOT CYLINDER
+# =============================================================================
+print("\n[1/2] Building FULL cylinder...")
+
+# Base shell
+outer_cyl = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+inner_cyl = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2)
+inner_cyl.translate(FreeCAD.Vector(0, 0, -1))
+cyl_body = outer_cyl.cut(inner_cyl)
+
+# Hub pocket
+pocket = Part.makeCylinder(HUB_POCKET_D / 2.0, HUB_POCKET_H + 0.1)
+pocket.translate(FreeCAD.Vector(0, 0, -0.05))
+cyl_body = cyl_body.cut(pocket)
+
+if HUB_POCKET_CHAM > 0:
+    cham_outer = Part.makeCone(
+        HUB_POCKET_D / 2.0 + HUB_POCKET_CHAM,
+        HUB_POCKET_D / 2.0,
+        HUB_POCKET_CHAM
+    )
+    cham_outer.translate(FreeCAD.Vector(0, 0, -0.001))
+    cyl_body = cyl_body.cut(cham_outer)
+
+# Bolt holes
+for i in range(BOLT_COUNT):
+    angle = i * (360.0 / BOLT_COUNT)
+    rad = BOLT_PCD / 2.0
+    x = rad * math.cos(math.radians(angle))
+    y = rad * math.sin(math.radians(angle))
+    hole = Part.makeCylinder(BOLT_HOLE_D / 2.0, CYL_HEIGHT + 2)
+    hole.translate(FreeCAD.Vector(x, y, -1))
+    cyl_body = cyl_body.cut(hole)
+    cb = Part.makeCylinder(BOLT_CB_D / 2.0, BOLT_CB_H + 0.1)
+    cb.translate(FreeCAD.Vector(x, y, -0.05))
+    cyl_body = cyl_body.cut(cb)
+
+# Slots (batch boolean)
+print("  Building 72 slot cutters...")
+slot_cutters = []
+for i in range(SLOT_COUNT):
+    angle = i * SLOT_PITCH_DEG
+    cutter = build_slot_cutter(
+        angle, SLOT_WIDTH, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    slot_cutters.append(cutter)
+
+print("  Fusing slot cutters...")
+master_cutter = slot_cutters[0]
+for c in slot_cutters[1:]:
+    master_cutter = master_cutter.fuse(c)
+
+print("  Cutting slots...")
+cyl_body = cyl_body.cut(master_cutter)
+
+# Spring groove (V1.1.7: deeper and lower)
+print(f"  Cutting spring groove (Z={SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}, depth {SPRING_GROOVE_DEPTH}mm)...")
+groove_outer = Part.makeCylinder(
+    CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT)
+)
+groove_inner = Part.makeCylinder(
+    CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05)
+)
+groove_cutter = groove_outer.cut(groove_inner)
+cyl_body = cyl_body.cut(groove_cutter)
+
+# Outer chamfers
+if EDGE_CHAMFER > 0:
+    try:
+        edges_to_chamfer = []
+        for e in cyl_body.Edges:
+            v1 = e.Vertexes[0].Point
+            v2 = e.Vertexes[1].Point
+            if abs(v1.z - v2.z) < 0.01:
+                r1 = (v1.x ** 2 + v1.y ** 2) ** 0.5
+                if abs(r1 - CYL_OUTER_R) < 0.05:
+                    if abs(v1.z - 0) < 0.05 or abs(v1.z - CYL_HEIGHT) < 0.05:
+                        edges_to_chamfer.append(e)
+        if edges_to_chamfer:
+            cyl_body = cyl_body.makeChamfer(EDGE_CHAMFER, edges_to_chamfer)
+            print(f"  Chamfered {len(edges_to_chamfer)} outer edges")
+    except Exception as ex:
+        print(f"  Chamfer skipped: {ex}")
+
+obj_full = doc.addObject("Part::Feature", "Cylinder_V1_1_7_FULL")
+obj_full.Shape = cyl_body
+obj_full.ViewObject.ShapeColor = (0.3, 0.5, 0.7)
+print(f"  Volume:  {cyl_body.Volume:.0f}mm^3")
+
+# =============================================================================
+# BUILD: 30 DEG TEST WEDGE
+# =============================================================================
+print("\n[2/2] Building 30 deg test wedge...")
+
+wedge_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+wedge_inner = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2)
+wedge_inner.translate(FreeCAD.Vector(0, 0, -1))
+wedge_body = wedge_outer.cut(wedge_inner)
+
+keep_sector = Part.makeCylinder(
+    CYL_OUTER_R + 5, CYL_HEIGHT + 2,
+    FreeCAD.Vector(0, 0, -1),
+    FreeCAD.Vector(0, 0, 1),
+    WEDGE_ANGLE_DEG
+)
+wedge_body = wedge_body.common(keep_sector)
+
+print("  Cutting 6 test slots:", WEDGE_SLOT_WIDTHS)
+wedge_cutters = []
+for i, slot_w in enumerate(WEDGE_SLOT_WIDTHS):
+    angle = (i + 0.5) * SLOT_PITCH_DEG
+    cutter = build_slot_cutter(
+        angle, slot_w, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    wedge_cutters.append(cutter)
+
+master_wedge_cutter = wedge_cutters[0]
+for c in wedge_cutters[1:]:
+    master_wedge_cutter = master_wedge_cutter.fuse(c)
+wedge_body = wedge_body.cut(master_wedge_cutter)
+
+# Spring groove in wedge (same parameters)
+wedge_groove_outer = Part.makeCylinder(
+    CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT)
+)
+wedge_groove_inner = Part.makeCylinder(
+    CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05)
+)
+wedge_groove_cutter = wedge_groove_outer.cut(wedge_groove_inner)
+wedge_keep_for_groove = Part.makeCylinder(
+    CYL_OUTER_R + 5, CYL_HEIGHT + 2,
+    FreeCAD.Vector(0, 0, -1),
+    FreeCAD.Vector(0, 0, 1),
+    WEDGE_ANGLE_DEG
+)
+wedge_groove_restricted = wedge_groove_cutter.common(wedge_keep_for_groove)
+wedge_body = wedge_body.cut(wedge_groove_restricted)
+
+wedge_body.translate(FreeCAD.Vector(150, 0, 0))
+
+obj_wedge = doc.addObject("Part::Feature", "Cylinder_V1_1_7_TESTWEDGE")
+obj_wedge.Shape = wedge_body
+obj_wedge.ViewObject.ShapeColor = (0.7, 0.5, 0.3)
+
+doc.recompute()
+
+# =============================================================================
+# PNG EXPORT
+# =============================================================================
+print("\nExporting PNG renders...")
+png_success = False
+
+try:
+    import FreeCADGui
+
+    if FreeCAD.GuiUp:
+        gui_doc = FreeCADGui.getDocument(doc.Name)
+        view = gui_doc.activeView()
+        IMG_W, IMG_H, BG = 1920, 1080, 'White'
+
+        obj_full.ViewObject.Visibility = True
+        obj_wedge.ViewObject.Visibility = False
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG_FULL_ISO, IMG_W, IMG_H, BG)
+        print(f"  [OK] FULL ISO:  {PATH_PNG_FULL_ISO}")
+
+        view.viewTop()
+        view.fitAll()
+        view.saveImage(PATH_PNG_FULL_TOP, IMG_W, IMG_H, BG)
+        print(f"  [OK] FULL TOP:  {PATH_PNG_FULL_TOP}")
+
+        obj_full.ViewObject.Visibility = False
+        obj_wedge.ViewObject.Visibility = True
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_ISO, IMG_W, IMG_H, BG)
+        print(f"  [OK] WEDGE ISO: {PATH_PNG_WEDGE_ISO}")
+
+        view.viewTop()
+        view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_TOP, IMG_W, IMG_H, BG)
+        print(f"  [OK] WEDGE TOP: {PATH_PNG_WEDGE_TOP}")
+
+        obj_full.ViewObject.Visibility = True
+        obj_wedge.ViewObject.Visibility = True
+        view.viewIsometric()
+        view.fitAll()
+
+        png_success = True
+    else:
+        print("  [SKIP] FreeCAD GUI not available")
+        print("         Run macro from FreeCAD GUI (Macro -> Macros -> Execute)")
+
+except Exception as ex:
+    print(f"  PNG export error: {ex}")
+
+# =============================================================================
+# STL EXPORT
+# =============================================================================
+print("\nExporting STLs...")
+try:
+    tmp_full = doc.addObject("Part::Feature", "tmp_full")
+    tmp_full.Shape = obj_full.Shape.copy()
+    Part.export([tmp_full], PATH_STL_FULL)
+    doc.removeObject("tmp_full")
+    print(f"  [OK] FULL STL:  {PATH_STL_FULL}")
+
+    wedge_export = obj_wedge.Shape.copy()
+    wedge_export.translate(FreeCAD.Vector(-150, 0, 0))
+    tmp_wedge = doc.addObject("Part::Feature", "tmp_wedge")
+    tmp_wedge.Shape = wedge_export
+    Part.export([tmp_wedge], PATH_STL_WEDGE)
+    doc.removeObject("tmp_wedge")
+    print(f"  [OK] WEDGE STL: {PATH_STL_WEDGE}")
+except Exception as ex:
+    print(f"  STL export error: {ex}")
+
+# =============================================================================
+# SVG BLUEPRINT
+# =============================================================================
+print("\nExporting SVG blueprint...")
+svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700">
+<text x="450" y="30" font-size="18" font-family="Arial" text-anchor="middle">
+CSM V3 Cylinder V1.1.7 (engineering review fixes)
+</text>
+
+<text x="40" y="70" font-size="13">OD: {CYL_OD}mm | ID: {CYL_ID}mm | H: {CYL_HEIGHT}mm</text>
+<text x="40" y="92" font-size="13">Slots: {SLOT_COUNT} @ {SLOT_WIDTH} x {SLOT_DEPTH}mm | chamfer {SLOT_CHAMFER}mm</text>
+<text x="40" y="114" font-size="13">Butt cavity: {BUTT_WIDTH} x {BUTT_HEIGHT}mm at Z={BUTT_BOT_Z}-{SLOT_BOT_Z}mm (cam zone)</text>
+
+<text x="40" y="160" font-size="14" font-weight="bold" fill="#1e3a5f">Spring Groove (V1.1.7):</text>
+<text x="60" y="180" font-size="12">Z range: {SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}mm (center Z={SPRING_GROOVE_Z_CTR}mm)</text>
+<text x="60" y="200" font-size="12">Depth: {SPRING_GROOVE_DEPTH}mm | Width: {SPRING_GROOVE_W}mm</text>
+<text x="60" y="220" font-size="12">Spring protrusion: {SPRING_PROTRUSION:.2f}mm past cyl OD</text>
+<text x="60" y="240" font-size="12">Material above groove: {MATERIAL_ABOVE_GROOVE}mm</text>
+
+<text x="40" y="290" font-size="14" font-weight="bold" fill="#5a8d3e">V1.1.7 Engineering Review Fixes:</text>
+<text x="60" y="310" font-size="12">FIX 1: Spring Z 68 -> 62mm (better leverage, 11.4mm material above)</text>
+<text x="60" y="328" font-size="12">FIX 2: Groove depth 1.2 -> 1.8mm (protrusion 1.59 -> 0.99mm)</text>
+<text x="60" y="346" font-size="12">FIX 3: Needle position fixed in viz macro (against back wall)</text>
+
+<text x="40" y="395" font-size="14" font-weight="bold" fill="#1e3a5f">Z-axis layout:</text>
+<text x="60" y="415" font-size="11">Z=75    Cylinder TOP</text>
+<text x="60" y="432" font-size="11">Z=63.6  Spring groove TOP</text>
+<text x="60" y="449" font-size="11">Z=62.0  Spring center  (was Z=68)</text>
+<text x="60" y="466" font-size="11">Z=60.4  Spring groove BOTTOM (was 66.4)</text>
+<text x="60" y="483" font-size="11">Z=23    Slot bottom</text>
+<text x="60" y="500" font-size="11">Z=19    Butt cavity bottom (cam engagement)</text>
+<text x="60" y="517" font-size="11">Z=0     Cylinder BOTTOM (hub pocket)</text>
+
+<text x="40" y="560" font-size="12">Test wedge slot widths: 1.18 | 1.20 | 1.22 | 1.24 | 1.26 | 1.28</text>
+
+<text x="40" y="600" font-size="11" fill="#666">
+Spring: FlyDesigns Common Thickness 0.110" (2.79mm wire)
+</text>
+<text x="40" y="620" font-size="11" fill="#666">
+Function: tension band, holds needle stems against back of slots
+</text>
+</svg>
+'''
+with open(PATH_SVG, 'w') as f:
+    f.write(svg_content)
+print(f"  [OK] SVG: {PATH_SVG}")
+
+# =============================================================================
+# FINAL SUMMARY
+# =============================================================================
+print()
+print("=" * 70)
+print("COMPLETE -- CYLINDER V1.1.7")
+print("=" * 70)
+print()
+print("V1.1.7 ENGINEERING REVIEW FIXES:")
+print(f"  FIX 1: Spring Z center 68 -> 62mm")
+print(f"         Material above groove: 5.4 -> 11.4mm (stronger top edge)")
+print(f"  FIX 2: Groove depth 1.2 -> 1.8mm")
+print(f"         Spring protrusion 1.59 -> 0.99mm (less yarn snag risk)")
+print(f"  FIX 3: Needle radial position (visualization macro)")
+print(f"         Stem now sits against back wall (mechanically correct)")
+print()
+print("Z-AXIS LAYOUT:")
+print(f"  Z=75      Cylinder TOP")
+print(f"  Z=63.6    Spring groove TOP")
+print(f"  Z=62.0    Spring center")
+print(f"  Z=60.4    Spring groove BOTTOM")
+print(f"  Z=23      Slot bottom")
+print(f"  Z=19      Butt cavity bottom (cam zone)")
+print(f"  Z=0       Cylinder BOTTOM")
+print()
+print("FILES GENERATED:")
+print(f"  STL FULL:    {PATH_STL_FULL}")
+print(f"  STL WEDGE:   {PATH_STL_WEDGE}")
+if png_success:
+    print(f"  PNG renders: 4 files in images/")
+print(f"  SVG:         {PATH_SVG}")
+print()
+print("STATUS: V1.1.7 READY FOR TEST WEDGE PRINT")
+print("=" * 70)

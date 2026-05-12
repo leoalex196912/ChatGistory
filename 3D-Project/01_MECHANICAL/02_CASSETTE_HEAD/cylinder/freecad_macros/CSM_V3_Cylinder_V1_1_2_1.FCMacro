@@ -1,0 +1,637 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CYLINDER V1.1.2 (V1.1.1 + PNG export fix)
+# =============================================================================
+# File:    CSM_V3_Cylinder_V1_1_2.FCMacro
+# Date:    May 2026
+# Target:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\freecad_macros\
+#
+# CHANGES FROM V1.1.1:
+#   * ADDED PNG EXPORT - V1.1.1 defined PNG paths and created directories
+#     but never actually generated the PNG renders. This version adds the
+#     missing FreeCADGui.saveImage() calls to produce visual renders.
+#   * Added 4 PNG outputs: full ISO, full TOP, wedge ISO, wedge TOP
+#   * Geometry, dimensions, and STL/SVG outputs UNCHANGED from V1.1.1
+#
+# CHANGES FROM V1.1 (carried forward in V1.1.1):
+#   1. SPRING_GROOVE_W:     3.0 -> 3.2mm  (PETG shrink margin)
+#   2. SPRING_GROOVE_DEPTH: 1.5 -> 1.2mm  (more spring exposed = more flex)
+#   3. SPRING_GROOVE_Z_BOT: 19.0 -> 17.9mm (better centered on butt rest)
+#   4. SPRING_GROOVE_Z_TOP: 22.0 -> 21.1mm (= 17.9 + 3.2 width)
+#
+# DESIGN INTENT (from V1.0):
+#   Build a 72-slot Legare/AutoKnitter-compatible knitting cylinder for
+#   12 gauge needles (FlyDesigns AutoKnitter/Legare 12G, verified).
+#
+# NEEDLE COMPATIBILITY (verified by physical measurement):
+#   Length:           58.49mm overall
+#   Stem cross-sec:   1.15mm wide x 1.80mm deep (rectangular ribbon)
+#   Butt L horizontal:8.24mm
+#   Butt L vertical:  3.64mm
+#   Hook tip radius:  3.12mm
+#   Hook to pivot:    7.00mm
+#
+# SPRING (FlyDesigns Common Thickness):
+#   Wire diameter:    0.110" / 2.79mm
+#   Type:             Steel music wire, helical
+#   Function:         Wraps around cylinder OD in groove
+#                     Engages needle butts radially
+#                     Provides return force after cam lift
+#
+# OUTPUTS:
+#   1. Full 72-slot production cylinder (CSM_V3_Cylinder_V1_1_2_FULL.stl)
+#   2. 30 deg test wedge with 3 slot widths (CSM_V3_Cylinder_V1_1_2_TESTWEDGE.stl)
+#   3. PNG renders: full ISO + full TOP + wedge ISO + wedge TOP  *** NEW ***
+#   4. SVG blueprint
+#
+# CRITICAL: print test wedge FIRST, verify fit (slot + spring groove),
+# then print full cylinder.
+#
+# IMPORTANT: Run this macro from FreeCAD GUI (Macro -> Macros... -> Execute)
+# NOT from headless command line, otherwise PNG export will be skipped.
+# =============================================================================
+
+import FreeCAD, Part, Mesh, MeshPart, math, os
+
+try:
+    import Draft
+except ImportError:
+    pass
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
+
+PATH_STL_FULL    = os.path.join(BASE, "CSM_V3_Cylinder_V1_1_2_FULL.stl")
+PATH_STL_WEDGE   = os.path.join(BASE, "CSM_V3_Cylinder_V1_1_2_TESTWEDGE.stl")
+PATH_PNG_FULL_ISO  = os.path.join(BASE, "images", "Cylinder_V1_1_2_FULL_ISO.png")
+PATH_PNG_FULL_TOP  = os.path.join(BASE, "images", "Cylinder_V1_1_2_FULL_TOP.png")
+PATH_PNG_WEDGE_ISO = os.path.join(BASE, "images", "Cylinder_V1_1_2_WEDGE_ISO.png")
+PATH_PNG_WEDGE_TOP = os.path.join(BASE, "images", "Cylinder_V1_1_2_WEDGE_TOP.png")
+PATH_SVG         = os.path.join(BASE, "blueprints", "Cylinder_V1_1_2_Blueprint.svg")
+
+for p in [PATH_STL_FULL, PATH_STL_WEDGE,
+          PATH_PNG_FULL_ISO, PATH_PNG_FULL_TOP,
+          PATH_PNG_WEDGE_ISO, PATH_PNG_WEDGE_TOP, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CORE PARAMETERS (LOCKED - verified from real needle measurements + reviewer)
+# =============================================================================
+
+# Cylinder body
+CYL_OD           = 114.3      # mm - 4.5" Legare/AutoKnitter standard
+CYL_ID           = 88.0       # mm - bore (clears drive hub upper extension)
+CYL_HEIGHT       = 75.0       # mm - axial length
+
+# Slot geometry (rectangular for ribbon-shape needle stem)
+SLOT_COUNT       = 72         # standard 72-slot adult sock cylinder
+SLOT_WIDTH       = 1.22       # mm circumferential (1.15mm needle + 0.07 clear)
+SLOT_DEPTH       = 1.90       # mm radial (1.80mm needle + 0.10 clear)
+SLOT_LENGTH      = 52.0       # mm axial extent (stem zone, top of cylinder downward)
+SLOT_CHAMFER     = 0.4        # mm lead-in chamfer at slot top
+
+# Butt cavity (wider/taller channel below slot for L-bend butt)
+BUTT_WIDTH       = 8.5        # mm circumferential (8.24mm butt + 0.26 clear)
+BUTT_HEIGHT      = 4.0        # mm axial (3.64mm butt + 0.36 clear)
+BUTT_DEPTH       = 1.90       # mm radial (same as slot depth)
+
+# Drive hub interface (mates V1.3 drive hub: 18mm boss x 3mm tall)
+HUB_BOSS_OD      = 18.0       # V1.3 hub boss OD
+HUB_POCKET_D     = 18.20      # cylinder pocket - 0.20mm slip fit on 18mm boss
+HUB_POCKET_H     = 3.0        # depth of pocket
+HUB_POCKET_CHAM  = 0.5        # mm chamfer at pocket entry
+
+# Bolt pattern (4x M5 at 90 deg spacing)
+BOLT_COUNT       = 4
+BOLT_PCD         = 70.0       # bolt circle diameter
+BOLT_HOLE_D      = 5.4        # M5 clearance hole
+BOLT_CB_D        = 9.5        # M5 socket head counterbore
+BOLT_CB_H        = 5.0        # counterbore depth
+
+# Outer chamfers
+EDGE_CHAMFER     = 0.6        # mm - top and bottom outer edges
+
+# CYLINDER SPRING GROOVE (V1.1.1 refined values)
+SPRING_GROOVE_W      = 3.2    # mm axial width
+SPRING_GROOVE_DEPTH  = 1.2    # mm radial depth
+SPRING_GROOVE_Z_BOT  = 17.9   # mm Z bottom
+SPRING_GROOVE_Z_TOP  = 21.1   # mm Z top
+
+# Test wedge (30 deg slice = 6 slots)
+WEDGE_ANGLE_DEG  = 30.0       # 6 slots x 5 deg pitch (360/72)
+WEDGE_SLOT_WIDTHS = [1.20, 1.20, 1.22, 1.22, 1.25, 1.25]
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+
+CYL_OUTER_R      = CYL_OD / 2.0
+CYL_INNER_R      = CYL_ID / 2.0
+SLOT_PITCH_DEG   = 360.0 / SLOT_COUNT          # 5.0 deg
+SLOT_PITCH_MM    = math.pi * CYL_OD / SLOT_COUNT  # 4.987 mm
+WALL_BETWEEN     = SLOT_PITCH_MM - SLOT_WIDTH    # 3.77mm
+
+print("=" * 70)
+print("CSM V3 - CYLINDER V1.1.2 (V1.1.1 + PNG export fix)")
+print("=" * 70)
+print(f"  Cylinder OD:        {CYL_OD}mm")
+print(f"  Cylinder ID:        {CYL_ID}mm")
+print(f"  Height:             {CYL_HEIGHT}mm")
+print(f"  Slot count:         {SLOT_COUNT}")
+print(f"  Slot pitch:         {SLOT_PITCH_DEG}deg / {SLOT_PITCH_MM:.3f}mm")
+print(f"  Slot W x D:         {SLOT_WIDTH} x {SLOT_DEPTH}mm")
+print(f"  Slot length:        {SLOT_LENGTH}mm axial")
+print(f"  Wall between slots: {WALL_BETWEEN:.3f}mm")
+print(f"  Butt cavity:        {BUTT_WIDTH} x {BUTT_HEIGHT}mm")
+print(f"  Hub pocket:         D{HUB_POCKET_D} x {HUB_POCKET_H}mm")
+print(f"  Bolt pattern:       {BOLT_COUNT}x M5 @ PCD {BOLT_PCD}mm")
+print(f"  Spring groove:      Z={SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}mm,")
+print(f"                      W={SPRING_GROOVE_W}mm x D={SPRING_GROOVE_DEPTH}mm")
+print()
+
+# =============================================================================
+# DOCUMENT
+# =============================================================================
+doc = FreeCAD.newDocument("CSM_Cylinder_V1_1_2")
+
+# =============================================================================
+# HELPER: Build a single slot solid
+# =============================================================================
+def build_slot_cutter(angle_deg, slot_width, slot_depth, slot_length,
+                      butt_width, butt_height, butt_depth,
+                      cyl_height, slot_chamfer):
+    """
+    Build a cutter shape representing one slot + butt cavity at the given angle.
+    """
+    slot_top_z    = cyl_height
+    slot_bot_z    = cyl_height - slot_length
+    butt_top_z    = slot_bot_z
+    butt_bot_z    = slot_bot_z - butt_height
+
+    # Slot box
+    slot_x_outer = CYL_OUTER_R + 1.0
+    slot_x_inner = CYL_OUTER_R - slot_depth
+    slot_box = Part.makeBox(
+        slot_x_outer - slot_x_inner,
+        slot_width,
+        slot_length
+    )
+    slot_box.translate(FreeCAD.Vector(slot_x_inner, -slot_width/2.0, slot_bot_z))
+
+    # Butt cavity box
+    butt_x_outer = CYL_OUTER_R + 1.0
+    butt_x_inner = CYL_OUTER_R - butt_depth
+    butt_box = Part.makeBox(
+        butt_x_outer - butt_x_inner,
+        butt_width,
+        butt_height
+    )
+    butt_box.translate(FreeCAD.Vector(butt_x_inner, -butt_width/2.0, butt_bot_z))
+
+    # Lead-in chamfer at slot top
+    if slot_chamfer > 0.0:
+        cham_x_outer = CYL_OUTER_R + 1.0
+        cham_x_inner = CYL_OUTER_R - slot_chamfer
+        cham_box = Part.makeBox(
+            cham_x_outer - cham_x_inner,
+            slot_width + 2 * slot_chamfer,
+            slot_chamfer + 0.1
+        )
+        cham_box.translate(FreeCAD.Vector(cham_x_inner,
+                                          -(slot_width + 2 * slot_chamfer) / 2.0,
+                                          slot_top_z - slot_chamfer))
+        cutter = slot_box.fuse(butt_box).fuse(cham_box)
+    else:
+        cutter = slot_box.fuse(butt_box)
+
+    cutter.rotate(FreeCAD.Vector(0, 0, 0),
+                  FreeCAD.Vector(0, 0, 1),
+                  angle_deg)
+
+    return cutter
+
+
+# =============================================================================
+# BUILD: FULL 72-SLOT CYLINDER
+# =============================================================================
+print("\n[1/2] Building FULL 72-slot cylinder...")
+
+# Base cylinder shell
+outer_cyl = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+inner_cyl = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2)
+inner_cyl.translate(FreeCAD.Vector(0, 0, -1))
+cyl_body = outer_cyl.cut(inner_cyl)
+
+# Hub pocket on bottom face
+pocket = Part.makeCylinder(HUB_POCKET_D / 2.0, HUB_POCKET_H + 0.1)
+pocket.translate(FreeCAD.Vector(0, 0, -0.05))
+cyl_body = cyl_body.cut(pocket)
+
+# Hub pocket lead-in chamfer
+if HUB_POCKET_CHAM > 0:
+    cham_outer = Part.makeCone(
+        HUB_POCKET_D / 2.0 + HUB_POCKET_CHAM,
+        HUB_POCKET_D / 2.0,
+        HUB_POCKET_CHAM,
+    )
+    cham_outer.translate(FreeCAD.Vector(0, 0, -0.001))
+    cyl_body = cyl_body.cut(cham_outer)
+
+# Bolt holes (4x M5 with counterbores)
+for i in range(BOLT_COUNT):
+    angle = i * (360.0 / BOLT_COUNT)
+    rad = BOLT_PCD / 2.0
+    x = rad * math.cos(math.radians(angle))
+    y = rad * math.sin(math.radians(angle))
+
+    hole = Part.makeCylinder(BOLT_HOLE_D / 2.0, CYL_HEIGHT + 2)
+    hole.translate(FreeCAD.Vector(x, y, -1))
+    cyl_body = cyl_body.cut(hole)
+
+    cb = Part.makeCylinder(BOLT_CB_D / 2.0, BOLT_CB_H + 0.1)
+    cb.translate(FreeCAD.Vector(x, y, -0.05))
+    cyl_body = cyl_body.cut(cb)
+
+# 72 needle slots + butt cavities
+print("  Cutting 72 slots...")
+for i in range(SLOT_COUNT):
+    angle = i * SLOT_PITCH_DEG
+    cutter = build_slot_cutter(
+        angle, SLOT_WIDTH, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    cyl_body = cyl_body.cut(cutter)
+
+# Cylinder spring groove (circumferential, around OD)
+print(f"  Cutting cylinder spring groove (Z={SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}mm)...")
+groove_outer = Part.makeCylinder(CYL_OUTER_R + 1.0,
+                                 SPRING_GROOVE_W,
+                                 FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT))
+groove_inner = Part.makeCylinder(CYL_OUTER_R - SPRING_GROOVE_DEPTH,
+                                 SPRING_GROOVE_W + 0.1,
+                                 FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05))
+groove_cutter = groove_outer.cut(groove_inner)
+cyl_body = cyl_body.cut(groove_cutter)
+
+# Outer edge chamfers (top and bottom)
+if EDGE_CHAMFER > 0:
+    try:
+        edges_to_chamfer = []
+        for e in cyl_body.Edges:
+            v1 = e.Vertexes[0].Point
+            v2 = e.Vertexes[1].Point
+            if abs(v1.z - v2.z) < 0.01:
+                r1 = (v1.x ** 2 + v1.y ** 2) ** 0.5
+                if abs(r1 - CYL_OUTER_R) < 0.05:
+                    if abs(v1.z - 0) < 0.05 or abs(v1.z - CYL_HEIGHT) < 0.05:
+                        edges_to_chamfer.append(e)
+        if edges_to_chamfer:
+            cyl_body = cyl_body.makeChamfer(EDGE_CHAMFER, edges_to_chamfer)
+            print(f"  Chamfered {len(edges_to_chamfer)} outer edges")
+    except Exception as ex:
+        print(f"  Outer chamfer skipped: {ex}")
+
+obj_full = doc.addObject("Part::Feature", "Cylinder_V1_1_2_FULL")
+obj_full.Shape = cyl_body
+obj_full.ViewObject.ShapeColor = (0.3, 0.5, 0.7)
+print(f"  Volume:  {cyl_body.Volume:.0f}mm^3")
+print(f"  Surface: {cyl_body.Area:.0f}mm^2")
+
+# =============================================================================
+# BUILD: 30 DEG TEST WEDGE
+# =============================================================================
+print("\n[2/2] Building 30 deg test wedge (6 slots, 3 width variants)...")
+
+# Build full ring first
+wedge_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+wedge_inner = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2)
+wedge_inner.translate(FreeCAD.Vector(0, 0, -1))
+wedge_body = wedge_outer.cut(wedge_inner)
+
+# Cut to 30-degree wedge
+keep_sector = Part.makeCylinder(CYL_OUTER_R + 5, CYL_HEIGHT + 2,
+                                FreeCAD.Vector(0, 0, -1),
+                                FreeCAD.Vector(0, 0, 1),
+                                WEDGE_ANGLE_DEG)
+wedge_body = wedge_body.common(keep_sector)
+
+# Cut 6 slots with varying widths
+print("  Cutting 6 test slots with widths:", WEDGE_SLOT_WIDTHS)
+for i, slot_w in enumerate(WEDGE_SLOT_WIDTHS):
+    angle = (i + 0.5) * SLOT_PITCH_DEG
+    cutter = build_slot_cutter(
+        angle, slot_w, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    wedge_body = wedge_body.cut(cutter)
+
+# Cut spring groove in test wedge
+print(f"  Cutting spring groove in test wedge...")
+wedge_groove_outer = Part.makeCylinder(CYL_OUTER_R + 1.0,
+                                       SPRING_GROOVE_W,
+                                       FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT))
+wedge_groove_inner = Part.makeCylinder(CYL_OUTER_R - SPRING_GROOVE_DEPTH,
+                                       SPRING_GROOVE_W + 0.1,
+                                       FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05))
+wedge_groove_cutter = wedge_groove_outer.cut(wedge_groove_inner)
+wedge_keep_for_groove = Part.makeCylinder(CYL_OUTER_R + 5, CYL_HEIGHT + 2,
+                                          FreeCAD.Vector(0, 0, -1),
+                                          FreeCAD.Vector(0, 0, 1),
+                                          WEDGE_ANGLE_DEG)
+wedge_groove_restricted = wedge_groove_cutter.common(wedge_keep_for_groove)
+wedge_body = wedge_body.cut(wedge_groove_restricted)
+
+# Position wedge offset for visualization
+wedge_body.translate(FreeCAD.Vector(150, 0, 0))
+
+obj_wedge = doc.addObject("Part::Feature", "Cylinder_V1_1_2_TESTWEDGE")
+obj_wedge.Shape = wedge_body
+obj_wedge.ViewObject.ShapeColor = (0.7, 0.5, 0.3)
+print(f"  Volume:  {wedge_body.Volume:.0f}mm^3 (~{wedge_body.Volume * 1.27 / 1000:.1f}g PETG)")
+
+doc.recompute()
+
+# =============================================================================
+# *** NEW IN V1.1.2: EXPORT PNG RENDERS ***
+# =============================================================================
+# This section was MISSING in V1.1.1 - that's why no images were generated.
+# Uses FreeCADGui.saveImage() which requires GUI to be active.
+# Run macro from FreeCAD GUI (Macro menu), NOT from headless command line.
+# =============================================================================
+print("\nExporting PNG renders...")
+
+png_success = False
+try:
+    import FreeCADGui
+
+    if FreeCAD.GuiUp:
+        gui_doc = FreeCADGui.getDocument(doc.Name)
+        view = gui_doc.activeView()
+
+        # Render settings
+        IMG_W = 1920
+        IMG_H = 1080
+        BG    = 'White'  # 'White', 'Black', 'Transparent', 'Current'
+
+        # --- 1. Render FULL cylinder - ISOMETRIC view ---
+        obj_full.ViewObject.Visibility = True
+        obj_wedge.ViewObject.Visibility = False
+
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG_FULL_ISO, IMG_W, IMG_H, BG)
+        print(f"  [OK] PNG FULL ISO:  {PATH_PNG_FULL_ISO}")
+
+        # --- 2. Render FULL cylinder - TOP view (shows 72 slot pattern) ---
+        view.viewTop()
+        view.fitAll()
+        view.saveImage(PATH_PNG_FULL_TOP, IMG_W, IMG_H, BG)
+        print(f"  [OK] PNG FULL TOP:  {PATH_PNG_FULL_TOP}")
+
+        # --- 3. Render TEST WEDGE - ISOMETRIC view ---
+        obj_full.ViewObject.Visibility = False
+        obj_wedge.ViewObject.Visibility = True
+
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_ISO, IMG_W, IMG_H, BG)
+        print(f"  [OK] PNG WEDGE ISO: {PATH_PNG_WEDGE_ISO}")
+
+        # --- 4. Render TEST WEDGE - TOP view (shows 6 slots clearly) ---
+        view.viewTop()
+        view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_TOP, IMG_W, IMG_H, BG)
+        print(f"  [OK] PNG WEDGE TOP: {PATH_PNG_WEDGE_TOP}")
+
+        # Restore both visible for final inspection
+        obj_full.ViewObject.Visibility = True
+        obj_wedge.ViewObject.Visibility = True
+        view.viewIsometric()
+        view.fitAll()
+
+        png_success = True
+    else:
+        print("  [SKIP] FreeCAD GUI not available - cannot render PNGs")
+        print("         Run macro from FreeCAD GUI (Macro -> Macros -> Execute)")
+        print("         not from headless 'freecadcmd' command line")
+
+except Exception as ex:
+    print(f"  PNG export error: {ex}")
+    import traceback
+    traceback.print_exc()
+
+# =============================================================================
+# EXPORT STLs
+# =============================================================================
+print("\nExporting STL files...")
+
+try:
+    # Full cylinder STL (centered at origin)
+    full_export = obj_full.Shape.copy()
+    tmp_full = doc.addObject("Part::Feature", "tmp_full")
+    tmp_full.Shape = full_export
+    Part.export([tmp_full], PATH_STL_FULL)
+    doc.removeObject("tmp_full")
+    print(f"  [OK] FULL STL:  {PATH_STL_FULL}")
+
+    # Test wedge STL (translate back to origin for printing)
+    wedge_export = obj_wedge.Shape.copy()
+    wedge_export.translate(FreeCAD.Vector(-150, 0, 0))
+    tmp_wedge = doc.addObject("Part::Feature", "tmp_wedge")
+    tmp_wedge.Shape = wedge_export
+    Part.export([tmp_wedge], PATH_STL_WEDGE)
+    doc.removeObject("tmp_wedge")
+    print(f"  [OK] WEDGE STL: {PATH_STL_WEDGE}")
+except Exception as ex:
+    print(f"  STL export error: {ex}")
+
+# =============================================================================
+# EXPORT BLUEPRINT SVG (top view + side section)
+# =============================================================================
+print("\nExporting SVG blueprint...")
+
+svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700" viewBox="0 0 900 700">
+  <style>
+    .title {{ font: bold 16px sans-serif; fill: #1e3a5f; }}
+    .label {{ font: 10px sans-serif; fill: #333; }}
+    .dim   {{ font: 11px sans-serif; fill: #b91c1c; }}
+    .note  {{ font: 9px sans-serif; fill: #666; font-style: italic; }}
+    .frame {{ fill: none; stroke: #ccc; stroke-width: 1; }}
+    .body  {{ fill: #d4e1ed; stroke: #1e3a5f; stroke-width: 1.5; }}
+    .slot  {{ fill: #fff; stroke: #b91c1c; stroke-width: 0.5; }}
+    .ctr   {{ stroke: #888; stroke-dasharray: 4 2; stroke-width: 0.5; fill: none; }}
+  </style>
+
+  <text x="450" y="30" text-anchor="middle" class="title">CSM V3 Cylinder V1.1.2 - Top View (72 slots)</text>
+
+  <!-- Top view of cylinder (scaled to fit) -->
+  <g transform="translate(225, 270)">
+    <circle cx="0" cy="0" r="171.45" class="body"/>
+    <circle cx="0" cy="0" r="132.0" fill="#fafaf8" stroke="#888" stroke-width="0.5"/>
+'''
+
+# Add 72 slots as small radial rectangles
+import math as _math
+for i in range(SLOT_COUNT):
+    angle = _math.radians(i * SLOT_PITCH_DEG)
+    r_outer = 171.45
+    r_inner = r_outer - SLOT_DEPTH * 1.5 * 1.5
+    x1 = r_outer * _math.cos(angle)
+    y1 = r_outer * _math.sin(angle)
+    x2 = r_inner * _math.cos(angle)
+    y2 = r_inner * _math.sin(angle)
+    svg_content += f'    <line x1="{x1:.1f}" y1="{y1:.1f}" x2="{x2:.1f}" y2="{y2:.1f}" class="slot"/>\n'
+
+# Add bolt circle and bolts
+bolt_pcd_scaled = BOLT_PCD * 1.5
+for i in range(BOLT_COUNT):
+    angle = _math.radians(i * 360.0 / BOLT_COUNT)
+    bx = (bolt_pcd_scaled / 2.0) * _math.cos(angle)
+    by = (bolt_pcd_scaled / 2.0) * _math.sin(angle)
+    svg_content += f'    <circle cx="{bx:.1f}" cy="{by:.1f}" r="4.0" fill="#fff" stroke="#5a8d3e" stroke-width="1"/>\n'
+    svg_content += f'    <circle cx="{bx:.1f}" cy="{by:.1f}" r="7.1" fill="none" stroke="#5a8d3e" stroke-width="0.5"/>\n'
+
+svg_content += f'''    <!-- Center hub pocket -->
+    <circle cx="0" cy="0" r="13.6" fill="#ffe0a0" stroke="#a07020" stroke-width="0.8"/>
+    <text x="0" y="3" text-anchor="middle" class="label">Hub</text>
+    <text x="0" y="14" text-anchor="middle" class="label">Pocket</text>
+
+    <!-- Annotations -->
+    <text x="0" y="-185" text-anchor="middle" class="dim">OD {CYL_OD}mm</text>
+    <text x="-160" y="0" text-anchor="middle" class="dim" transform="rotate(-90 -160 0)">ID {CYL_ID}mm</text>
+    <text x="105" y="-105" class="dim">{SLOT_COUNT} slots</text>
+    <text x="105" y="-92" class="dim">@ {SLOT_PITCH_DEG} deg</text>
+    <text x="50" y="50" class="label">{BOLT_COUNT}x M5</text>
+    <text x="50" y="62" class="label">PCD {BOLT_PCD}mm</text>
+  </g>
+
+  <!-- Side view -->
+  <text x="700" y="60" text-anchor="middle" class="title">Side Section</text>
+  <g transform="translate(580, 90)">
+    <rect x="0" y="0" width="240" height="150" class="body"/>
+    <!-- Slot region (top {SLOT_LENGTH}mm) -->
+    <rect x="0" y="0" width="240" height="104" fill="#fff" stroke="#b91c1c" stroke-width="0.5" stroke-dasharray="3 2"/>
+    <text x="120" y="55" text-anchor="middle" class="label">Slot zone</text>
+    <text x="120" y="68" text-anchor="middle" class="label">(72 slots)</text>
+    <text x="120" y="81" text-anchor="middle" class="label">{SLOT_LENGTH}mm tall</text>
+
+    <!-- Spring groove zone -->
+    <rect x="0" y="100" width="240" height="6" fill="#ffe0a0" stroke="#a07020" stroke-width="0.5"/>
+    <text x="120" y="105" text-anchor="middle" class="label">Spring groove</text>
+
+    <!-- Butt cavity zone -->
+    <rect x="0" y="106" width="240" height="8" fill="#fee" stroke="#d97706" stroke-width="0.5"/>
+    <text x="120" y="113" text-anchor="middle" class="label">Butt cavity {BUTT_HEIGHT}mm</text>
+
+    <!-- Below butt -->
+    <rect x="0" y="114" width="240" height="36" fill="#f0f0e8" stroke="#888" stroke-width="0.5"/>
+    <text x="120" y="135" text-anchor="middle" class="label">Solid base + hub interface</text>
+
+    <text x="-30" y="6" class="dim">Top</text>
+    <text x="-30" y="155" class="dim">Bottom</text>
+    <text x="250" y="6" class="dim">{CYL_HEIGHT}mm</text>
+    <text x="250" y="155" class="dim">total</text>
+  </g>
+
+  <!-- Slot detail close-up -->
+  <text x="700" y="290" text-anchor="middle" class="title">Slot Detail (cross section)</text>
+  <g transform="translate(620, 320)">
+    <rect x="0" y="0" width="180" height="140" class="frame"/>
+    <text x="90" y="20" text-anchor="middle" class="label">Slot cross section</text>
+
+    <!-- Slot rectangle -->
+    <rect x="60" y="40" width="60" height="40" class="slot"/>
+    <text x="90" y="65" text-anchor="middle" class="dim">{SLOT_WIDTH}W</text>
+    <text x="90" y="78" text-anchor="middle" class="dim">x</text>
+    <text x="90" y="91" text-anchor="middle" class="dim">{SLOT_DEPTH}D</text>
+    <text x="50" y="35" text-anchor="end" class="note">chamfer</text>
+    <text x="50" y="46" text-anchor="end" class="note">{SLOT_CHAMFER}mm</text>
+    <line x1="55" y1="40" x2="65" y2="35" stroke="#b91c1c" stroke-width="0.5"/>
+    <line x1="125" y1="40" x2="115" y2="35" stroke="#b91c1c" stroke-width="0.5"/>
+  </g>
+
+  <!-- Test wedge note -->
+  <g transform="translate(40, 480)">
+    <rect x="0" y="0" width="820" height="180" fill="#fff3cd" stroke="#d97706" stroke-width="1"/>
+    <text x="410" y="25" text-anchor="middle" class="title">TEST WEDGE STRATEGY (PRINT FIRST!)</text>
+    <text x="20" y="50" class="label">A 30 deg test wedge (6 slots) is generated alongside the full cylinder.</text>
+    <text x="20" y="68" class="label">Print the wedge FIRST to verify slot fit before committing 4-6 hours to the full cylinder.</text>
+    <text x="20" y="92" class="dim">Slot width variants in test wedge:</text>
+    <text x="40" y="110" class="label">Slots 1-2 (angles 2.5, 7.5 deg):  width = 1.20mm  (tightest, may need PETG shrinkage)</text>
+    <text x="40" y="126" class="label">Slots 3-4 (angles 12.5, 17.5 deg): width = 1.22mm  (TARGET - reviewer recommendation)</text>
+    <text x="40" y="142" class="label">Slots 5-6 (angles 22.5, 27.5 deg): width = 1.25mm  (loosest insurance)</text>
+    <text x="20" y="166" class="note">Insert 1 needle in each slot. Slide up/down. Pick width that glides smoothly without rattle. Use that for production.</text>
+  </g>
+</svg>
+'''
+
+with open(PATH_SVG, 'w') as f:
+    f.write(svg_content)
+print(f"  [OK] SVG: {PATH_SVG}")
+
+# =============================================================================
+# FINAL SUMMARY
+# =============================================================================
+print()
+print("=" * 70)
+print("COMPLETE -- CYLINDER V1.1.2 (with PNG export)")
+print("=" * 70)
+print()
+print("V1.1.2 PHILOSOPHY: Legare/AutoKnitter compatible (4.5\", 72-slot, 12g)")
+print("Designed around ACTUAL needle measurements, not assumptions.")
+print()
+print("CRITICAL DIMENSIONS:")
+print(f"  OD:                {CYL_OD}mm (Legare standard)")
+print(f"  ID:                {CYL_ID}mm")
+print(f"  Height:            {CYL_HEIGHT}mm")
+print(f"  Slots:             {SLOT_COUNT} @ {SLOT_PITCH_DEG} deg / {SLOT_PITCH_MM:.3f}mm pitch")
+print(f"  Slot W x D:        {SLOT_WIDTH} x {SLOT_DEPTH}mm (rectangular for ribbon needle)")
+print(f"  Slot length:       {SLOT_LENGTH}mm axial")
+print(f"  Wall between:      {WALL_BETWEEN:.2f}mm (excellent PETG strength)")
+print(f"  Butt cavity:       {BUTT_WIDTH} x {BUTT_HEIGHT}mm")
+print(f"  Hub interface:     D{HUB_POCKET_D}mm pocket + 4x M5 @ PCD {BOLT_PCD}mm")
+print(f"  Spring groove:     Z={SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP}mm,")
+print(f"                     W={SPRING_GROOVE_W}mm x D={SPRING_GROOVE_DEPTH}mm")
+print(f"                     For FlyDesigns Common Thickness 0.110\" / 2.79mm wire")
+print()
+print("HARDWARE NEEDED:")
+print(f"  - 4x M5 bolts (already have via screw assortment kit)")
+print(f"  - Loctite 603 (already have)")
+print(f"  - Drive hub V1.3 (already designed)")
+print(f"  - 100x AutoKnitter/Legare 12G needles (already have, only 72 used)")
+print(f"  - 3x Cylinder Springs Common Thickness from FlyDesigns")
+print()
+print("PRINT INSTRUCTIONS:")
+print("  STEP 1: PRINT TEST WEDGE FIRST")
+print("    File: CSM_V3_Cylinder_V1_1_2_TESTWEDGE.stl")
+print("    Time: 30-45 minutes  |  Material: ~10g PETG")
+print("    Settings: 0.2mm layers, 5 perimeters, 6 top/bottom, 40% gyroid")
+print("              Cylinder upright (axis Z), NO supports, ~40mm/s walls")
+print()
+print("  STEP 2: TEST FIT - insert needles into each slot pair:")
+print("    Slots 1-2 (1.20mm) | Slots 3-4 (1.22mm <- expected) | Slots 5-6 (1.25mm)")
+print("    Each needle should slide smoothly without binding or rattle.")
+print()
+print("  STEP 3: PRINT FULL CYLINDER")
+print("    File: CSM_V3_Cylinder_V1_1_2_FULL.stl")
+print("    Time: 4-6 hours  |  Material: ~120g PETG")
+print()
+print("FILES GENERATED:")
+print(f"  STL FULL:    {PATH_STL_FULL}")
+print(f"  STL WEDGE:   {PATH_STL_WEDGE}")
+if png_success:
+    print(f"  PNG FULL ISO: {PATH_PNG_FULL_ISO}    *** NEW IN V1.1.2 ***")
+    print(f"  PNG FULL TOP: {PATH_PNG_FULL_TOP}    *** NEW IN V1.1.2 ***")
+    print(f"  PNG WEDGE ISO: {PATH_PNG_WEDGE_ISO}  *** NEW IN V1.1.2 ***")
+    print(f"  PNG WEDGE TOP: {PATH_PNG_WEDGE_TOP}  *** NEW IN V1.1.2 ***")
+else:
+    print(f"  PNG renders: SKIPPED (run from FreeCAD GUI to enable)")
+print(f"  SVG:         {PATH_SVG}")
+print()
+print("STATUS: CYLINDER V1.1.2 READY TO PRINT (with spring groove + PNG renders)")
+print("=" * 70)

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700">
+<text x="450" y="30" font-size="18" font-family="Arial" text-anchor="middle">
+CSM V3 Cylinder V1.1.7 (engineering review fixes)
+</text>
+
+<text x="40" y="70" font-size="13">OD: 114.3mm | ID: 88.0mm | H: 75.0mm</text>
+<text x="40" y="92" font-size="13">Slots: 72 @ 1.22 x 2.0mm | chamfer 0.8mm</text>
+<text x="40" y="114" font-size="13">Butt cavity: 8.5 x 4.0mm at Z=19.0-23.0mm (cam zone)</text>
+
+<text x="40" y="160" font-size="14" font-weight="bold" fill="#1e3a5f">Spring Groove (V1.1.7):</text>
+<text x="60" y="180" font-size="12">Z range: 60.4-63.6mm (center Z=62.0mm)</text>
+<text x="60" y="200" font-size="12">Depth: 1.8mm | Width: 3.2mm</text>
+<text x="60" y="220" font-size="12">Spring protrusion: 0.99mm past cyl OD</text>
+<text x="60" y="240" font-size="12">Material above groove: 11.399999999999999mm</text>
+
+<text x="40" y="290" font-size="14" font-weight="bold" fill="#5a8d3e">V1.1.7 Engineering Review Fixes:</text>
+<text x="60" y="310" font-size="12">FIX 1: Spring Z 68 -> 62mm (better leverage, 11.4mm material above)</text>
+<text x="60" y="328" font-size="12">FIX 2: Groove depth 1.2 -> 1.8mm (protrusion 1.59 -> 0.99mm)</text>
+<text x="60" y="346" font-size="12">FIX 3: Needle position fixed in viz macro (against back wall)</text>
+
+<text x="40" y="395" font-size="14" font-weight="bold" fill="#1e3a5f">Z-axis layout:</text>
+<text x="60" y="415" font-size="11">Z=75    Cylinder TOP</text>
+<text x="60" y="432" font-size="11">Z=63.6  Spring groove TOP</text>
+<text x="60" y="449" font-size="11">Z=62.0  Spring center  (was Z=68)</text>
+<text x="60" y="466" font-size="11">Z=60.4  Spring groove BOTTOM (was 66.4)</text>
+<text x="60" y="483" font-size="11">Z=23    Slot bottom</text>
+<text x="60" y="500" font-size="11">Z=19    Butt cavity bottom (cam engagement)</text>
+<text x="60" y="517" font-size="11">Z=0     Cylinder BOTTOM (hub pocket)</text>
+
+<text x="40" y="560" font-size="12">Test wedge slot widths: 1.18 | 1.20 | 1.22 | 1.24 | 1.26 | 1.28</text>
+
+<text x="40" y="600" font-size="11" fill="#666">
+Spring: FlyDesigns Common Thickness 0.110" (2.79mm wire)
+</text>
+<text x="40" y="620" font-size="11" fill="#666">
+Function: tension band, holds needle stems against back of slots
+</text>
+</svg>

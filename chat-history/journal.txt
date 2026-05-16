@@ -96,3 +96,11 @@
 
 
 
+
+
+
+=== Journal Entry 2026-05-16T09:00:00.000000+00:00 ===
+2026-05-16-09-00-00-csm-v3-cylinder-v3-engineering-iteration.txt
+[Long-running DIY automated circular sock knitting machine (CSM V3) engineering design session. Cylinder V2.0 -> V3.0 reverse-engineering and engineering review iteration. Started with user concern that V2.0 didn't visually match Erlbacher/tru-knit photos, progressed through multiple iterations to a mechanically sound V3.0 ready for prototype printing. Final V3.0 parameters: SLOT_DEPTH=3.4mm, SPRING_GROOVE_DEPTH=1.7mm (0.10mm preload), SLOT_ROOT_FILLET=0.5mm (PETG fatigue prevention), bottom ring with D50 take-down opening + 4x M5 inserts at PCD70/45-deg offset + D6 magnet pocket at PCD95 for Hall sensor indexing, fin tops eased via cutter-flare (FIN_TOP_CHAMFER=0.6mm carved into geometry, not post-process). Wedge test redesigned to vary both slot width AND depth (slots 4-6 test depth flex). Multiple reviewer feedback rounds: some accepted (root fillets, magnet pocket, slot depth reduction), some rejected (inaccurate claims about missing spring groove and inverted cylinder/cam rotation). Materials confirmed against BOM_V11 -- net new spend: $0 (D6x2mm magnets B0F4KS6KV3 in inventory, M5 inserts/screws in B0DPQJ4W3Z + B0FFSNFK3Y). Status: macro complete, awaiting first physical print (test wedge first, ~30-45 min, ~10g PETG).]
+
+

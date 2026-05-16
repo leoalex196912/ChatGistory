@@ -1,0 +1,266 @@
+================================================================================
+CSM V3 — CYLINDER V3.0 ENGINEERING ITERATION SESSION
+================================================================================
+Date:     2026-05-16
+Topic:    Cylinder V2.0 → V3.0 reverse-engineering + engineering review iteration
+File:     C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\
+          freecad_macros\CSM_V3_Cylinder_V3_0.FCMacro
+Status:   V3.0 macro complete, awaiting first print (test wedge)
+
+================================================================================
+SESSION SUMMARY
+================================================================================
+
+Long-running engineering iteration converting the V2.0 cylinder design into a
+mechanically sound V3.0 ready for prototype printing. The session began with
+the user concerned that the cylinder didn't visually match Erlbacher / tru-knit
+reference photos, and progressively shifted from "make CAD look like the photo"
+to "make a working CSM cylinder that survives cyclic cam loading in PETG."
+
+The session involved multiple back-and-forth engineering reviews — some valid,
+some inaccurate. The user pushed back repeatedly when feedback didn't address
+the real issue, and the AI eventually committed to definitive structural
+changes only after carefully verifying each concern.
+
+================================================================================
+KEY DECISIONS AND PARAMETER EVOLUTION
+================================================================================
+
+----------------------------
+CYLINDER V3.0 FINAL PARAMETERS
+----------------------------
+
+  Body geometry:
+    CYL_OD              = 114.3 mm    (Legare 4.5" standard)
+    CYL_ID              = 88.0 mm     (main bore for sock take-down)
+    CYL_HEIGHT          = 75.0 mm
+
+  Bottom mounting ring:
+    BOTTOM_THICK        = 12.0 mm     (annular ring carrying bolt + magnet pockets)
+    TAKEDOWN_OPEN_D     = 50.0 mm     (central opening for sock + weight passage)
+
+  Needle slots:
+    SLOT_COUNT          = 72
+    SLOT_WIDTH          = 1.22 mm     (1.15mm needle stem + 0.07mm clearance)
+    SLOT_DEPTH          = 3.40 mm     (1.80mm stem + 1.60mm dynamic clearance)
+    SLOT_ROOT_FILLET    = 0.50 mm     (CRITICAL: PETG fatigue prevention)
+
+  Slot top zone (fin top easing / yarn clearance):
+    TOP_ZONE_WIDTH      = 3.00 mm     (slot widens here, fins narrower at top)
+    TOP_ZONE_HEIGHT     = 6.0 mm
+    TOP_TRANSITION_H    = 2.0 mm
+    FIN_TOP_CHAMFER     = 0.6 mm      (per-side, carved by cutter flare)
+    FIN_TOP_CHAMFER_H   = 0.8 mm      (axial height of the chamfer)
+
+  Spring groove:
+    SPRING_GROOVE_W     = 4.0 mm
+    SPRING_GROOVE_DEPTH = 1.7 mm      (coupled to SLOT_DEPTH; 0.10mm preload)
+    SPRING_GROOVE_Z_CTR = 55.0 mm     (above cam engagement zone at Z=19-31)
+    Spring protrusion past OD: 1.09 mm (visible coil, like Erlbacher)
+
+  Drive mount (matches Drive Hub V2.4.2):
+    BOLT_COUNT          = 4
+    BOLT_PCD            = 70.0 mm
+    BOLT_ANGLE_OFF      = 45.0 deg    (matches drive hub flange)
+    INSERT_HOLE_D       = 6.0 mm      (for B0DPQJ4W3Z M5 brass heat-set inserts)
+    INSERT_HOLE_H       = 10.0 mm     (blind pocket from bottom)
+    HUB_POCKET_D        = 18.2 mm     (receives drive hub D18 boss)
+    HUB_POCKET_H        = 3.0 mm
+
+  Hall sensor index (one pulse per revolution):
+    MAGNET_POCKET_D     = 6.0 mm      (matches B0F4KS6KV3 magnets in stock)
+    MAGNET_POCKET_H     = 2.2 mm      (2.0mm magnet + 0.2mm epoxy bed)
+    MAGNET_PCD          = 95.0 mm     (Option A — outside bolt circle, visually
+                                        distinct from M5 inserts)
+    MAGNET_ANGLE_DEG    = 0.0 deg     (aligned with Slot #0 = master index)
+
+  Edge treatment:
+    TOP_EDGE_CHAMFER    = 0.6 mm      (now carved by cutter flare, not post-cut)
+    BOT_EDGE_CHAMFER    = 0.6 mm      (post-cut, OD bottom only)
+
+  Test wedge slots (variable width AND depth for empirical validation):
+    Slot 1:  1.20 x 3.0 mm   (narrow width)
+    Slot 2:  1.22 x 3.0 mm   BASELINE
+    Slot 3:  1.24 x 3.0 mm   (wide width)
+    Slot 4:  1.22 x 2.8 mm   (shallow depth)
+    Slot 5:  1.22 x 3.2 mm   (moderate depth)
+    Slot 6:  1.22 x 3.6 mm   (deeper -- fin flex stress test)
+
+================================================================================
+ITERATION TIMELINE
+================================================================================
+
+Stage 1 — INITIAL DOUBT:
+  User questioned V2.0 design saying "cylinder doesn't look like Erlbacher
+  or Lonati machines." Discussion clarified that:
+  - Lonati = industrial 15-24g 168-400 needles, NOT our target
+  - Legare/Erlbacher = hobby/semi-pro 12g 72 needles 114.3mm = our target
+  - V2.0 had geometric issues (stepped slot would deadlock at 4mm cam lift
+    when 8mm was required)
+
+Stage 2 — V3.0 CREATION:
+  Built V3.0 with:
+  - Full-height uniform slots (no stepped butt cavity)
+  - Reverted to simple geometry matching Erlbacher proportions
+
+Stage 3 — VISUAL ITERATION (REJECTED):
+  Got sidetracked making the cylinder "look like the photo":
+  - Pushed SLOT_DEPTH from 2.0 -> 2.8 -> 4.0 -> 4.2 mm
+  - Added torus-cutter top dome (complex, OCC-fragile)
+  - Top edge treatments kept failing visually
+
+Stage 4 — ENGINEERING REVIEW (ACCEPTED):
+  Reviewer raised 6 valid concerns:
+  1. Slot depth too aggressive (4.2 -> should be 3.0)
+  2. No slot root fillets (PETG fatigue risk — MANDATORY)
+  3. Spring groove interaction not physically validated
+  4. PETG creep risk (accepted scope-limited)
+  5. No indexing feature (added magnet pocket)
+  6. Top dome torus approach fragile (replaced with simple chamfer)
+
+Stage 5 — REFINED ENGINEERING (PARTIAL ACCEPT):
+  Reviewer proposed slot depth 3.4-3.8 mm + groove depth 1.0-1.4 mm
+  AI pushed back: those values are GEOMETRICALLY INCOMPATIBLE
+  Constraint: SLOT_DEPTH <= SPRING_GROOVE_DEPTH + 1.80mm (spring must reach
+  the needle outer face)
+  Compromise reached: SLOT_DEPTH=3.4, GROOVE_DEPTH=1.7, preload 0.10mm
+
+Stage 6 — INACCURATE FEEDBACK (REJECTED):
+  Reviewer claimed three "defects":
+  1. "No spring groove" — FALSE (it's there at Z=53-57mm)
+  2. "Custom drive interface vs Erlbacher pin system" — IRRELEVANT
+     (intentional design choice; drive hub V2.4.2 already locked)
+  3. "Flat top vs castellated sinker landings" — MISLEADING
+     (the fin tops between slot openings ARE the castellations)
+  AI dismissed these and pivoted back to substantive points.
+
+Stage 7 — DIRECTIONALITY/TIMING DISCUSSION:
+  Reviewer made fundamental error: claimed "Erlbacher cylinder is stationary,
+  cam ring rotates." CORRECTED: in our machine AND in real Erlbachers, the
+  CYLINDER rotates and the CAM RING is stationary. This is the standard CSM
+  architecture since the 1880s.
+  Clocking analysis:
+  - Slot #0 at 0° = master index (aligned with magnet pocket at 0°)
+  - 4 M5 inserts at 45/135/225/315° = structural fasteners (no timing role)
+  - Hall sensor + magnet provides 1 pulse/rev for software calibration
+  - Sinker ring auto-indexes by 5° symmetry
+
+Stage 8 — MOUNTING POINT QUESTIONS:
+  User asked why 5 pockets visible and whether through-holes.
+  Clarified:
+  - 4 are M5 insert pockets (PCD 70, 90° apart, evenly spaced)
+  - 1 is magnet pocket (separate feature)
+  - All are BLIND, not through (inserts grip PETG; magnet is epoxy retained)
+  - Moved magnet to PCD 95 (outside bolt circle) for visual distinction
+
+Stage 9 — MATERIALS VERIFICATION:
+  User asked to avoid new purchases.
+  Verified BOM_V11:
+  - SS49E Hall Sensors (B09MSDC3GR) — KEEP
+  - Neodymium Magnets (B0F4KS6KV3) — D6 x 2mm N52, 50 per pack — KEEP
+  - M5 inserts B0DPQJ4W3Z — already ordered
+  - M5 flatheads B0FFSNFK3Y — already ordered
+  Adjusted MAGNET_POCKET_H from 3.0 to 2.2mm to match the 2mm magnets
+  on hand. NET NEW SPEND: $0.
+
+Stage 10 — FIN TOP EASING (FINAL FIX):
+  User repeatedly asked for rounded/eased fin tops; AI repeatedly applied
+  post-cut chamfers that silently failed. After multiple failed attempts,
+  shifted to CARVING the chamfer directly into the slot cutter geometry
+  via a flared top section:
+  - Cutter widens from TOP_ZONE_WIDTH to (TOP_ZONE_WIDTH + 2*0.6) over the
+    top 0.8mm of axial height
+  - Chamfer is part of the boolean cut, not a post-process step
+  - Guaranteed visible because it's geometric, not optional
+
+================================================================================
+KEY ENGINEERING INSIGHTS PRESERVED
+================================================================================
+
+1. Spring/slot geometric coupling:
+   SLOT_DEPTH <= SPRING_GROOVE_DEPTH + 1.80mm
+   This is the hard constraint that prevents the spring from losing contact
+   with the needle outer face. Future iterations MUST respect this.
+
+2. Cam ring vs cylinder rotation:
+   CYLINDER rotates, CAM RING is stationary.
+   This is non-negotiable for any CSM matching Erlbacher architecture.
+   Yarn feeders are on the stationary frame.
+
+3. Slot depth is mechanical, not visual:
+   Photos exaggerate depth via shadows. The needle stem only needs 1.80mm.
+   Anything beyond that is dynamic-clearance margin. PETG can't tolerate
+   the same depths that machined aluminum cylinders use.
+
+4. Root fillets at slot bottoms are MANDATORY for PETG:
+   Sharp 90 deg internal corners along layer lines = fatigue crack starters
+   under cyclic cam loading. SLOT_ROOT_FILLET = 0.5mm is the minimum.
+
+5. The wedge test is the only way to validate:
+   Static geometry calculations can't predict fin flex under dynamic load.
+   The wedge has 6 slots varying both width and depth specifically so the
+   physical test answers the question that math cannot.
+
+6. PETG is for prototypes only:
+   Material progression for production: PETG -> PA12-CF/PPA-CF -> machined Al.
+   Accept creep as a known limitation; iterate the design fast on PETG.
+
+================================================================================
+OPEN QUESTIONS / FUTURE V4 IDEAS
+================================================================================
+
+1. Profiled slot floor:
+   Real industrial cylinders have non-rectangular slot interiors -- shallow
+   waist with deeper relief in the middle to match real needle contact
+   patterns (needle contacts at upper guide + lower butt, not continuously).
+   Major change to cutter geometry; defer to V4 if wedge shows binding.
+
+2. Dynamic fin flex under cyclic loading:
+   Static hand-pressure tests are necessary but insufficient. Real failure
+   modes (harmonic vibration, butt impacts, creep) only show up after
+   50k-1M cycles. Plan for replacement cycles even with perfect prototype.
+
+3. Top dome / fin top profile:
+   If FIN_TOP_CHAMFER = 0.6mm is still not visually sufficient, can push
+   to 0.8mm (constraint: fin width at top = 1.99mm, chamfer per side max
+   0.99mm). Or consider rounded loft profile for a true filleted look.
+
+4. Sinker ring interfacing:
+   Sinker Ring V1.0 has 72 sinkers projecting inward; how they interact
+   with the 0.6mm fin top chamfers needs verification when both parts are
+   in hand.
+
+================================================================================
+FILES MODIFIED THIS SESSION
+================================================================================
+
+  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\freecad_macros\
+    CSM_V3_Cylinder_V3_0.FCMacro    (new, ~30KB, ready to execute)
+
+  Memory updated:
+    C:\Users\LEONID\.claude\projects\C--3D-Project\memory\
+      project_csm_v3_overview.md    (cylinder version updated to V3.0)
+
+================================================================================
+NEXT STEPS
+================================================================================
+
+  1. Run CSM_V3_Cylinder_V3_0.FCMacro in FreeCAD (Macro -> Macros -> Execute)
+  2. Verify ISO render shows:
+     - Eased fin tops (chamfered, not 90 deg sharp)
+     - Bottom ring with 4 M5 pockets + 1 magnet pocket + take-down opening
+     - Spring groove visible on OD at Z=53-57mm
+  3. Print CSM_V3_Cylinder_V3_0_TESTWEDGE.stl FIRST (~30-45 min, ~10g PETG)
+  4. Physical test on wedge:
+     - Slide 12g FlyDesigns needle through each of 6 slots
+     - Apply lateral force on butt -- check for fin flex
+     - Test M5 insert pocket (B0DPQJ4W3Z) press fit
+     - Test D6x2mm magnet pocket (B0F4KS6KV3) press fit
+  5. Based on wedge results, finalize SLOT_WIDTH + SLOT_DEPTH values
+  6. Print full cylinder STL (~4-6 hours, ~120g PETG)
+
+  NET NEW SPEND for this stage: $0 (all materials in BOM_V11 inventory)
+
+================================================================================
+END OF SESSION
+================================================================================

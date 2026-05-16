@@ -1,0 +1,843 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CYLINDER V2.0
+# =============================================================================
+# File:    CSM_V3_Cylinder_V2_0.FCMacro
+# Date:    May 2026
+# Output:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\
+#
+# =============================================================================
+# WHAT THIS MACRO BUILDS
+# =============================================================================
+#
+# A 72-slot rotating knitting cylinder for a Legare/AutoKnitter/Erlbacher-
+# compatible circular sock machine.
+#
+# OUTPUTS:
+#   1. CSM_V3_Cylinder_V2_0_FULL.stl       Production cylinder (72 slots)
+#   2. CSM_V3_Cylinder_V2_0_TESTWEDGE.stl  30° wedge (6 slots, 6 widths)
+#   3. images/Cylinder_V2_0_*.png           4 PNG renders
+#   4. blueprints/Cylinder_V2_0_Blueprint.svg
+#
+# =============================================================================
+# HOW A CSM CYLINDER WORKS
+# =============================================================================
+#
+# The cylinder is the heart of the machine. It rotates (driven from below)
+# while the cam ring, sinker ring, and retainer ring stay stationary.
+#
+# NEEDLES: 72 latch needles sit in vertical slots on the outer surface.
+#   Each needle has a rectangular ribbon stem (sits in the slot) and an
+#   L-shaped butt that projects radially through the butt cavity at the
+#   bottom of the slot zone.
+#
+# CAM RING (stationary, wraps around cylinder):
+#   - Engages needle BUTTS via an axial cam profile
+#   - As cylinder rotates, the cam forces each needle up (Z increases) to
+#     catch yarn, then back down to form a stitch
+#   - Cam ring ID = 115mm (0.35mm clearance each side at OD 114.3mm)
+#
+# CYLINDER SPRING (FlyDesigns Common Thickness 0.110" / 2.79mm):
+#   - A circumferential tension band wrapped in the spring groove near the top
+#   - Function: presses needle STEMS against the back wall of their slots
+#   - Prevents needles from rattling or falling out when cylinder tilts
+#   - Position: Z=60.4 to Z=63.6mm (center Z=62mm) per Erlbacher reference
+#   - NOT a cam return mechanism (common misconception)
+#
+# DRIVE HUB (below cylinder):
+#   - 18mm boss fits into bottom pocket of cylinder
+#   - 4× M5 bolts at PCD 70mm lock cylinder to hub flange
+#   - Hub mounts on 12mm shaft via D-bore and set screws
+#
+# =============================================================================
+# WHY THIS CYLINDER MATCHES COMMERCIAL MACHINES
+# =============================================================================
+#
+# This design is dimensionally compatible with Legare/AutoKnitter cylinders:
+#
+#   Legare 400/47:    OD=114.3mm (4.5"), 72 slots, cast metal
+#   AutoKnitter CSM:  OD=114.3mm, 72 slots, spring at top
+#   Erlbacher:        OD=114.3mm, 72 slots, spring near top per manual
+#   Lonati industrial: Different - uses fine steel, precision-ground,
+#                      different gauge system -- NOT this cylinder's target
+#
+# Key geometry that defines CSM compatibility:
+#   - OD = 114.3mm exactly (needles project out at this radius)
+#   - 72 slots at 5° pitch (standard adult-sock gauge)
+#   - Spring groove near top (holds stems, not butts)
+#   - Simple hollow tube -- no outer flange, no extra shells
+#   - Cam ring clearance: OD 114.3 vs cam ID 115 = 0.35mm/side (correct)
+#
+# =============================================================================
+# COMPLETE PARAMETER HISTORY (WHY EACH VALUE IS WHAT IT IS)
+# =============================================================================
+#
+# CYL_OD = 114.3mm     Legare 4.5" standard. All compatible accessories
+#                       (cam ring, sinker ring, needles) designed for this.
+#
+# CYL_ID = 88.0mm      Bore sized to clear drive hub V1.3. Hub has 18mm
+#                       boss (fits in bottom pocket), flange sits below.
+#
+# CYL_HEIGHT = 75mm    Standard Legare-compatible working height. Gives
+#                       52mm slot zone + 4mm butt cavity + 19mm base.
+#
+# SLOT_WIDTH = 1.22mm  FlyDesigns 12G needle stem is 1.15mm wide.
+#                       V1.1.4 engineering review: +0.07mm clearance.
+#                       Test wedge validates actual winner (1.18-1.28mm).
+#
+# SLOT_DEPTH = 2.00mm  Needle stem is 1.80mm deep (ribbon cross-section).
+#                       V1.1.4 fix: was 1.90mm, PETG shrinks ~0.1mm,
+#                       2.00mm designed → ~1.90mm printed = proper fit.
+#
+# SLOT_LENGTH = 52mm   Needle stem is 58.49mm total; lower 6.5mm is the
+#                       butt L-bend zone. Slot covers stem zone above butt.
+#
+# SLOT_CHAMFER = 0.8mm V1.1.3 fix: was 0.4mm (too small to see/feel).
+#                       0.8mm gives visible, tactile needle insertion guide.
+#
+# BUTT_WIDTH = 8.5mm   Needle butt L-horizontal is 8.24mm. +0.26mm clear.
+# BUTT_HEIGHT = 4.0mm  Needle butt L-vertical is 3.64mm. +0.36mm clear.
+# BUTT_DEPTH = 2.00mm  Same as slot depth (butt rides at same radial depth).
+#
+# BUTT_Z = 19-23mm     Cam ring engages butts here. Spring groove must not
+#                       overlap this zone. (Butt bottom = 19mm, top = 23mm)
+#
+# SPRING_GROOVE_Z = 62mm  V1.1.6: moved from Z=15-18mm (WRONG - bottom) to
+#                          near top per Erlbacher documentation.
+#                          V1.1.7 fix: was Z=68mm (too close to top edge,
+#                          only 5.4mm material above). Z=62mm gives 11.4mm
+#                          material above groove (safe), while still in the
+#                          "below hooks, above cams" zone per Erlbacher.
+#
+# SPRING_GROOVE_DEPTH = 1.8mm  V1.1.7 fix: was 1.2mm.
+#                               Protrusion past OD: 1.2mm → 0.99mm.
+#                               Real CSM cylinders recess the spring so it
+#                               barely protrudes. Reduces yarn carrier snag.
+#
+# HUB_POCKET_D = 18.20mm  Drive hub V1.3 boss OD = 18.0mm.
+#                          0.20mm slip fit. PETG shrinks ~0.10-0.15mm,
+#                          so 18.20 designed → ~18.05-18.10 printed.
+#                          Result: comfortable 0.05-0.10mm clearance.
+#
+# =============================================================================
+
+import FreeCAD, Part, Mesh, MeshPart, math, os
+
+try:
+    import Draft
+except ImportError:
+    pass
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
+
+PATH_STL_FULL      = os.path.join(BASE, "CSM_V3_Cylinder_V2_0_FULL.stl")
+PATH_STL_WEDGE     = os.path.join(BASE, "CSM_V3_Cylinder_V2_0_TESTWEDGE.stl")
+PATH_PNG_FULL_ISO  = os.path.join(BASE, "images", "Cylinder_V2_0_FULL_ISO.png")
+PATH_PNG_FULL_TOP  = os.path.join(BASE, "images", "Cylinder_V2_0_FULL_TOP.png")
+PATH_PNG_WEDGE_ISO = os.path.join(BASE, "images", "Cylinder_V2_0_WEDGE_ISO.png")
+PATH_PNG_WEDGE_TOP = os.path.join(BASE, "images", "Cylinder_V2_0_WEDGE_TOP.png")
+PATH_SVG           = os.path.join(BASE, "blueprints", "Cylinder_V2_0_Blueprint.svg")
+
+for p in [PATH_STL_FULL, PATH_STL_WEDGE,
+          PATH_PNG_FULL_ISO, PATH_PNG_FULL_TOP,
+          PATH_PNG_WEDGE_ISO, PATH_PNG_WEDGE_TOP, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CORE PARAMETERS  (all values locked through V1.1.7 engineering review)
+# =============================================================================
+
+# ── Cylinder body ──────────────────────────────────────────────────────────
+CYL_OD          = 114.3    # mm  Legare 4.5" standard
+CYL_ID          = 88.0     # mm  bore – clears drive hub V1.3 upper extension
+CYL_HEIGHT      = 75.0     # mm  total axial length
+
+# ── Needle slots (72 vertical rectangular cuts from OD inward) ────────────
+SLOT_COUNT      = 72       # standard adult-sock cylinder
+SLOT_WIDTH      = 1.22     # mm  circumferential  (1.15mm needle + 0.07mm clear)
+SLOT_DEPTH      = 2.00     # mm  radial inward     (1.80mm needle + 0.20mm clear)
+SLOT_LENGTH     = 52.0     # mm  axial extent (stem zone, top of cylinder down)
+SLOT_CHAMFER    = 0.8      # mm  lead-in chamfer at slot top (needle insertion guide)
+
+# ── Butt cavity (wider/taller pocket below slot – cam ring engagement) ─────
+BUTT_WIDTH      = 8.5      # mm  circumferential  (8.24mm needle butt + 0.26mm)
+BUTT_HEIGHT     = 4.0      # mm  axial             (3.64mm needle butt + 0.36mm)
+BUTT_DEPTH      = SLOT_DEPTH  # mm  same radial depth as slot
+
+# ── Cylinder spring groove (FlyDesigns 0.110" / 2.79mm wire) ──────────────
+# Position: near top, per Erlbacher documentation
+# Function: tension band pressing needle stems against slot back walls
+SPRING_GROOVE_W      = 3.2     # mm  axial width  (2.79mm wire + 0.41mm clearance)
+SPRING_GROOVE_DEPTH  = 1.8     # mm  radial depth (spring protrudes 0.99mm past OD)
+SPRING_GROOVE_Z_CTR  = 62.0    # mm  Z center     (11.4mm below top face)
+SPRING_GROOVE_Z_BOT  = SPRING_GROOVE_Z_CTR - SPRING_GROOVE_W / 2.0   # 60.4mm
+SPRING_GROOVE_Z_TOP  = SPRING_GROOVE_Z_CTR + SPRING_GROOVE_W / 2.0   # 63.6mm
+
+# ── Drive hub interface (mates Drive Hub V1.3) ─────────────────────────────
+HUB_POCKET_D    = 18.20    # mm  pocket ID  (18mm boss + 0.20mm slip fit)
+HUB_POCKET_H    = 3.0      # mm  pocket depth
+HUB_POCKET_CHAM = 0.5      # mm  lead-in chamfer at pocket entry
+
+# ── Bolt pattern (4× M5 socket-head, locks cylinder to drive hub flange) ──
+BOLT_COUNT      = 4
+BOLT_PCD        = 70.0     # mm  bolt circle diameter
+BOLT_HOLE_D     = 5.4      # mm  M5 clearance hole (5.0 + 0.4mm)
+BOLT_CB_D       = 9.5      # mm  counterbore for M5 socket head
+BOLT_CB_H       = 5.0      # mm  counterbore depth
+
+# ── Edge chamfers ──────────────────────────────────────────────────────────
+EDGE_CHAMFER    = 0.6      # mm  OD top and bottom edges
+
+# ── Test wedge ─────────────────────────────────────────────────────────────
+# 30° wedge = 6 slots, 6 different widths
+# Print this BEFORE the full cylinder.  Insert a needle in each slot pair.
+# Pick the width that slides smoothly without rattle – use it for full print.
+WEDGE_ANGLE_DEG   = 30.0
+WEDGE_SLOT_WIDTHS = [1.18, 1.20, 1.22, 1.24, 1.26, 1.28]  # mm
+
+# =============================================================================
+# DERIVED VALUES  (do not edit – computed from parameters above)
+# =============================================================================
+CYL_OUTER_R = CYL_OD / 2.0                         # 57.15mm
+CYL_INNER_R = CYL_ID / 2.0                         # 44.0mm
+SLOT_PITCH_DEG = 360.0 / SLOT_COUNT                # 5.0°
+SLOT_PITCH_MM  = math.pi * CYL_OD / SLOT_COUNT     # 4.987mm
+WALL_BETWEEN   = SLOT_PITCH_MM - SLOT_WIDTH         # 3.77mm  (wall between adjacent slots)
+
+SLOT_BOT_Z  = CYL_HEIGHT - SLOT_LENGTH             # 23.0mm  (bottom of slot zone)
+BUTT_BOT_Z  = SLOT_BOT_Z - BUTT_HEIGHT             # 19.0mm  (bottom of butt cavity)
+BUTT_TOP_Z  = SLOT_BOT_Z                           # 23.0mm  (top of butt cavity = slot bottom)
+
+# Spring geometry
+SPRING_WIRE_D    = 2.79                             # mm FlyDesigns 0.110"
+SPRING_INNER_R   = CYL_OUTER_R - SPRING_GROOVE_DEPTH              # 55.35mm
+SPRING_WIRE_CTR_R = SPRING_INNER_R + SPRING_WIRE_D / 2.0          # 56.745mm
+SPRING_OUTER_R   = SPRING_INNER_R + SPRING_WIRE_D                  # 58.14mm
+SPRING_PROTRUSION = SPRING_OUTER_R - CYL_OUTER_R                   # 0.99mm
+
+MATERIAL_ABOVE_GROOVE    = CYL_HEIGHT - SPRING_GROOVE_Z_TOP        # 11.4mm
+MATERIAL_BELOW_GROOVE    = SPRING_GROOVE_Z_BOT - SLOT_BOT_Z        # 37.4mm
+
+WALL_THICKNESS  = (CYL_OD - CYL_ID) / 2.0                         # 13.15mm
+
+# =============================================================================
+# STARTUP PRINT
+# =============================================================================
+print("=" * 70)
+print("CSM V3 - CYLINDER V2.0")
+print("Legare/AutoKnitter/Erlbacher compatible, 72-slot, 12-gauge")
+print("=" * 70)
+print()
+print("CYLINDER BODY:")
+print(f"  OD:              {CYL_OD} mm     (Legare 4.5\" = 114.3mm)")
+print(f"  ID (bore):       {CYL_ID} mm")
+print(f"  Wall thickness:  {WALL_THICKNESS:.2f} mm")
+print(f"  Height:          {CYL_HEIGHT} mm")
+print()
+print("NEEDLE SLOTS:")
+print(f"  Count:           {SLOT_COUNT} slots at {SLOT_PITCH_DEG}° pitch")
+print(f"  Pitch (arc):     {SLOT_PITCH_MM:.3f} mm")
+print(f"  Width × depth:   {SLOT_WIDTH} × {SLOT_DEPTH} mm  (needle = 1.15 × 1.80mm)")
+print(f"  Length:          {SLOT_LENGTH} mm axial  (Z={SLOT_BOT_Z}-{CYL_HEIGHT})")
+print(f"  Chamfer:         {SLOT_CHAMFER} mm lead-in at top")
+print(f"  Wall between:    {WALL_BETWEEN:.2f} mm")
+print()
+print("BUTT CAVITY (cam ring engagement zone):")
+print(f"  Width:           {BUTT_WIDTH} mm  (needle butt = 8.24mm)")
+print(f"  Height:          {BUTT_HEIGHT} mm  (needle butt = 3.64mm)")
+print(f"  Z range:         {BUTT_BOT_Z}-{BUTT_TOP_Z} mm")
+print()
+print("SPRING GROOVE (V1.1.7 corrected per Erlbacher reference):")
+print(f"  Z range:         {SPRING_GROOVE_Z_BOT}-{SPRING_GROOVE_Z_TOP} mm")
+print(f"  Center:          Z={SPRING_GROOVE_Z_CTR} mm")
+print(f"  Width × depth:   {SPRING_GROOVE_W} × {SPRING_GROOVE_DEPTH} mm")
+print(f"  Spring protrusion past OD:  {SPRING_PROTRUSION:.2f} mm")
+print(f"  Material above groove:      {MATERIAL_ABOVE_GROOVE:.1f} mm (top edge strength)")
+print(f"  Spring wire OD:             {SPRING_INNER_R:.2f}-{SPRING_OUTER_R:.2f} mm radius")
+print()
+print("HUB INTERFACE:")
+print(f"  Hub pocket:      D{HUB_POCKET_D} × {HUB_POCKET_H}mm deep (18mm boss slip fit)")
+print(f"  Bolt pattern:    {BOLT_COUNT}× M5 at PCD {BOLT_PCD}mm (counterbored from below)")
+print()
+print("Z-AXIS LAYOUT:")
+print(f"  Z=75.0   Cylinder TOP (chamfer 0.6mm)")
+print(f"  Z=63.6   Spring groove TOP")
+print(f"  Z=62.0   Spring center (FlyDesigns 0.110\" wire)")
+print(f"  Z=60.4   Spring groove BOTTOM  (depth {SPRING_GROOVE_DEPTH}mm)")
+print(f"  Z=23.0   Slot bottom  (52mm stem zone above)")
+print(f"  Z=23.0   Butt cavity TOP  (cam ring engagement)")
+print(f"  Z=19.0   Butt cavity BOTTOM")
+print(f"  Z= 3.0   Hub pocket bottom  (D{HUB_POCKET_D} × 3mm)")
+print(f"  Z= 0.0   Cylinder BOTTOM")
+print()
+
+# =============================================================================
+# SANITY CHECKS
+# =============================================================================
+errors = []
+if SPRING_GROOVE_Z_TOP > CYL_HEIGHT:
+    errors.append(f"Spring groove top ({SPRING_GROOVE_Z_TOP}) exceeds cylinder height ({CYL_HEIGHT})")
+if SPRING_GROOVE_Z_BOT < SLOT_BOT_Z:
+    errors.append(f"Spring groove ({SPRING_GROOVE_Z_BOT}) overlaps slot zone ({SLOT_BOT_Z})")
+if MATERIAL_ABOVE_GROOVE < 5.0:
+    errors.append(f"Less than 5mm material above spring groove ({MATERIAL_ABOVE_GROOVE:.1f}mm)")
+if SPRING_PROTRUSION < 0.4:
+    errors.append(f"Spring protrusion too small ({SPRING_PROTRUSION:.2f}mm) – won't engage stems")
+if SPRING_PROTRUSION > 1.5:
+    errors.append(f"Spring protrusion too large ({SPRING_PROTRUSION:.2f}mm) – may snag yarn carrier")
+if WALL_THICKNESS < 10.0:
+    errors.append(f"Wall too thin ({WALL_THICKNESS:.1f}mm) – PETG structural risk")
+if BUTT_BOT_Z < HUB_POCKET_H:
+    errors.append(f"Butt cavity overlaps hub pocket depth")
+if len(WEDGE_SLOT_WIDTHS) != 6:
+    errors.append("WEDGE_SLOT_WIDTHS must have exactly 6 entries")
+
+if errors:
+    print("ERRORS:")
+    for e in errors:
+        print(f"  ❌ {e}")
+    raise RuntimeError("Parameter validation failed – fix errors above before continuing")
+
+print("Parameter validation: OK")
+print()
+
+# =============================================================================
+# FREECAD DOCUMENT
+# =============================================================================
+doc = FreeCAD.newDocument("CSM_Cylinder_V2_0")
+
+# =============================================================================
+# HELPER: build one slot+butt+chamfer cutter shape
+# =============================================================================
+def build_slot_cutter(angle_deg, slot_w, slot_d, slot_len,
+                      butt_w, butt_h, butt_d,
+                      cyl_h, chamfer):
+    """
+    Returns a Part shape that, when cut from the cylinder body, creates
+    one complete needle slot with butt cavity and lead-in chamfer.
+
+    Geometry (before rotation):
+      - Slot box:  extends radially inward from OD, top at cyl_h, axial len = slot_len
+      - Butt box:  wider and shorter, sits immediately below slot bottom
+      - Chamfer:   slightly wider box at slot top opening (lead-in guide)
+
+    The cutter is built on the +X axis then rotated to angle_deg.
+    """
+    slot_top_z = cyl_h
+    slot_bot_z = cyl_h - slot_len
+    butt_bot_z = slot_bot_z - butt_h
+
+    # Slot box: from (CYL_OUTER_R - slot_d) to (CYL_OUTER_R + 1mm safety)
+    sx_inner = CYL_OUTER_R - slot_d
+    sx_outer = CYL_OUTER_R + 1.0
+    slot_box = Part.makeBox(
+        sx_outer - sx_inner,          # X depth (radial)
+        slot_w,                       # Y width (circumferential)
+        slot_len                      # Z length (axial)
+    )
+    slot_box.translate(FreeCAD.Vector(sx_inner, -slot_w / 2.0, slot_bot_z))
+
+    # Butt cavity box
+    bx_inner = CYL_OUTER_R - butt_d
+    bx_outer = CYL_OUTER_R + 1.0
+    butt_box = Part.makeBox(
+        bx_outer - bx_inner,
+        butt_w,
+        butt_h
+    )
+    butt_box.translate(FreeCAD.Vector(bx_inner, -butt_w / 2.0, butt_bot_z))
+
+    cutter = slot_box.fuse(butt_box)
+
+    # Lead-in chamfer at slot top (widens entry by chamfer on each side)
+    if chamfer > 0:
+        cx_inner = CYL_OUTER_R - chamfer
+        cx_outer = CYL_OUTER_R + 1.0
+        cham_box = Part.makeBox(
+            cx_outer - cx_inner,
+            slot_w + 2.0 * chamfer,       # wider than slot
+            chamfer + 0.1                 # thin axial strip
+        )
+        cham_box.translate(FreeCAD.Vector(
+            cx_inner,
+            -(slot_w + 2.0 * chamfer) / 2.0,
+            slot_top_z - chamfer
+        ))
+        cutter = cutter.fuse(cham_box)
+
+    # Rotate to requested angle
+    cutter.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(0, 0, 1), angle_deg)
+    return cutter
+
+
+# =============================================================================
+# BUILD: FULL 72-SLOT CYLINDER
+# =============================================================================
+print("[1/2] Building full 72-slot cylinder...")
+
+# ── Hollow tube (outer cylinder minus inner bore) ──────────────────────────
+outer_cyl = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+inner_cyl = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2.0)
+inner_cyl.translate(FreeCAD.Vector(0, 0, -1.0))
+cyl_body = outer_cyl.cut(inner_cyl)
+
+# ── Hub pocket (bottom center, fits drive hub V1.3 boss) ──────────────────
+pocket = Part.makeCylinder(HUB_POCKET_D / 2.0, HUB_POCKET_H + 0.1)
+pocket.translate(FreeCAD.Vector(0, 0, -0.05))
+cyl_body = cyl_body.cut(pocket)
+
+if HUB_POCKET_CHAM > 0:
+    # Conical chamfer at the pocket entry
+    cham_cone = Part.makeCone(
+        HUB_POCKET_D / 2.0 + HUB_POCKET_CHAM,
+        HUB_POCKET_D / 2.0,
+        HUB_POCKET_CHAM
+    )
+    cham_cone.translate(FreeCAD.Vector(0, 0, -0.001))
+    cyl_body = cyl_body.cut(cham_cone)
+
+# ── Bolt holes: 4× M5 clearance + counterbore from bottom ─────────────────
+for i in range(BOLT_COUNT):
+    ang = i * (360.0 / BOLT_COUNT)
+    r   = BOLT_PCD / 2.0
+    bx  = r * math.cos(math.radians(ang))
+    by  = r * math.sin(math.radians(ang))
+
+    # Through-hole
+    thru = Part.makeCylinder(BOLT_HOLE_D / 2.0, CYL_HEIGHT + 2.0)
+    thru.translate(FreeCAD.Vector(bx, by, -1.0))
+    cyl_body = cyl_body.cut(thru)
+
+    # Counterbore (socket-head clearance, from bottom face)
+    cb = Part.makeCylinder(BOLT_CB_D / 2.0, BOLT_CB_H + 0.1)
+    cb.translate(FreeCAD.Vector(bx, by, -0.05))
+    cyl_body = cyl_body.cut(cb)
+
+# ── 72 needle slots + butt cavities (batch boolean) ───────────────────────
+print("  Building 72 slot cutters...")
+slot_cutters = []
+for i in range(SLOT_COUNT):
+    angle = i * SLOT_PITCH_DEG
+    c = build_slot_cutter(
+        angle, SLOT_WIDTH, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    slot_cutters.append(c)
+
+print("  Fusing 72 cutters into master cutter...")
+master_cutter = slot_cutters[0]
+for c in slot_cutters[1:]:
+    master_cutter = master_cutter.fuse(c)
+
+print("  Applying master cut to cylinder body...")
+cyl_body = cyl_body.cut(master_cutter)
+
+# ── Spring groove (circumferential, outer OD surface) ─────────────────────
+print(f"  Cutting spring groove (Z={SPRING_GROOVE_Z_BOT:.1f}-{SPRING_GROOVE_Z_TOP:.1f}, depth={SPRING_GROOVE_DEPTH}mm)...")
+g_outer = Part.makeCylinder(
+    CYL_OUTER_R + 1.0,
+    SPRING_GROOVE_W,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT)
+)
+g_inner = Part.makeCylinder(
+    CYL_OUTER_R - SPRING_GROOVE_DEPTH,
+    SPRING_GROOVE_W + 0.1,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05)
+)
+groove_cutter = g_outer.cut(g_inner)
+cyl_body = cyl_body.cut(groove_cutter)
+
+# ── Outer edge chamfers (top and bottom OD edge) ──────────────────────────
+if EDGE_CHAMFER > 0:
+    try:
+        cham_edges = []
+        for e in cyl_body.Edges:
+            v1 = e.Vertexes[0].Point
+            v2 = e.Vertexes[1].Point
+            if abs(v1.z - v2.z) < 0.01:  # horizontal edge
+                r1 = math.sqrt(v1.x**2 + v1.y**2)
+                if abs(r1 - CYL_OUTER_R) < 0.05:
+                    if abs(v1.z) < 0.05 or abs(v1.z - CYL_HEIGHT) < 0.05:
+                        cham_edges.append(e)
+        if cham_edges:
+            cyl_body = cyl_body.makeChamfer(EDGE_CHAMFER, cham_edges)
+            print(f"  Applied {EDGE_CHAMFER}mm chamfer to {len(cham_edges)} outer edges")
+    except Exception as ex:
+        print(f"  Outer chamfer skipped: {ex}")
+
+obj_full = doc.addObject("Part::Feature", "Cylinder_V2_0_FULL")
+obj_full.Shape = cyl_body
+obj_full.ViewObject.ShapeColor = (0.25, 0.48, 0.72)
+print(f"  Volume: {cyl_body.Volume:.0f} mm³  (~{cyl_body.Volume * 1.27 / 1000:.0f}g PETG)")
+print("  Full cylinder done.")
+print()
+
+# =============================================================================
+# BUILD: 30° TEST WEDGE (6 slots, 6 width variants)
+# =============================================================================
+print("[2/2] Building 30° test wedge...")
+print(f"  Slot widths: {WEDGE_SLOT_WIDTHS}")
+
+wedge_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+wedge_inner = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT + 2.0)
+wedge_inner.translate(FreeCAD.Vector(0, 0, -1.0))
+wedge_body = wedge_outer.cut(wedge_inner)
+
+# Intersect with 30° sector to get the wedge shape
+keep_sector = Part.makeCylinder(
+    CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
+    FreeCAD.Vector(0, 0, -1.0),
+    FreeCAD.Vector(0, 0, 1.0),
+    WEDGE_ANGLE_DEG
+)
+wedge_body = wedge_body.common(keep_sector)
+
+# 6 slot cutters centered at 2.5°, 7.5°, 12.5°, 17.5°, 22.5°, 27.5°
+wedge_cutters = []
+for i, sw in enumerate(WEDGE_SLOT_WIDTHS):
+    angle = (i + 0.5) * SLOT_PITCH_DEG
+    c = build_slot_cutter(
+        angle, sw, SLOT_DEPTH, SLOT_LENGTH,
+        BUTT_WIDTH, BUTT_HEIGHT, BUTT_DEPTH,
+        CYL_HEIGHT, SLOT_CHAMFER
+    )
+    wedge_cutters.append(c)
+
+master_wedge = wedge_cutters[0]
+for c in wedge_cutters[1:]:
+    master_wedge = master_wedge.fuse(c)
+wedge_body = wedge_body.cut(master_wedge)
+
+# Spring groove in wedge (restricted to wedge angular range)
+wg_outer = Part.makeCylinder(
+    CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT)
+)
+wg_inner = Part.makeCylinder(
+    CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05)
+)
+wg_cutter = wg_outer.cut(wg_inner)
+wg_sector = Part.makeCylinder(
+    CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
+    FreeCAD.Vector(0, 0, -1.0),
+    FreeCAD.Vector(0, 0, 1.0),
+    WEDGE_ANGLE_DEG
+)
+wedge_body = wedge_body.cut(wg_cutter.common(wg_sector))
+
+# Offset for side-by-side view in FreeCAD
+wedge_body.translate(FreeCAD.Vector(150.0, 0, 0))
+
+obj_wedge = doc.addObject("Part::Feature", "Cylinder_V2_0_TESTWEDGE")
+obj_wedge.Shape = wedge_body
+obj_wedge.ViewObject.ShapeColor = (0.72, 0.50, 0.25)
+print(f"  Volume: {wedge_body.Volume:.0f} mm³  (~{wedge_body.Volume * 1.27 / 1000:.0f}g PETG)")
+print("  Test wedge done.")
+print()
+
+doc.recompute()
+
+# =============================================================================
+# PNG EXPORT  (requires FreeCAD GUI mode)
+# =============================================================================
+print("Exporting PNG renders...")
+png_ok = False
+
+try:
+    import FreeCADGui
+    if FreeCAD.GuiUp:
+        gui_doc = FreeCADGui.getDocument(doc.Name)
+        view = gui_doc.activeView()
+        W, H, BG = 1920, 1080, "White"
+
+        # Full cylinder – ISO
+        obj_full.ViewObject.Visibility  = True
+        obj_wedge.ViewObject.Visibility = False
+        view.viewIsometric(); view.fitAll()
+        view.saveImage(PATH_PNG_FULL_ISO, W, H, BG)
+        print(f"  [OK] {PATH_PNG_FULL_ISO}")
+
+        # Full cylinder – TOP
+        view.viewTop(); view.fitAll()
+        view.saveImage(PATH_PNG_FULL_TOP, W, H, BG)
+        print(f"  [OK] {PATH_PNG_FULL_TOP}")
+
+        # Wedge – ISO
+        obj_full.ViewObject.Visibility  = False
+        obj_wedge.ViewObject.Visibility = True
+        view.viewIsometric(); view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_ISO, W, H, BG)
+        print(f"  [OK] {PATH_PNG_WEDGE_ISO}")
+
+        # Wedge – TOP
+        view.viewTop(); view.fitAll()
+        view.saveImage(PATH_PNG_WEDGE_TOP, W, H, BG)
+        print(f"  [OK] {PATH_PNG_WEDGE_TOP}")
+
+        # Restore both visible
+        obj_full.ViewObject.Visibility  = True
+        obj_wedge.ViewObject.Visibility = True
+        view.viewIsometric(); view.fitAll()
+        png_ok = True
+    else:
+        print("  [SKIP] No GUI – run from FreeCAD GUI (Macro → Macros → Execute)")
+except Exception as ex:
+    print(f"  PNG error: {ex}")
+
+# =============================================================================
+# STL EXPORT
+# =============================================================================
+print("\nExporting STLs...")
+try:
+    # Full cylinder (centered at origin)
+    tmp = doc.addObject("Part::Feature", "_tmp_full")
+    tmp.Shape = obj_full.Shape.copy()
+    Part.export([tmp], PATH_STL_FULL)
+    doc.removeObject("_tmp_full")
+    print(f"  [OK] {PATH_STL_FULL}")
+except Exception as ex:
+    print(f"  Full STL error: {ex}")
+
+try:
+    # Wedge (translate back to origin for printing)
+    wedge_for_export = obj_wedge.Shape.copy()
+    wedge_for_export.translate(FreeCAD.Vector(-150.0, 0, 0))
+    tmp = doc.addObject("Part::Feature", "_tmp_wedge")
+    tmp.Shape = wedge_for_export
+    Part.export([tmp], PATH_STL_WEDGE)
+    doc.removeObject("_tmp_wedge")
+    print(f"  [OK] {PATH_STL_WEDGE}")
+except Exception as ex:
+    print(f"  Wedge STL error: {ex}")
+
+# =============================================================================
+# SVG BLUEPRINT
+# =============================================================================
+print("\nExporting SVG blueprint...")
+
+# Build slot tick marks for top view
+import math as _m
+SCALE = 1.5   # 1mm real = SCALE px
+
+def _circ(r, col="none", stroke="#1e3a5f", sw=1.5, dash=""):
+    da = f' stroke-dasharray="{dash}"' if dash else ""
+    return f'<circle cx="0" cy="0" r="{r*SCALE:.2f}" fill="{col}" stroke="{stroke}" stroke-width="{sw}"{da}/>'
+
+slot_lines = ""
+for i in range(SLOT_COUNT):
+    ang = _m.radians(i * SLOT_PITCH_DEG)
+    r_out = CYL_OUTER_R * SCALE
+    r_in  = (CYL_OUTER_R - SLOT_DEPTH) * SCALE
+    x1, y1 = r_out * _m.cos(ang), r_out * _m.sin(ang)
+    x2, y2 = r_in  * _m.cos(ang), r_in  * _m.sin(ang)
+    slot_lines += f'<line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" stroke="#c0392b" stroke-width="0.5"/>\n'
+
+bolt_marks = ""
+for i in range(BOLT_COUNT):
+    ang = _m.radians(i * 90.0)
+    br  = BOLT_PCD / 2.0 * SCALE
+    bx, by = br * _m.cos(ang), br * _m.sin(ang)
+    bolt_marks += f'<circle cx="{bx:.2f}" cy="{by:.2f}" r="{BOLT_HOLE_D/2*SCALE:.2f}" fill="white" stroke="#27ae60" stroke-width="1"/>\n'
+    bolt_marks += f'<circle cx="{bx:.2f}" cy="{by:.2f}" r="{BOLT_CB_D/2*SCALE:.2f}" fill="none" stroke="#27ae60" stroke-width="0.5" stroke-dasharray="2 2"/>\n'
+
+spring_r  = CYL_OUTER_R * SCALE
+groove_r  = (CYL_OUTER_R - SPRING_GROOVE_DEPTH) * SCALE
+
+# Z-axis side section (schematic, to scale)
+H_SCALE = 2.5  # 1mm real = H_SCALE px side-view height
+sv_x, sv_w = 590, 120   # x-position and width of side-view column
+sv_od_x = sv_x + sv_w   # right edge (OD)
+
+def _sv_rect(z_bot, z_top, label="", col="#d4e1ed", sw=1.0, scol="#1e3a5f"):
+    y_top = 50 + (CYL_HEIGHT - z_top) * H_SCALE
+    y_bot = 50 + (CYL_HEIGHT - z_bot) * H_SCALE
+    h = y_bot - y_top
+    rect = f'<rect x="{sv_x}" y="{y_top:.1f}" width="{sv_w}" height="{h:.1f}" fill="{col}" stroke="{scol}" stroke-width="{sw}"/>\n'
+    if label:
+        rect += f'<text x="{sv_x + sv_w/2:.0f}" y="{y_top + h/2 + 4:.1f}" text-anchor="middle" font-size="9" fill="#333">{label}</text>\n'
+    return rect
+
+svg = f'''<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="950" height="700"
+     font-family="Arial, sans-serif">
+
+  <!-- Background -->
+  <rect width="950" height="700" fill="#fafafa"/>
+
+  <!-- ── Title ────────────────────────────────────────────────── -->
+  <text x="475" y="28" text-anchor="middle"
+        font-size="17" font-weight="bold" fill="#1e3a5f">
+    CSM V3 — Cylinder V2.0 (Legare/AutoKnitter/Erlbacher compatible)
+  </text>
+  <text x="475" y="46" text-anchor="middle"
+        font-size="11" fill="#555">
+    OD {CYL_OD}mm · ID {CYL_ID}mm · H {CYL_HEIGHT}mm · {SLOT_COUNT} slots · 12-gauge · PETG
+  </text>
+
+  <!-- ── TOP VIEW ─────────────────────────────────────────────── -->
+  <text x="200" y="76" text-anchor="middle"
+        font-size="12" font-weight="bold" fill="#1e3a5f">Top View</text>
+
+  <g transform="translate(200, 360)">
+    <!-- Cylinder body -->
+    {_circ(CYL_OUTER_R, col="#d4e1ed")}
+    <!-- Bore -->
+    {_circ(CYL_ID/2, col="#fafafa", stroke="#888", sw=0.8)}
+    <!-- Hub pocket -->
+    {_circ(HUB_POCKET_D/2, col="#ffe8a0", stroke="#b8860b", sw=0.8)}
+    <!-- 72 slot lines -->
+    {slot_lines}
+    <!-- Bolt circle -->
+    {_circ(BOLT_PCD/2, col="none", stroke="#27ae60", sw=0.5, dash="3 2")}
+    {bolt_marks}
+    <!-- Spring groove circle (dashed) -->
+    {_circ(CYL_OUTER_R - SPRING_GROOVE_DEPTH, col="none", stroke="#8e44ad", sw=0.8, dash="4 3")}
+
+    <!-- Annotations -->
+    <text x="0" y="{-(CYL_OUTER_R*SCALE + 16):.0f}" text-anchor="middle"
+          font-size="10" fill="#c0392b">OD {CYL_OD}mm</text>
+    <text x="{CYL_OUTER_R*SCALE + 8:.0f}" y="4" text-anchor="start"
+          font-size="9" fill="#888">ID {CYL_ID}mm</text>
+    <text x="{(CYL_OUTER_R-SPRING_GROOVE_DEPTH)*SCALE + 4:.0f}" y="{-10:.0f}"
+          font-size="9" fill="#8e44ad">groove r</text>
+    <text x="{BOLT_PCD/2*SCALE + 4:.0f}" y="{12:.0f}"
+          font-size="9" fill="#27ae60">PCD {BOLT_PCD}</text>
+  </g>
+
+  <!-- ── SIDE SECTION ─────────────────────────────────────────── -->
+  <text x="{sv_x + sv_w/2:.0f}" y="76" text-anchor="middle"
+        font-size="12" font-weight="bold" fill="#1e3a5f">Side Section (to scale)</text>
+
+  <!-- Cylinder walls (two columns, representing the hollow tube cross-section) -->
+  {_sv_rect(0, CYL_HEIGHT, col="#d4e1ed")}
+
+  <!-- Bore (white interior) -->
+  {f'<rect x="{sv_x+8}" y="{50:.1f}" width="{sv_w-16}" height="{CYL_HEIGHT*H_SCALE:.1f}" fill="white" stroke="none"/>'}
+
+  <!-- Slot zone -->
+  {_sv_rect(SLOT_BOT_Z, CYL_HEIGHT, label="Slot zone", col="#e8f0fb", scol="#5d8fcd")}
+
+  <!-- Spring groove (purple) -->
+  {_sv_rect(SPRING_GROOVE_Z_BOT, SPRING_GROOVE_Z_TOP, label="Spring groove", col="#d8b4fe", scol="#8e44ad", sw=1.5)}
+
+  <!-- Butt cavity (orange) -->
+  {_sv_rect(BUTT_BOT_Z, BUTT_TOP_Z, label="Butt cavity", col="#fed7aa", scol="#d97706", sw=1.5)}
+
+  <!-- Hub pocket (yellow, bottom) -->
+  {_sv_rect(0, HUB_POCKET_H, label="Hub pocket", col="#ffe8a0", scol="#b8860b")}
+
+  <!-- Z dimension annotations (right side) -->
+  <g font-size="9" fill="#333">
+    <text x="{sv_od_x + 5}" y="{50 + 4:.1f}">Z={CYL_HEIGHT:.0f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-SPRING_GROOVE_Z_TOP)*H_SCALE + 4:.1f}">Z={SPRING_GROOVE_Z_TOP:.1f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-SPRING_GROOVE_Z_CTR)*H_SCALE + 4:.1f}" fill="#8e44ad">Z={SPRING_GROOVE_Z_CTR:.0f} (spring ctr)</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-SPRING_GROOVE_Z_BOT)*H_SCALE + 4:.1f}">Z={SPRING_GROOVE_Z_BOT:.1f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-SLOT_BOT_Z)*H_SCALE + 4:.1f}">Z={SLOT_BOT_Z:.0f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-BUTT_TOP_Z)*H_SCALE + 4:.1f}" fill="#d97706">Z={BUTT_TOP_Z:.0f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + (CYL_HEIGHT-BUTT_BOT_Z)*H_SCALE + 4:.1f}" fill="#d97706">Z={BUTT_BOT_Z:.0f}</text>
+    <text x="{sv_od_x + 5}" y="{50 + CYL_HEIGHT*H_SCALE - 3:.1f}">Z=0</text>
+  </g>
+
+  <!-- ── PARAMETER TABLE ──────────────────────────────────────── -->
+  <rect x="30" y="590" width="890" height="100" fill="#fff" stroke="#ccc" rx="4"/>
+  <text x="475" y="609" text-anchor="middle" font-size="11"
+        font-weight="bold" fill="#1e3a5f">Critical Dimensions</text>
+
+  <g font-size="10" fill="#333">
+    <text x="50"  y="627">OD: {CYL_OD}mm (4.5")</text>
+    <text x="200" y="627">ID: {CYL_ID}mm</text>
+    <text x="320" y="627">H: {CYL_HEIGHT}mm</text>
+    <text x="420" y="627">Wall: {WALL_THICKNESS:.2f}mm</text>
+    <text x="540" y="627">Slots: {SLOT_COUNT} @ {SLOT_PITCH_DEG}°</text>
+    <text x="680" y="627">Pitch: {SLOT_PITCH_MM:.3f}mm</text>
+
+    <text x="50"  y="645">Slot W×D: {SLOT_WIDTH}×{SLOT_DEPTH}mm</text>
+    <text x="200" y="645">Chamfer: {SLOT_CHAMFER}mm</text>
+    <text x="320" y="645">Slot L: {SLOT_LENGTH}mm</text>
+    <text x="420" y="645">Wall btw: {WALL_BETWEEN:.2f}mm</text>
+    <text x="540" y="645">Butt: {BUTT_WIDTH}×{BUTT_HEIGHT}mm</text>
+    <text x="680" y="645">Butt Z: {BUTT_BOT_Z:.0f}-{BUTT_TOP_Z:.0f}mm</text>
+
+    <text x="50"  y="663">Spring Z: {SPRING_GROOVE_Z_BOT:.1f}-{SPRING_GROOVE_Z_TOP:.1f}mm</text>
+    <text x="200" y="663">Groove: {SPRING_GROOVE_W}×{SPRING_GROOVE_DEPTH}mm</text>
+    <text x="320" y="663">Protrusion: {SPRING_PROTRUSION:.2f}mm</text>
+    <text x="420" y="663">Mat. above: {MATERIAL_ABOVE_GROOVE:.1f}mm</text>
+    <text x="540" y="663">Hub pocket: D{HUB_POCKET_D}×{HUB_POCKET_H}mm</text>
+    <text x="680" y="663">Bolts: {BOLT_COUNT}×M5 PCD{BOLT_PCD:.0f}</text>
+
+    <text x="50"  y="681" font-style="italic" fill="#666">
+      Test wedge widths: {" | ".join(str(w) for w in WEDGE_SLOT_WIDTHS)}mm
+    </text>
+    <text x="420" y="681" font-style="italic" fill="#666">
+      Spring: FlyDesigns 0.110" wire · PETG material · Cam ring ID=115mm (0.35mm/side clearance)
+    </text>
+  </g>
+</svg>
+'''
+
+with open(PATH_SVG, 'w', encoding='utf-8') as f:
+    f.write(svg)
+print(f"  [OK] {PATH_SVG}")
+
+# =============================================================================
+# FINAL SUMMARY
+# =============================================================================
+print()
+print("=" * 70)
+print("CYLINDER V2.0 — COMPLETE")
+print("=" * 70)
+print()
+print("WHY THIS LOOKS LIKE A REAL CSM CYLINDER:")
+print("  ✓ OD = 114.3mm  (Legare 4.5\" standard – all accessories fit)")
+print("  ✓ Simple hollow tube – no outer flange, no extra shells")
+print("  ✓ 72 vertical slots  – same count and pitch as Legare/AutoKnitter")
+print("  ✓ Spring groove near top (Z=62) – per Erlbacher documentation")
+print("  ✓ Wall thickness 13.15mm – adequate PETG structural strength")
+print("  ✓ Cam ring clearance: OD 114.3 vs cam ID 115 = 0.35mm/side")
+print()
+print("Z-AXIS LAYOUT:")
+print(f"  Z=75.0  TOP (chamfer {EDGE_CHAMFER}mm)")
+print(f"  Z=63.6  Spring groove TOP")
+print(f"  Z=62.0  Spring center (FlyDesigns 0.110\")")
+print(f"  Z=60.4  Spring groove BOTTOM  (depth {SPRING_GROOVE_DEPTH}mm)")
+print(f"  Z=23.0  Slot bottom  →  Z=75 = 52mm slot zone")
+print(f"  Z=23.0  Butt cavity TOP  (cam ring engagement)")
+print(f"  Z=19.0  Butt cavity BOTTOM")
+print(f"  Z= 3.0  Hub pocket BOTTOM  (D{HUB_POCKET_D}×3mm)")
+print(f"  Z= 0.0  BOTTOM")
+print()
+print("WHAT TO PRINT FIRST:  CSM_V3_Cylinder_V2_0_TESTWEDGE.stl")
+print("  30-45 min · ~10g PETG · same settings as full cylinder")
+print("  Test fit with 12G FlyDesigns needle in each slot:")
+for i, w in enumerate(WEDGE_SLOT_WIDTHS):
+    tag = " ← TARGET" if w == 1.22 else ""
+    print(f"    Slot {i+1}: {w}mm{tag}")
+print("  Choose the width that slides smoothly without rattle.")
+print()
+print("PRINT SETTINGS (full cylinder):")
+print("  Material:      PETG (DRY filament)")
+print("  Layer height:  0.16mm  (smoother slots)")
+print("  Walls:         5")
+print("  Top/bottom:    6 layers")
+print("  Infill:        40% Gyroid")
+print("  Orientation:   Upright (axis = Z)  – no supports needed")
+print("  Wall speed:    25 mm/s  (slot quality)")
+print("  Infill speed:  80 mm/s")
+print("  Time:          4-6 hours  (~120g PETG)")
+print()
+print("FILES GENERATED:")
+print(f"  STL FULL:    {PATH_STL_FULL}")
+print(f"  STL WEDGE:   {PATH_STL_WEDGE}")
+if png_ok:
+    print(f"  PNGs (4):    {os.path.dirname(PATH_PNG_FULL_ISO)}")
+else:
+    print(f"  PNGs:        not generated (run from FreeCAD GUI)")
+print(f"  SVG:         {PATH_SVG}")
+print()
+print("STATUS: V2.0 READY — print test wedge first")
+print("=" * 70)

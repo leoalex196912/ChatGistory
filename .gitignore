@@ -1,0 +1,20 @@
+# Claude Code local state (machine-specific, do not commit)
+3D-Project/.claude/
+.claude/
+
+# MCP config (contains machine-specific Windows paths)
+3D-Project/.mcp.json
+.mcp.json
+
+# FreeCAD backup files
+*.FCStd1
+*.FCBak
+
+# Python cache
+__pycache__/
+*.pyc
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

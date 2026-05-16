@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="700">
+
+<text x="450" y="30"
+font-size="20"
+font-family="Arial"
+text-anchor="middle">
+
+CSM V3 Cylinder V1.2.0 Open Trick
+
+</text>
+
+<text x="40" y="80" font-size="14">
+Material: PETG
+</text>
+
+<text x="40" y="105" font-size="14">
+Slots: 64
+</text>
+
+<text x="40" y="130" font-size="14">
+OD: 120.0 mm
+</text>
+
+<text x="40" y="155" font-size="14">
+ID: 100.0 mm
+</text>
+
+<text x="40" y="180" font-size="14">
+Fin Thickness: 1.6 mm
+</text>
+
+<text x="40" y="205" font-size="14">
+Slot Width: 1.22 mm
+</text>
+
+<text x="40" y="230" font-size="14">
+Root Fillet: 1.0 mm
+</text>
+
+<text x="40" y="255" font-size="14">
+Spring Groove Z: 62.0 mm
+</text>
+
+<text x="40" y="280" font-size="14">
+Spring Groove Depth: 0.7 mm
+</text>
+
+<text x="40" y="305" font-size="14">
+Hall Sensor Enabled: True
+</text>
+
+<text x="40" y="330" font-size="14">
+Magnet Diameter: 5.0 mm
+</text>
+
+<text x="40" y="355" font-size="14">
+Magnet Depth: 3.0 mm
+</text>
+
+<text x="40" y="405"
+font-size="15"
+font-weight="bold">
+
+Open-Trick Cage Architecture
+
+</text>
+
+<text x="60" y="430" font-size="12">
+- exposed needle tricks
+</text>
+
+<text x="60" y="450" font-size="12">
+- reinforced fin roots
+</text>
+
+<text x="60" y="470" font-size="12">
+- automation-ready structure
+</text>
+
+<text x="60" y="490" font-size="12">
+- Hall sensor indexing
+</text>
+
+<text x="60" y="510" font-size="12">
+- PETG/PPA-CF configurable
+</text>
+
+</svg>

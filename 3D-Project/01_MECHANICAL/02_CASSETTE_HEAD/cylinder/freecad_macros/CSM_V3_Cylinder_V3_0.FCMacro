@@ -34,15 +34,16 @@ import FreeCAD, Part, math, os
 # =============================================================================
 BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
 PATH_STL = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_FULL.stl")
-PATH_STL_WEDGE = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_TESTWEDGE.stl")
+PATH_STL_WEDGE_A = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_WEDGE_A_WIDTH.stl")
+PATH_STL_WEDGE_B = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl")
 PATH_PNG_ISO = os.path.join(BASE, "images", "Cylinder_V3_0_ISO.png")
 PATH_PNG_TOP = os.path.join(BASE, "images", "Cylinder_V3_0_TOP.png")
 PATH_PNG_FRONT = os.path.join(BASE, "images", "Cylinder_V3_0_FRONT.png")
 PATH_PNG_WEDGE = os.path.join(BASE, "images", "Cylinder_V3_0_WEDGE_ISO.png")
 PATH_SVG = os.path.join(BASE, "blueprints", "Cylinder_V3_0_Blueprint.svg")
 
-for p in [PATH_STL, PATH_STL_WEDGE, PATH_PNG_ISO, PATH_PNG_TOP,
-          PATH_PNG_FRONT, PATH_PNG_WEDGE, PATH_SVG]:
+for p in [PATH_STL, PATH_STL_WEDGE_A, PATH_STL_WEDGE_B,
+          PATH_PNG_ISO, PATH_PNG_TOP, PATH_PNG_FRONT, PATH_PNG_WEDGE, PATH_SVG]:
     os.makedirs(os.path.dirname(p), exist_ok=True)
 
 # =============================================================================
@@ -73,14 +74,11 @@ TAKEDOWN_OPEN_D = 50.0    # central opening D through the bottom ring
 # wider at top for yarn/hook/latch clearance.
 SLOT_COUNT   = 72
 SLOT_WIDTH   = 1.22    # circumferential  (1.15mm needle + 0.07mm clearance)
-SLOT_DEPTH   = 3.40    # radial inward.  Tuned for DYNAMIC clearance, not just
-                       # the 1.80mm static stem cross-section.
-                       # Reasoning: real needles tilt + flex under cam lift,
-                       # and contact points are concentrated at upper guide
-                       # and lower butt -- not continuously along the stem.
-                       # 1.60mm of clearance beyond the stem covers tilt
-                       # rebound + PETG shrink + sanding. Wedge slots 4-6
-                       # (2.8/3.2/3.6mm) will validate this empirically.
+SLOT_DEPTH   = 3.00    # radial inward.  Calibrated against the reference
+                       # "Cylinder 72 Slots" STL (verified slot depth 2.55mm).
+                       # 3.00mm gives 0.45mm margin over the reference while
+                       # still being conservative enough for PETG. The wedge
+                       # depth sweep (2.5-3.6mm) will give empirical data.
 SLOT_ROOT_FILLET = 0.5 # mm  fillet radius at slot-bottom internal corners.
                        # CRITICAL for PETG fatigue life: sharp 90 deg internal
                        # corners along layer lines are classic crack starters
@@ -128,18 +126,14 @@ BORE_TOP_CHAMFER  = 1.0   # mm  bore inner top edge chamfer (loop transfer)
 # Depth 2.2mm leaves spring protruding ~0.59mm past OD -- enough to engage
 # needle stems firmly but not enough to snag yarn carriers.
 SPRING_GROOVE_W     = 4.0    # axial width   (2.79mm wire + 1.21mm install slack)
-SPRING_GROOVE_DEPTH = 1.7    # radial depth -- COUPLED to SLOT_DEPTH.
+SPRING_GROOVE_DEPTH = 1.3    # radial depth -- COUPLED to SLOT_DEPTH=3.0mm.
                               # Geometric constraint: groove >= slot - 1.80
-                              # (so spring inner face can reach needle outer
-                              # face for retention).
-                              # With slot=3.4mm:
-                              #   needle outer face at radius 55.55mm
-                              #   spring inner face at radius 55.45mm
+                              # With slot=3.0mm:
+                              #   needle outer face at radius 55.95mm
+                              #   spring inner face at radius 55.85mm
                               #   geometric preload = 0.10mm (creep margin)
-                              # Spring protrudes 2.79-1.70 = 1.09mm past OD
+                              # Spring protrudes 2.79-1.30 = 1.49mm past OD
                               # (clearly visible coil, like Erlbacher).
-                              # Can't go shallower without losing spring reach
-                              # to the needle (would need shallower slot too).
 SPRING_GROOVE_Z_CTR = 55.0   # mm from bottom -- matches visible band in photo
 SPRING_GROOVE_Z_BOT = SPRING_GROOVE_Z_CTR - SPRING_GROOVE_W / 2.0   # 53.0
 SPRING_GROOVE_Z_TOP = SPRING_GROOVE_Z_CTR + SPRING_GROOVE_W / 2.0   # 57.0
@@ -178,30 +172,47 @@ MAGNET_POCKET_H  = 2.2   # mm  pocket depth -- magnet is 2.0mm thick;
 MAGNET_PCD       = 95.0  # mm  OUTSIDE bolt circle so it's visually distinct
                           # from the 4 insert pockets. Sits in ring material
                           # between bolt PCD 70 and slot bottoms at radius
-                          # 53.75mm (slot floor with SLOT_DEPTH=3.4mm).
+                          # 54.15mm (slot floor with SLOT_DEPTH=3.0mm).
                           # Magnet pocket center at radius 47.5mm -- 12.5mm
                           # inside bolt center, 6.25mm clear of slot bottom.
 MAGNET_ANGLE_DEG = 0.0   # mm  arbitrary angular position (one pulse/rev)
 
-# Test wedge: 30 deg pie slice with 6 slots, varying BOTH width AND depth.
-# Print this BEFORE the full cylinder. The 6 slots let you isolate which
-# variable matters more for your printer + filament: lateral fit (width)
-# or radial fit / spring engagement (depth).
+# TWO TEST WEDGES with isolated variables (proper experimental design).
+# Print BOTH before the full cylinder, ~30-45 min + ~10g PETG each.
 #
-# Slots 1-3:  width sweep at target depth -> finds the right WIDTH
-# Slots 4-6:  depth sweep at target width -> finds the right DEPTH
+# WEDGE A -- WIDTH SWEEP at fixed depth 3.0mm:
+#   Finds the right slot WIDTH for your printer + filament.
+#   Hold depth constant so you can isolate the width effect.
 #
-# After printing, push a needle through each slot and check for: smooth
-# slide, no rattle, spring contact firm enough to retain.
+# WEDGE B -- DEPTH SWEEP at fixed width 1.22mm:
+#   Finds the right slot DEPTH (includes the reference cylinder's 2.55mm
+#   depth as the shallowest test).
+#   Hold width constant to isolate depth effect on fin flex / needle fit.
+#
+# After printing, push a 12g FlyDesigns needle through each slot:
+#   - WEDGE A: pick the slot that slides smoothly with no lateral rattle
+#   - WEDGE B: pick the slot where the fin doesn't flex under butt-side
+#              pressure but the needle still slides freely
 WEDGE_ANGLE_DEG = 30.0
-WEDGE_SLOTS = [
+
+WEDGE_A_SLOTS = [   # WIDTH sweep at fixed depth 3.0
     # (slot_width_mm, slot_depth_mm)
-    (1.20, 3.0),   # narrow width, target depth
-    (1.22, 3.0),   # target width, target depth  <-- baseline
-    (1.24, 3.0),   # wider width, target depth
-    (1.22, 2.8),   # target width, shallower
-    (1.22, 3.2),   # target width, deeper
-    (1.22, 3.6),   # target width, even deeper (depth-flex stress test)
+    (1.18, 3.0),
+    (1.20, 3.0),
+    (1.22, 3.0),    # <-- baseline (matches SLOT_WIDTH)
+    (1.24, 3.0),
+    (1.26, 3.0),
+    (1.28, 3.0),
+]
+
+WEDGE_B_SLOTS = [   # DEPTH sweep at fixed width 1.22
+    # (slot_width_mm, slot_depth_mm)
+    (1.22, 2.5),    # matches reference STL depth (2.55mm)
+    (1.22, 2.8),
+    (1.22, 3.0),    # <-- baseline (matches SLOT_DEPTH)
+    (1.22, 3.2),
+    (1.22, 3.4),
+    (1.22, 3.6),
 ]
 
 # Derived
@@ -331,16 +342,24 @@ def build_slot_cutter(body_w, angle_deg, slot_d=None):
     """
     d = SLOT_DEPTH if slot_d is None else slot_d
     sx_inner_local = CYL_OUTER_R - d
+    # SLOT STARTS AT TOP OF BOTTOM RING (Z=BOTTOM_THICK), NOT AT Z=0.
+    # This keeps the bottom ring as a SOLID continuous annulus -- no slot
+    # interruptions through the mounting zone. Matches the reference cylinder
+    # design philosophy and strengthens the print at the bolt-load region.
+    # Needles now insert from the TOP (through the wider top zone, then slide
+    # down) instead of from the bottom.
+    z_slot_bot  = BOTTOM_THICK              # slot floor sits on top of ring
     z_body_top  = CYL_HEIGHT - TOP_ZONE_HEIGHT - TOP_TRANSITION_H
     z_trans_top = CYL_HEIGHT - TOP_ZONE_HEIGHT
 
-    # ---- (1) Body zone: narrow slot, from bottom to z_body_top ----
+    # ---- (1) Body zone: narrow slot, from z_slot_bot to z_body_top ----
+    body_height = z_body_top - z_slot_bot
     body = Part.makeBox(
         sx_outer - sx_inner_local,
         body_w,
-        z_body_top + 0.2,
+        body_height + 0.1,
     )
-    body.translate(FreeCAD.Vector(sx_inner_local, -body_w / 2.0, -0.2))
+    body.translate(FreeCAD.Vector(sx_inner_local, -body_w / 2.0, z_slot_bot))
 
     # Fillet the 2 vertical edges on the inner-most face (slot bottom corners)
     if SLOT_ROOT_FILLET > 0:
@@ -508,115 +527,108 @@ vol_mm3 = body.Volume
 print(f"\nVolume: {vol_mm3:.0f} mm^3  (~{vol_mm3 * 1.27 / 1000:.0f}g PETG)")
 
 # =============================================================================
-# BUILD TEST WEDGE  (30 deg pie slice, 6 slots at 6 different widths)
+# BUILD TEST WEDGES (two 30 deg pie slices with isolated variables)
 # =============================================================================
-print()
-print("[WEDGE] Building 30 deg test wedge with slot widths:")
-for i, (sw, sd) in enumerate(WEDGE_SLOTS):
-    print(f"        Slot {i+1}: width={sw}mm  depth={sd}mm")
+def build_wedge(wedge_slots, x_offset, color, label):
+    """Build a 30 deg test wedge with the given list of (width, depth) slots.
+       Includes test insert + magnet pockets, spring groove, top chamfers."""
+    print()
+    print(f"[{label}] Building 30 deg test wedge:")
+    for i, (sw, sd) in enumerate(wedge_slots):
+        print(f"        Slot {i+1}: width={sw}mm  depth={sd}mm")
 
-# Hollow tube
-w_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
-# Wedge gets the same stepped bore: D50 through bottom ring + D88 main bore
-w_inner_up = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT - BOTTOM_THICK + 2.0)
-w_inner_up.translate(FreeCAD.Vector(0, 0, BOTTOM_THICK))
-w_inner_lo = Part.makeCylinder(TAKEDOWN_OPEN_D / 2.0, BOTTOM_THICK + 2.0)
-w_inner_lo.translate(FreeCAD.Vector(0, 0, -1.0))
-wedge_body = w_outer.cut(w_inner_up).cut(w_inner_lo)
+    w_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
+    w_inner_up = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT - BOTTOM_THICK + 2.0)
+    w_inner_up.translate(FreeCAD.Vector(0, 0, BOTTOM_THICK))
+    w_inner_lo = Part.makeCylinder(TAKEDOWN_OPEN_D / 2.0, BOTTOM_THICK + 2.0)
+    w_inner_lo.translate(FreeCAD.Vector(0, 0, -1.0))
+    wb = w_outer.cut(w_inner_up).cut(w_inner_lo)
 
-# Keep only the 30 deg sector
-sector = Part.makeCylinder(
-    CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
-    FreeCAD.Vector(0, 0, -1.0),
-    FreeCAD.Vector(0, 0, 1.0),
-    WEDGE_ANGLE_DEG,
-)
-wedge_body = wedge_body.common(sector)
-
-# Cut 6 slots at half-pitch offsets within the wedge (2.5, 7.5, 12.5, 17.5, 22.5, 27.5 deg)
-# Each uses the same flared top profile as the main cylinder slots.
-wedge_cutters = []
-for i, (sw, sd) in enumerate(WEDGE_SLOTS):
-    angle = (i + 0.5) * SLOT_PITCH_DEG
-    wedge_cutters.append(build_slot_cutter(sw, angle, slot_d=sd))
-
-wedge_master = tree_fuse(wedge_cutters)
-wedge_body = wedge_body.cut(wedge_master)
-
-# Test insert pocket at 10 deg + test magnet pocket at 20 deg in the wedge.
-# Both at PCD 70mm so the wedge mirrors the full-cylinder geometry exactly.
-# Lets you check both features print cleanly before the full print.
-print(f"        Adding test insert pocket at 10 deg + magnet pocket at 20 deg")
-# Insert pocket
-test_ang_i = math.radians(10.0)
-tb_ix = (BOLT_PCD / 2.0) * math.cos(test_ang_i)
-tb_iy = (BOLT_PCD / 2.0) * math.sin(test_ang_i)
-test_pocket_i = Part.makeCylinder(INSERT_HOLE_D / 2.0, INSERT_HOLE_H + 0.1)
-test_pocket_i.translate(FreeCAD.Vector(tb_ix, tb_iy, -0.05))
-wedge_body = wedge_body.cut(test_pocket_i)
-# Magnet pocket at MAGNET_PCD=95 (outer ring material), angle 20 deg
-# Within the 30 deg wedge sector. Verifies the pocket prints cleanly
-# at the outer position (different PCD from insert pocket).
-test_ang_m = math.radians(20.0)
-tb_mx = (MAGNET_PCD / 2.0) * math.cos(test_ang_m)
-tb_my = (MAGNET_PCD / 2.0) * math.sin(test_ang_m)
-test_pocket_m = Part.makeCylinder(MAGNET_POCKET_D / 2.0, MAGNET_POCKET_H + 0.1)
-test_pocket_m.translate(FreeCAD.Vector(tb_mx, tb_my, -0.05))
-wedge_body = wedge_body.cut(test_pocket_m)
-
-# Spring groove restricted to wedge sector
-wg_outer = Part.makeCylinder(
-    CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
-    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT),
-)
-wg_inner = Part.makeCylinder(
-    CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
-    FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05),
-)
-wg_cutter = wg_outer.cut(wg_inner)
-wg_sector = Part.makeCylinder(
-    CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
-    FreeCAD.Vector(0, 0, -1.0),
-    FreeCAD.Vector(0, 0, 1.0),
-    WEDGE_ANGLE_DEG,
-)
-wedge_body = wedge_body.cut(wg_cutter.common(wg_sector))
-
-# Apply the same OD top + bore top radial chamfers as the full cylinder.
-# (Cones are symmetric around the axis; they only affect the 30 deg wedge
-# material that overlaps with them.)
-try:
-    w_od_outer = Part.makeCylinder(CYL_OUTER_R + 2.0, OD_TOP_CHAMFER + 0.1)
-    w_od_outer.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - OD_TOP_CHAMFER))
-    w_od_inner = Part.makeCone(
-        CYL_OUTER_R,
-        CYL_OUTER_R - OD_TOP_CHAMFER,
-        OD_TOP_CHAMFER + 0.2,
+    # Keep only 30 deg sector
+    sector = Part.makeCylinder(
+        CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
+        FreeCAD.Vector(0, 0, -1.0),
+        FreeCAD.Vector(0, 0, 1.0),
+        WEDGE_ANGLE_DEG,
     )
-    w_od_inner.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - OD_TOP_CHAMFER - 0.05))
-    wedge_body = wedge_body.cut(w_od_outer.cut(w_od_inner))
-    w_bore_cone = Part.makeCone(
-        CYL_INNER_R,
-        CYL_INNER_R + BORE_TOP_CHAMFER,
-        BORE_TOP_CHAMFER + 0.1,
+    wb = wb.common(sector)
+
+    # Slot cuts
+    wedge_cutters = []
+    for i, (sw, sd) in enumerate(wedge_slots):
+        angle = (i + 0.5) * SLOT_PITCH_DEG
+        wedge_cutters.append(build_slot_cutter(sw, angle, slot_d=sd))
+    wb = wb.cut(tree_fuse(wedge_cutters))
+
+    # Insert pocket test (10 deg) + magnet pocket test (20 deg)
+    test_ang_i = math.radians(10.0)
+    tb_ix = (BOLT_PCD / 2.0) * math.cos(test_ang_i)
+    tb_iy = (BOLT_PCD / 2.0) * math.sin(test_ang_i)
+    tp_i = Part.makeCylinder(INSERT_HOLE_D / 2.0, INSERT_HOLE_H + 0.1)
+    tp_i.translate(FreeCAD.Vector(tb_ix, tb_iy, -0.05))
+    wb = wb.cut(tp_i)
+
+    test_ang_m = math.radians(20.0)
+    tb_mx = (MAGNET_PCD / 2.0) * math.cos(test_ang_m)
+    tb_my = (MAGNET_PCD / 2.0) * math.sin(test_ang_m)
+    tp_m = Part.makeCylinder(MAGNET_POCKET_D / 2.0, MAGNET_POCKET_H + 0.1)
+    tp_m.translate(FreeCAD.Vector(tb_mx, tb_my, -0.05))
+    wb = wb.cut(tp_m)
+
+    # Spring groove restricted to wedge sector
+    wg_outer = Part.makeCylinder(
+        CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+        FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT),
     )
-    w_bore_cone.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - BORE_TOP_CHAMFER))
-    wedge_body = wedge_body.cut(w_bore_cone)
-    print(f"        OD + bore top chamfers applied to wedge")
-except Exception as ex:
-    print(f"        Wedge top chamfers skipped: {ex}")
+    wg_inner = Part.makeCylinder(
+        CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+        FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05),
+    )
+    wg_cutter = wg_outer.cut(wg_inner)
+    wg_sector = Part.makeCylinder(
+        CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
+        FreeCAD.Vector(0, 0, -1.0),
+        FreeCAD.Vector(0, 0, 1.0),
+        WEDGE_ANGLE_DEG,
+    )
+    wb = wb.cut(wg_cutter.common(wg_sector))
 
-# Offset to display side-by-side in FreeCAD
-wedge_body.translate(FreeCAD.Vector(150.0, 0, 0))
+    # OD top + bore top chamfers
+    try:
+        w_od_outer = Part.makeCylinder(CYL_OUTER_R + 2.0, OD_TOP_CHAMFER + 0.1)
+        w_od_outer.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - OD_TOP_CHAMFER))
+        w_od_inner = Part.makeCone(
+            CYL_OUTER_R, CYL_OUTER_R - OD_TOP_CHAMFER, OD_TOP_CHAMFER + 0.2,
+        )
+        w_od_inner.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - OD_TOP_CHAMFER - 0.05))
+        wb = wb.cut(w_od_outer.cut(w_od_inner))
+        w_bore_cone = Part.makeCone(
+            CYL_INNER_R, CYL_INNER_R + BORE_TOP_CHAMFER, BORE_TOP_CHAMFER + 0.1,
+        )
+        w_bore_cone.translate(FreeCAD.Vector(0, 0, CYL_HEIGHT - BORE_TOP_CHAMFER))
+        wb = wb.cut(w_bore_cone)
+    except Exception as ex:
+        print(f"        Top chamfers skipped: {ex}")
 
-obj_wedge = doc.addObject("Part::Feature", "Cylinder_V3_0_TESTWEDGE")
-obj_wedge.Shape = wedge_body
-obj_wedge.ViewObject.ShapeColor = (0.85, 0.55, 0.25)   # orange to distinguish
+    # Offset for side-by-side display
+    wb.translate(FreeCAD.Vector(x_offset, 0, 0))
+    return wb
+
+wedge_A = build_wedge(WEDGE_A_SLOTS, x_offset=150.0, color=(0.85, 0.55, 0.25), label="WEDGE A (width)")
+wedge_B = build_wedge(WEDGE_B_SLOTS, x_offset=250.0, color=(0.55, 0.85, 0.45), label="WEDGE B (depth)")
+
+obj_wedge_A = doc.addObject("Part::Feature", "Cylinder_V3_0_WEDGE_A_WIDTH")
+obj_wedge_A.Shape = wedge_A
+obj_wedge_A.ViewObject.ShapeColor = (0.85, 0.55, 0.25)
+
+obj_wedge_B = doc.addObject("Part::Feature", "Cylinder_V3_0_WEDGE_B_DEPTH")
+obj_wedge_B.Shape = wedge_B
+obj_wedge_B.ViewObject.ShapeColor = (0.55, 0.85, 0.45)
 doc.recompute()
 
-w_vol = wedge_body.Volume
-print(f"        Wedge volume: {w_vol:.0f} mm^3  (~{w_vol * 1.27 / 1000:.0f}g PETG)")
-print(f"        Print time:   ~30-45 min")
+print(f"        Wedge A volume: {wedge_A.Volume:.0f} mm^3  (~{wedge_A.Volume * 1.27 / 1000:.0f}g PETG)")
+print(f"        Wedge B volume: {wedge_B.Volume:.0f} mm^3  (~{wedge_B.Volume * 1.27 / 1000:.0f}g PETG)")
+print(f"        Print time each: ~30-45 min")
 
 # =============================================================================
 # EXPORT
@@ -631,17 +643,21 @@ try:
 except Exception as ex:
     print(f"  STL error: {ex}")
 
-print("\nExporting STL (test wedge -- translated back to origin)...")
-try:
-    wedge_export = wedge_body.copy()
-    wedge_export.translate(FreeCAD.Vector(-150.0, 0, 0))   # back to origin for slicer
-    tmp = doc.addObject("Part::Feature", "_tmp_wedge")
-    tmp.Shape = wedge_export
-    Part.export([tmp], PATH_STL_WEDGE)
-    doc.removeObject("_tmp_wedge")
-    print(f"  [OK] {PATH_STL_WEDGE}")
-except Exception as ex:
-    print(f"  Wedge STL error: {ex}")
+print("\nExporting STL (test wedges -- both translated back to origin)...")
+for wb_obj, x_off, path, name in [
+    (wedge_A, 150.0, PATH_STL_WEDGE_A, "_tmp_wedge_A"),
+    (wedge_B, 250.0, PATH_STL_WEDGE_B, "_tmp_wedge_B"),
+]:
+    try:
+        export_shape = wb_obj.copy()
+        export_shape.translate(FreeCAD.Vector(-x_off, 0, 0))
+        tmp = doc.addObject("Part::Feature", name)
+        tmp.Shape = export_shape
+        Part.export([tmp], path)
+        doc.removeObject(name)
+        print(f"  [OK] {path}")
+    except Exception as ex:
+        print(f"  Wedge STL error: {ex}")
 
 print("\nExporting PNG renders...")
 png_ok = False
@@ -653,7 +669,7 @@ try:
         W, H, BG = 1920, 1080, "White"
         # Full cylinder views
         obj.ViewObject.Visibility = True
-        obj_wedge.ViewObject.Visibility = False
+        obj_wedge_A.ViewObject.Visibility = False
         view.viewIsometric(); view.fitAll()
         view.saveImage(PATH_PNG_ISO, W, H, BG); print(f"  [OK] {PATH_PNG_ISO}")
         view.viewTop(); view.fitAll()
@@ -663,13 +679,13 @@ try:
 
         # Test wedge view
         obj.ViewObject.Visibility = False
-        obj_wedge.ViewObject.Visibility = True
+        obj_wedge_A.ViewObject.Visibility = True
         view.viewIsometric(); view.fitAll()
         view.saveImage(PATH_PNG_WEDGE, W, H, BG); print(f"  [OK] {PATH_PNG_WEDGE}")
 
         # Restore both visible
         obj.ViewObject.Visibility = True
-        obj_wedge.ViewObject.Visibility = True
+        obj_wedge_A.ViewObject.Visibility = True
         view.viewIsometric(); view.fitAll()
         png_ok = True
     else:
@@ -818,30 +834,35 @@ print("  Orientation:   UPRIGHT (Z axis vertical) -- NO supports")
 print("  Wall speed:    25 mm/s")
 print("  Time:          ~4-6 hours / ~120g PETG")
 print()
-print("PRINT ORDER:")
-print("  1. PRINT TEST WEDGE FIRST  (CSM_V3_Cylinder_V3_0_TESTWEDGE.stl)")
-print("     ~30-45 min, ~10g PETG, same settings as full cylinder")
-print("     Insert a 12g FlyDesigns needle in each of the 6 slots:")
-for i, (w, d) in enumerate(WEDGE_SLOTS):
-    is_base = (abs(w - SLOT_WIDTH) < 0.001 and abs(d - SLOT_DEPTH) < 0.001)
-    tag = "  <-- baseline" if is_base else ""
-    print(f"        Slot {i+1}:  width={w}mm  depth={d}mm{tag}")
+print("PRINT ORDER (proper experimental design -- print BOTH wedges first):")
 print()
-print("     Tests TWO variables (width grips needle, depth controls fin flex):")
-print("       Slots 1-3: width sweep at depth 3.0mm -> pick best WIDTH")
-print("       Slots 4-6: depth sweep at width 1.22mm -> pick best DEPTH")
+print("  WEDGE A (WIDTH sweep, depth fixed at 3.0mm):")
+print("    File: CSM_V3_Cylinder_V3_0_WEDGE_A_WIDTH.stl")
+for i, (w, d) in enumerate(WEDGE_A_SLOTS):
+    tag = "  <-- baseline" if abs(w - SLOT_WIDTH) < 0.001 else ""
+    print(f"      Slot {i+1}:  W={w}mm  D={d}mm{tag}")
 print()
-print("     Mechanical checks per slot:")
-print("       - Slides smoothly with no rattle (good width)")
-print("       - Cannot be wiggled side-to-side at the body (good width)")
-print("       - Apply light lateral force on butt -- fin should not flex")
-print("         visibly (good depth/structure)")
-print("       - Returns under spring tension without sticking")
+print("  WEDGE B (DEPTH sweep, width fixed at 1.22mm):")
+print("    File: CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl")
+for i, (w, d) in enumerate(WEDGE_B_SLOTS):
+    tag = "  <-- baseline" if abs(d - SLOT_DEPTH) < 0.001 else ""
+    if abs(d - 2.5) < 0.001:
+        tag += "  <-- reference STL depth"
+    print(f"      Slot {i+1}:  W={w}mm  D={d}mm{tag}")
+print()
+print("  HOW TO TEST EACH WEDGE:")
+print("    1. Insert a 12g FlyDesigns needle into each of the 6 slots")
+print("    2. Slide top-to-bottom; pick the slot where the needle:")
+print("       - Slides smoothly with no rattle")
+print("       - Cannot wiggle side-to-side")
+print("       - Apply lateral force on butt -- fin should not flex visibly")
+print("    3. WEDGE A tells you the right WIDTH (best lateral grip)")
+print("    4. WEDGE B tells you the right DEPTH (best fin stiffness)")
 print()
 print("     Also check: insert pocket (M5 brass insert fits cleanly?)")
 print("                 magnet pocket (D6 magnet press-fit?)")
 print()
-print("  2. Update SLOT_WIDTH and SLOT_DEPTH in macro, re-run, print full")
+print("  Then update SLOT_WIDTH + SLOT_DEPTH in macro, re-run, print full")
 print()
 print("AFTER FULL PRINT:")
 print("  1. Sand slot walls 400 -> 1000 grit")

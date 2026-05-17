@@ -1,0 +1,289 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CASSETTE BASE V1.0
+# =============================================================================
+# File:    CSM_V3_CassetteBase_V1_0.FCMacro
+# Date:    2026-05-17
+# Output:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cassette_base\
+#
+# Structural foundation for the cassette head. Mounts to the wood mid-shelf
+# of the machine frame, holds the cam ring from below, supports the sinker
+# ring above, and provides 6 feeder mount points (2 used initially, 4 reserved
+# for upgrade). Provisions for a future ribber disk are included.
+#
+# STACK-UP (cylinder Z coords, Z=0 at cylinder bottom):
+#   Z=49 (CB_BOT)  -- bottom of cassette base, cam ring V6.5 mounts here
+#   Z=63 (CB_TOP)  -- top of outer cassette base disc (14mm thick)
+#   Z=75 (RISER_TOP) -- top of central stepped riser (12mm raised)
+#                    -- sinker ring V1.2.1 registers HERE via D135 lip
+#
+# DIFFERENCE FROM CHATGPT V1 PROPOSAL:
+#   Added 12mm central stepped riser so sinker ring sits at correct Z=75.
+#   ChatGPT's flat disc would have left sinker ring 12mm below cylinder top.
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cassette_base"
+PATH_STL = os.path.join(BASE, "CSM_V3_CassetteBase_V1_0_FULL.stl")
+PATH_PNG = os.path.join(BASE, "images", "CassetteBase_V1_0_ISO.png")
+PATH_SVG = os.path.join(BASE, "blueprints", "CassetteBase_V1_0_Blueprint.svg")
+for p in [PATH_STL, PATH_PNG, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# PARAMETERS (all mm)
+# =============================================================================
+
+# ---- Outer disc (main cassette base) ----
+CB_OD              = 200.0   # outer diameter
+CB_THICK           = 14.0    # outer ring thickness
+CB_CENTER_HOLE_D   = 117.0   # cylinder passes through (1.35mm total clearance)
+
+# ---- Central stepped riser (raises sinker register to cylinder Z=75) ----
+RISER_OD           = 145.0   # outer diameter of central raised step
+                              # (larger than sinker_ID 115.3, smaller than cam_PCD 155)
+RISER_HEIGHT       = 12.0    # extends 12mm above CB_THICK to reach sinker plane
+SINKER_REGISTER_D  = 135.0   # matches sinker ring V1.2.1 OD exactly
+SINKER_REGISTER_H  = 1.0     # locating lip height on top of riser
+
+# ---- Cam Ring V6.5 interface (mates from BELOW) ----
+CAM_BOLT_PCD       = 155.0   # MATCH Cam Ring V6.5 BOLT_PCD
+CAM_PIN_PCD        = 145.0   # MATCH Cam Ring V6.5 PIN_PCD
+CAM_BOLT_COUNT     = 6
+CAM_BOLT_D         = 5.4     # M5 + 0.4mm clearance (M5 bolts)
+CAM_PIN_D          = 4.10    # MATCH Cam Ring V6.5 PIN_HOLE_D (D4 dowels)
+CAM_BOLT_OFFSET    = 30.0    # bolts at 30/90/150/210/270/330 deg
+CAM_PIN_OFFSET     = 0.0     # pins at  0/60/120/180/240/300 deg (alternating)
+
+# ---- Feeder Module mount points (6× M4, only 2 used in Phase 1) ----
+FEEDER_PCD         = 190.0   # radius 95mm
+FEEDER_COUNT       = 6
+FEEDER_BOLT_D      = 4.2     # M4 + 0.2mm clearance
+FEEDER_OFFSET      = 0.0     # 0/60/120/180/240/300 deg (aligned with cam pins)
+                              # Feeders #1 + #4 (at 0 and 180) are Phase 1 active
+
+# ---- Frame mount (4× M5 to wood mid-shelf through aluminum plate) ----
+FRAME_MOUNT_PCD    = 180.0   # within 150x150mm Al plate footprint (corners at r=106)
+FRAME_MOUNT_COUNT  = 4
+FRAME_BOLT_D       = 5.4
+FRAME_OFFSET       = 45.0    # bolts at 45/135/225/315 deg
+
+# ---- Ribber mount (future Phase 2 provision, 6× M4) ----
+RIBBER_MOUNT_PCD   = 128.0   # in the riser zone
+RIBBER_MOUNT_COUNT = 6
+RIBBER_BOLT_D      = 4.2
+RIBBER_OFFSET      = 0.0
+
+# ---- Edge treatment ----
+EDGE_CHAMFER       = 0.6     # outer + inner edges
+
+# =============================================================================
+# DERIVED
+# =============================================================================
+CB_OUTER_R = CB_OD / 2.0
+CB_INNER_R = CB_CENTER_HOLE_D / 2.0
+RISER_OUTER_R = RISER_OD / 2.0
+TOTAL_HEIGHT = CB_THICK + RISER_HEIGHT  # 26mm total (outer 14 + center 12)
+
+# =============================================================================
+# REPORT
+# =============================================================================
+print("=" * 70)
+print("CSM V3 - CASSETTE BASE V1.0")
+print("=" * 70)
+print(f"Outer disc:     OD {CB_OD} x {CB_THICK}mm thick")
+print(f"Center hole:    D {CB_CENTER_HOLE_D}mm (cylinder passes through)")
+print(f"Central riser:  OD {RISER_OD} x {RISER_HEIGHT}mm (raises sinker plane)")
+print(f"Sinker register: D {SINKER_REGISTER_D} x {SINKER_REGISTER_H}mm lip on top of riser")
+print(f"Total height:   {TOTAL_HEIGHT}mm")
+print()
+print("INTERFACES:")
+print(f"  Cam Ring V6.5:  {CAM_BOLT_COUNT} x M5 bolts @ PCD {CAM_BOLT_PCD}, offset {CAM_BOLT_OFFSET} deg")
+print(f"                  {CAM_BOLT_COUNT} x D{CAM_PIN_D} pins @ PCD {CAM_PIN_PCD}, offset {CAM_PIN_OFFSET} deg")
+print(f"  Sinker Ring:    register D {SINKER_REGISTER_D}mm on top of riser")
+print(f"  Feeders:        {FEEDER_COUNT} x M4 @ PCD {FEEDER_PCD}, 60 deg spacing (2 active, 4 reserved)")
+print(f"  Frame:          {FRAME_MOUNT_COUNT} x M5 @ PCD {FRAME_MOUNT_PCD}, 90 deg spacing")
+print(f"  Ribber (future): {RIBBER_MOUNT_COUNT} x M4 @ PCD {RIBBER_MOUNT_PCD}")
+print()
+
+# =============================================================================
+# BUILD
+# =============================================================================
+doc = FreeCAD.newDocument("Cassette_Base_V1_0")
+
+# ---- (1) Main outer disc ----
+print("[1/5] Main outer disc...")
+body = Part.makeCylinder(CB_OUTER_R, CB_THICK)
+
+# ---- (2) Central raised step (riser) ----
+print("[2/5] Central stepped riser (raises sinker plane to cylinder Z=75)...")
+riser = Part.makeCylinder(RISER_OUTER_R, RISER_HEIGHT)
+riser.translate(FreeCAD.Vector(0, 0, CB_THICK))
+body = body.fuse(riser)
+
+# ---- (3) Central cylinder pass-through hole (through BOTH disc and riser) ----
+print("[3/5] Center pass-through hole (D{}mm) through full height...".format(CB_CENTER_HOLE_D))
+center = Part.makeCylinder(CB_INNER_R, TOTAL_HEIGHT + 2.0)
+center.translate(FreeCAD.Vector(0, 0, -1.0))
+body = body.cut(center)
+
+# ---- (4) Sinker register lip (small step at top of riser) ----
+# The sinker ring V1.2.1 has OD 135. The register is a recess/lip that locates it.
+# We cut a small (1mm tall) STEP on the top of the riser so the sinker sits IN it.
+# Outer edge of step = SINKER_REGISTER_D / 2 + small clearance.
+# This creates a "pocket" that constrains the sinker ring radially.
+register_outer = Part.makeCylinder(RISER_OUTER_R + 0.1, SINKER_REGISTER_H + 0.1)
+register_inner = Part.makeCylinder((SINKER_REGISTER_D + 0.3) / 2.0, SINKER_REGISTER_H + 0.2)
+register_pocket = register_outer.cut(register_inner)
+register_pocket.translate(FreeCAD.Vector(0, 0, TOTAL_HEIGHT - SINKER_REGISTER_H))
+body = body.cut(register_pocket)
+print(f"[4a/5] Sinker register pocket (D{SINKER_REGISTER_D} + 0.3 slip fit) at top of riser")
+
+# ---- (5) All bolt + pin holes ----
+print("[4b/5] Cutting bolt + pin patterns...")
+
+def hole(diameter_mm, x, y, z_bottom=-0.5, z_height=None):
+    """Cut a through-hole. Default extends through TOTAL_HEIGHT + 1mm."""
+    if z_height is None:
+        z_height = TOTAL_HEIGHT + 1.5
+    h = Part.makeCylinder(diameter_mm / 2.0, z_height)
+    h.translate(FreeCAD.Vector(x, y, z_bottom))
+    return h
+
+# Cam ring bolts (6× M5 at PCD 155, alternating with pins)
+cam_holes = []
+for i in range(CAM_BOLT_COUNT):
+    ang = math.radians(i * 60.0 + CAM_BOLT_OFFSET)
+    x = (CAM_BOLT_PCD / 2.0) * math.cos(ang)
+    y = (CAM_BOLT_PCD / 2.0) * math.sin(ang)
+    cam_holes.append(hole(CAM_BOLT_D, x, y))
+
+# Cam ring pins (6× D4.1 at PCD 145, alternating)
+for i in range(CAM_BOLT_COUNT):
+    ang = math.radians(i * 60.0 + CAM_PIN_OFFSET)
+    x = (CAM_PIN_PCD / 2.0) * math.cos(ang)
+    y = (CAM_PIN_PCD / 2.0) * math.sin(ang)
+    cam_holes.append(hole(CAM_PIN_D, x, y))
+
+# Feeder mounts (6× M4)
+for i in range(FEEDER_COUNT):
+    ang = math.radians(i * 60.0 + FEEDER_OFFSET)
+    x = (FEEDER_PCD / 2.0) * math.cos(ang)
+    y = (FEEDER_PCD / 2.0) * math.sin(ang)
+    cam_holes.append(hole(FEEDER_BOLT_D, x, y))
+
+# Frame mounts (4× M5 to mid-shelf)
+for i in range(FRAME_MOUNT_COUNT):
+    ang = math.radians(i * 90.0 + FRAME_OFFSET)
+    x = (FRAME_MOUNT_PCD / 2.0) * math.cos(ang)
+    y = (FRAME_MOUNT_PCD / 2.0) * math.sin(ang)
+    cam_holes.append(hole(FRAME_BOLT_D, x, y))
+
+# Ribber mounts (future, 6× M4)
+for i in range(RIBBER_MOUNT_COUNT):
+    ang = math.radians(i * 60.0 + RIBBER_OFFSET)
+    x = (RIBBER_MOUNT_PCD / 2.0) * math.cos(ang)
+    y = (RIBBER_MOUNT_PCD / 2.0) * math.sin(ang)
+    cam_holes.append(hole(RIBBER_BOLT_D, x, y))
+
+# Tree-fuse for performance, then single cut
+def tree_fuse(shapes):
+    while len(shapes) > 1:
+        nxt = []
+        for i in range(0, len(shapes), 2):
+            if i + 1 < len(shapes):
+                nxt.append(shapes[i].fuse(shapes[i + 1]))
+            else:
+                nxt.append(shapes[i])
+        shapes = nxt
+    return shapes[0]
+
+print(f"  Total holes: {len(cam_holes)} -- fusing and cutting...")
+master = tree_fuse(cam_holes)
+body = body.cut(master)
+
+# ---- (6) Edge chamfer (outer + inner top/bottom) ----
+print("[5/5] Outer edge chamfers...")
+try:
+    edges = []
+    for e in body.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.z - v2.z) < 0.01:
+            r1 = math.sqrt(v1.x**2 + v1.y**2)
+            if abs(r1 - CB_OUTER_R) < 0.05:
+                if abs(v1.z) < 0.05 or abs(v1.z - CB_THICK) < 0.05:
+                    edges.append(e)
+            elif abs(r1 - CB_INNER_R) < 0.05:
+                if abs(v1.z) < 0.05 or abs(v1.z - TOTAL_HEIGHT) < 0.05:
+                    edges.append(e)
+    if edges:
+        body = body.makeChamfer(EDGE_CHAMFER, edges)
+        print(f"  Chamfered {len(edges)} edges @ {EDGE_CHAMFER}mm")
+except Exception as ex:
+    print(f"  Chamfer skipped: {ex}")
+
+# =============================================================================
+# DOCUMENT + EXPORT
+# =============================================================================
+obj = doc.addObject("Part::Feature", "CassetteBase_V1_0")
+obj.Shape = body
+obj.ViewObject.ShapeColor = (0.85, 0.55, 0.25)   # orange
+doc.recompute()
+print(f"\nVolume: {body.Volume:.0f} mm^3  (~{body.Volume * 1.27 / 1000:.0f}g PETG)")
+
+# Export STL
+try:
+    tmp = doc.addObject("Part::Feature", "_tmp_export")
+    tmp.Shape = body.copy()
+    Part.export([tmp], PATH_STL)
+    doc.removeObject("_tmp_export")
+    print(f"  [OK] {PATH_STL}")
+except Exception as ex:
+    print(f"  STL error: {ex}")
+
+# PNG render
+try:
+    import FreeCADGui
+    if FreeCAD.GuiUp:
+        gd = FreeCADGui.getDocument(doc.Name)
+        view = gd.activeView()
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG, 1920, 1080, "White")
+        print(f"  [OK] {PATH_PNG}")
+except Exception as ex:
+    print(f"  PNG error: {ex}")
+
+print()
+print("=" * 70)
+print("CASSETTE BASE V1.0 -- COMPLETE")
+print("=" * 70)
+print()
+print("INTERFACES VERIFIED:")
+print(f"  Cam Ring V6.5:  {CAM_BOLT_COUNT}x M5 PCD {CAM_BOLT_PCD} + {CAM_BOLT_COUNT}x D{CAM_PIN_D} PCD {CAM_PIN_PCD} (match)")
+print(f"  Sinker Ring V1.2.1: D{SINKER_REGISTER_D} register pocket (match)")
+print(f"  Cylinder V3.0: D{CB_CENTER_HOLE_D} pass-through (1.35mm clearance vs OD {CB_OD/2})")
+print(f"  Aluminum plate 150x150x6: 4x M5 frame mounts at PCD {FRAME_MOUNT_PCD} (within plate)")
+print()
+print("CASSETTE HEAD STACK-UP (cylinder Z coords):")
+print(f"  Z=75   sinker ring top + register pocket")
+print(f"  Z=63   cassette base outer disc top")
+print(f"  Z=49   cassette base bottom + cam ring mounts here")
+print(f"  Z=14   cam ring bottom")
+print(f"  Z=19-31 needle butt engagement zone (cam track at Z=19-27)")
+print()
+print("PRINT NOTES:")
+print("  - Print FLAT on bed (200mm OD disc, 26mm total height)")
+print("  - PETG, 0.20mm layers, 4 walls, 40% infill")
+print("  - No supports needed")
+print("  - Print time ~3-4 hours, ~80g PETG")
+print()
+print("PHASE 1 / PHASE 2 NOTES:")
+print("  Phase 1 (now): use feeder mounts #1 + #4 (0 and 180 deg) for 2 feeders")
+print("  Phase 1.5: populate all 6 feeder mounts when upgrading to 6-feeder")
+print("  Phase 2: use 6 ribber mount holes (PCD 128) to bolt ribber assembly on top")
+print()

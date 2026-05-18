@@ -1,0 +1,321 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CASSETTE BASE V1.1
+# =============================================================================
+# File:    CSM_V3_CassetteBase_V1_1.FCMacro
+# Date:    2026-05-17
+# Output:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cassette_base\
+#
+# CHANGES FROM V1.0:
+#   1. Annular sinker pedestal (decoupled from cylinder pass-through):
+#        - SINKER_PEDESTAL_OD: 145 -> 150
+#        - SINKER_PEDESTAL_ID: was implicit at 117 (= cylinder pass-through)
+#                              now explicit at 128 (creates inner shelf)
+#        Reasons: less PETG warp, better airflow, easier yarn access,
+#        cleaner architecture for future ribber.
+#
+#   2. Ribber mount PCD moved 128 -> 140 to avoid zero-wall condition
+#      at pedestal inner edge (PCD 128 = PEDESTAL_ID = ribber-hole-at-edge).
+#      Now balanced wall sections: ~6mm inner + ~5mm outer around M4 holes.
+#
+#   3. Sinker register pocket FIXED. V1.0 used an annular cut that didn't
+#      actually constrain the sinker ring. V1.1 uses a single cylindrical
+#      cut (D135.3) so the sinker physically drops INTO the recess and
+#      gets located by the recess wall.
+#
+#   4. Named MACHINE DATUMS section -- prevents future stack-up errors.
+#      All future cassette-head macros should reference these named Z
+#      planes instead of using raw numbers.
+#
+# REFERENCE: ChatGPT design proposal + reviewer engineering review,
+# both validated against locked specs (Cam Ring V6.5, Sinker Ring V1.2.1,
+# Cylinder V3.0).
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# =============================================================================
+# MACHINE DATUMS  (global Z reference planes, cylinder coords)
+# Copy this block into every machine-component macro.
+# Z=0 is at cylinder bottom (its build coordinate origin).
+# =============================================================================
+CYLINDER_Z0         = 0.0
+CAM_DATUM_Z         = 49.0   # cam ring top / cassette base bottom
+CASSETTE_TOP_Z      = 63.0   # outer disc top of cassette base
+SINKER_Z            = 75.0   # sinker register plane / cylinder top
+FEEDER_REFERENCE_Z  = 78.0   # nominal feeder finger height (above sinker)
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cassette_base"
+PATH_STL = os.path.join(BASE, "CSM_V3_CassetteBase_V1_1_FULL.stl")
+PATH_PNG = os.path.join(BASE, "images", "CassetteBase_V1_1_ISO.png")
+PATH_SVG = os.path.join(BASE, "blueprints", "CassetteBase_V1_1_Blueprint.svg")
+for p in [PATH_STL, PATH_PNG, PATH_SVG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# CASSETTE BASE PARAMETERS  (local coords: Z=0 = cassette base bottom)
+# =============================================================================
+
+# ---- Outer disc ----
+CB_OD              = 200.0
+CB_THICK           = 14.0    # = CASSETTE_TOP_Z - CAM_DATUM_Z
+CB_CENTER_HOLE_D   = 117.0   # cylinder pass-through (1.35mm total clearance)
+
+# ---- Annular sinker pedestal (raised step on top of disc) ----
+SINKER_PEDESTAL_OD = 150.0   # outer diameter of raised pedestal
+SINKER_PEDESTAL_ID = 128.0   # inner diameter (annular, NOT inherited from CB_CENTER_HOLE_D)
+SINKER_PEDESTAL_H  = 12.0    # = SINKER_Z - CASSETTE_TOP_Z
+SINKER_REGISTER_D  = 135.0   # MATCH Sinker Ring V1.2.1 OD
+SINKER_REGISTER_H  = 1.0     # depth of register pocket cut into pedestal top
+SINKER_SLIP_FIT    = 0.3     # diametral slip fit clearance for sinker (0.15mm/side)
+
+# ---- Cam Ring V6.5 interface (mounts from BELOW the cassette base) ----
+CAM_BOLT_PCD       = 155.0   # MATCH Cam Ring V6.5 BOLT_PCD
+CAM_PIN_PCD        = 145.0   # MATCH Cam Ring V6.5 PIN_PCD
+CAM_BOLT_COUNT     = 6
+CAM_BOLT_D         = 5.4     # M5 + 0.4mm clearance
+CAM_PIN_D          = 4.10    # MATCH Cam Ring V6.5 PIN_HOLE_D
+CAM_BOLT_OFFSET    = 30.0    # bolts at 30/90/150/210/270/330 deg
+CAM_PIN_OFFSET     = 0.0     # pins at 0/60/120/180/240/300 deg (alternating)
+
+# ---- Feeder Module mounts (6, with Phase 1 using 2) ----
+FEEDER_PCD         = 190.0
+FEEDER_COUNT       = 6
+FEEDER_BOLT_D      = 4.2     # M4 + 0.2mm clearance
+FEEDER_OFFSET      = 0.0
+
+# ---- Frame mounts (4x M5 to wood mid-shelf via 150x150x6 aluminum plate) ----
+FRAME_MOUNT_PCD    = 180.0   # within 150x150mm plate (corners at r=106)
+FRAME_MOUNT_COUNT  = 4
+FRAME_BOLT_D       = 5.4
+FRAME_OFFSET       = 45.0
+
+# ---- Future ribber mounts (Phase 2 provision, 6x M4) ----
+# CHANGED from 128 -> 140 to avoid zero-wall condition at pedestal inner edge.
+# With PEDESTAL_ID=128 (r=64) and ribber PCD=140 (r=70):
+#   inner wall to hole = 70 - 64 - 2.1 = 3.9mm
+#   outer wall to hole = 75 - 70 - 2.1 = 2.9mm
+RIBBER_MOUNT_PCD   = 140.0
+RIBBER_MOUNT_COUNT = 6
+RIBBER_BOLT_D      = 4.2
+RIBBER_OFFSET      = 0.0
+
+# ---- Edge treatment ----
+EDGE_CHAMFER       = 0.6
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+CB_OUTER_R         = CB_OD / 2.0
+CB_INNER_R         = CB_CENTER_HOLE_D / 2.0
+PEDESTAL_OUTER_R   = SINKER_PEDESTAL_OD / 2.0
+PEDESTAL_INNER_R   = SINKER_PEDESTAL_ID / 2.0
+TOTAL_HEIGHT       = CB_THICK + SINKER_PEDESTAL_H  # 26mm
+REGISTER_OPEN_D    = SINKER_REGISTER_D + SINKER_SLIP_FIT  # 135.3mm
+
+# =============================================================================
+# STARTUP REPORT
+# =============================================================================
+print("=" * 72)
+print("CSM V3 - CASSETTE BASE V1.1")
+print("=" * 72)
+print("MACHINE DATUMS (cylinder Z coords):")
+print(f"  CYLINDER_Z0       = {CYLINDER_Z0}")
+print(f"  CAM_DATUM_Z       = {CAM_DATUM_Z}  (cam ring top / cassette base bottom)")
+print(f"  CASSETTE_TOP_Z    = {CASSETTE_TOP_Z}  (outer disc top)")
+print(f"  SINKER_Z          = {SINKER_Z}  (sinker register plane / cylinder top)")
+print(f"  FEEDER_REFERENCE_Z= {FEEDER_REFERENCE_Z}")
+print()
+print("PART GEOMETRY (local Z, bottom = 0):")
+print(f"  Outer disc:       OD {CB_OD} x H {CB_THICK} mm")
+print(f"  Center pass:      D {CB_CENTER_HOLE_D} mm  (cylinder OD 114.3 + 2.7 total clearance)")
+print(f"  Sinker pedestal:  OD {SINKER_PEDESTAL_OD} x ID {SINKER_PEDESTAL_ID} x H {SINKER_PEDESTAL_H} mm (ANNULAR)")
+print(f"  Register pocket:  D {REGISTER_OPEN_D:.2f} x {SINKER_REGISTER_H}mm deep at pedestal top")
+print(f"  Total height:     {TOTAL_HEIGHT} mm")
+print()
+print("BOLT PATTERNS:")
+print(f"  Cam ring bolts:   {CAM_BOLT_COUNT} x M5 (D{CAM_BOLT_D}) at PCD {CAM_BOLT_PCD}, offset {CAM_BOLT_OFFSET} deg")
+print(f"  Cam ring pins:    {CAM_BOLT_COUNT} x D{CAM_PIN_D} at PCD {CAM_PIN_PCD}, offset {CAM_PIN_OFFSET} deg")
+print(f"  Feeder mounts:    {FEEDER_COUNT} x M4 (D{FEEDER_BOLT_D}) at PCD {FEEDER_PCD}, 60 deg spacing")
+print(f"  Frame mounts:     {FRAME_MOUNT_COUNT} x M5 (D{FRAME_BOLT_D}) at PCD {FRAME_MOUNT_PCD}, 90 deg spacing")
+print(f"  Ribber mounts:    {RIBBER_MOUNT_COUNT} x M4 (D{RIBBER_BOLT_D}) at PCD {RIBBER_MOUNT_PCD} (Phase 2)")
+print()
+
+# =============================================================================
+# VALIDATION CHECKS
+# =============================================================================
+# Check ribber holes are within pedestal material with margins
+ribber_r = RIBBER_MOUNT_PCD / 2.0
+hole_radius = RIBBER_BOLT_D / 2.0
+inner_wall = ribber_r - PEDESTAL_INNER_R - hole_radius
+outer_wall = PEDESTAL_OUTER_R - ribber_r - hole_radius
+print("RIBBER HOLE WALL CHECK:")
+print(f"  Inner wall: {inner_wall:.2f} mm  ({'OK' if inner_wall >= 2.0 else 'TOO THIN'})")
+print(f"  Outer wall: {outer_wall:.2f} mm  ({'OK' if outer_wall >= 2.0 else 'TOO THIN'})")
+print()
+assert inner_wall >= 2.0, "Ribber hole inner wall < 2mm -- structurally weak"
+assert outer_wall >= 2.0, "Ribber hole outer wall < 2mm -- structurally weak"
+
+# Check pedestal sits OUTSIDE cylinder pass-through (no overlap conflict)
+assert PEDESTAL_INNER_R > CB_INNER_R, "Pedestal ID must be larger than cylinder pass-through D"
+
+# Check register pocket diameter is INSIDE pedestal OD (so outer wall remains)
+assert REGISTER_OPEN_D < SINKER_PEDESTAL_OD, "Register pocket exceeds pedestal OD"
+print(f"Geometry validation: PASS")
+print()
+
+# =============================================================================
+# DOCUMENT + BUILD
+# =============================================================================
+doc = FreeCAD.newDocument("Cassette_Base_V1_1")
+
+# ---- (1) Main outer disc ----
+print("[1/6] Outer disc...")
+disc = Part.makeCylinder(CB_OUTER_R, CB_THICK)
+
+# ---- (2) Annular sinker pedestal ----
+print("[2/6] Annular sinker pedestal (OD150 / ID128)...")
+pedestal_outer = Part.makeCylinder(PEDESTAL_OUTER_R, SINKER_PEDESTAL_H)
+pedestal_inner = Part.makeCylinder(PEDESTAL_INNER_R, SINKER_PEDESTAL_H + 0.1)
+pedestal_inner.translate(FreeCAD.Vector(0, 0, -0.05))
+pedestal = pedestal_outer.cut(pedestal_inner)
+pedestal.translate(FreeCAD.Vector(0, 0, CB_THICK))
+
+# ---- (3) Fuse disc + pedestal ----
+print("[3/6] Fusing disc + pedestal...")
+body = disc.fuse(pedestal)
+
+# ---- (4) Cylinder pass-through through entire stack ----
+print(f"[4/6] Cylinder pass-through (D{CB_CENTER_HOLE_D}) through full height...")
+center = Part.makeCylinder(CB_INNER_R, TOTAL_HEIGHT + 2.0)
+center.translate(FreeCAD.Vector(0, 0, -1.0))
+body = body.cut(center)
+
+# ---- (5) Sinker register pocket (FIXED from V1.0 -- simple circular cut) ----
+print(f"[5/6] Sinker register pocket (D{REGISTER_OPEN_D:.2f}, {SINKER_REGISTER_H}mm deep)")
+register = Part.makeCylinder(REGISTER_OPEN_D / 2.0, SINKER_REGISTER_H + 0.1)
+register.translate(FreeCAD.Vector(0, 0, TOTAL_HEIGHT - SINKER_REGISTER_H))
+body = body.cut(register)
+
+# ---- (6) All bolt/pin holes ----
+print("[6/6] Cutting bolt + pin patterns...")
+
+def hole(diam_mm, x, y):
+    """Through-hole, axis = Z, from z=-0.5 up through total height + 0.5"""
+    h = Part.makeCylinder(diam_mm / 2.0, TOTAL_HEIGHT + 1.5)
+    h.translate(FreeCAD.Vector(x, y, -0.5))
+    return h
+
+all_holes = []
+
+# Cam ring bolts
+for i in range(CAM_BOLT_COUNT):
+    ang = math.radians(i * 60.0 + CAM_BOLT_OFFSET)
+    x = (CAM_BOLT_PCD / 2.0) * math.cos(ang)
+    y = (CAM_BOLT_PCD / 2.0) * math.sin(ang)
+    all_holes.append(hole(CAM_BOLT_D, x, y))
+
+# Cam ring pins
+for i in range(CAM_BOLT_COUNT):
+    ang = math.radians(i * 60.0 + CAM_PIN_OFFSET)
+    x = (CAM_PIN_PCD / 2.0) * math.cos(ang)
+    y = (CAM_PIN_PCD / 2.0) * math.sin(ang)
+    all_holes.append(hole(CAM_PIN_D, x, y))
+
+# Feeder mounts
+for i in range(FEEDER_COUNT):
+    ang = math.radians(i * 60.0 + FEEDER_OFFSET)
+    x = (FEEDER_PCD / 2.0) * math.cos(ang)
+    y = (FEEDER_PCD / 2.0) * math.sin(ang)
+    all_holes.append(hole(FEEDER_BOLT_D, x, y))
+
+# Frame mounts
+for i in range(FRAME_MOUNT_COUNT):
+    ang = math.radians(i * 90.0 + FRAME_OFFSET)
+    x = (FRAME_MOUNT_PCD / 2.0) * math.cos(ang)
+    y = (FRAME_MOUNT_PCD / 2.0) * math.sin(ang)
+    all_holes.append(hole(FRAME_BOLT_D, x, y))
+
+# Ribber mounts (PCD 140 -- moved from V1.0's 128 to avoid edge breakout)
+for i in range(RIBBER_MOUNT_COUNT):
+    ang = math.radians(i * 60.0 + RIBBER_OFFSET)
+    x = (RIBBER_MOUNT_PCD / 2.0) * math.cos(ang)
+    y = (RIBBER_MOUNT_PCD / 2.0) * math.sin(ang)
+    all_holes.append(hole(RIBBER_BOLT_D, x, y))
+
+# Tree-fuse + cut for performance
+def tree_fuse(shapes):
+    while len(shapes) > 1:
+        nxt = []
+        for i in range(0, len(shapes), 2):
+            if i + 1 < len(shapes):
+                nxt.append(shapes[i].fuse(shapes[i + 1]))
+            else:
+                nxt.append(shapes[i])
+        shapes = nxt
+    return shapes[0]
+
+print(f"  Fusing {len(all_holes)} hole cutters...")
+master = tree_fuse(all_holes)
+body = body.cut(master)
+
+# ---- (7) Edge chamfers ----
+print(f"[+] Edge chamfers @ {EDGE_CHAMFER}mm...")
+try:
+    edges = []
+    for e in body.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.z - v2.z) < 0.01:
+            r1 = math.sqrt(v1.x**2 + v1.y**2)
+            if abs(r1 - CB_OUTER_R) < 0.05:
+                if abs(v1.z) < 0.05 or abs(v1.z - CB_THICK) < 0.05:
+                    edges.append(e)
+            elif abs(r1 - CB_INNER_R) < 0.05:
+                if abs(v1.z) < 0.05 or abs(v1.z - TOTAL_HEIGHT) < 0.05:
+                    edges.append(e)
+            elif abs(r1 - PEDESTAL_OUTER_R) < 0.05:
+                if abs(v1.z - TOTAL_HEIGHT) < 0.05:
+                    edges.append(e)
+    if edges:
+        body = body.makeChamfer(EDGE_CHAMFER, edges)
+        print(f"  Chamfered {len(edges)} edges")
+except Exception as ex:
+    print(f"  Chamfer skipped: {ex}")
+
+# =============================================================================
+# EXPORT
+# =============================================================================
+obj = doc.addObject("Part::Feature", "CassetteBase_V1_1")
+obj.Shape = body
+obj.ViewObject.ShapeColor = (0.85, 0.55, 0.25)
+doc.recompute()
+print(f"\nVolume: {body.Volume:.0f} mm^3  (~{body.Volume * 1.27 / 1000:.0f}g PETG)")
+
+try:
+    tmp = doc.addObject("Part::Feature", "_tmp_export")
+    tmp.Shape = body.copy()
+    Part.export([tmp], PATH_STL)
+    doc.removeObject("_tmp_export")
+    print(f"  [OK] {PATH_STL}")
+except Exception as ex:
+    print(f"  STL error: {ex}")
+
+try:
+    import FreeCADGui
+    if FreeCAD.GuiUp:
+        gd = FreeCADGui.getDocument(doc.Name)
+        view = gd.activeView()
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG, 1920, 1080, "White")
+        print(f"  [OK] {PATH_PNG}")
+except Exception as ex:
+    print(f"  PNG error: {ex}")
+
+print()
+print("=" * 72)
+print("CASSETTE BASE V1.1 -- COMPLETE")
+print("=" * 72)

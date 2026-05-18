@@ -111,17 +111,25 @@ consistent with this ICD.
 
 ---
 
-## Interface 7: Sinker Ring ↔ Retainer Ring (proposed, Phase 1)
+## Interface 7: Cassette Base + Sinker Ring ↔ Retainer Ring (LOCKED in V1.0)
 
-> ⚠️ Not yet locked — Retainer Ring is the next part to design.
-
-| Property | Value (proposed) | Status |
+| Property | Value | Locked by |
 |---|---|---|
-| Mating method | Retainer sits ABOVE sinker, mounts to cassette base via shared feeder bolts | proposed |
-| Retainer Ring through-opening | ≥ D116.3 (cylinder OD + 1mm radial clearance) | proposed |
-| Optional inward lip diameter | 100-108mm effective loop control | proposed |
-| Lip must clear hook peak | Z=83 (= HOOK_PEAK_Z) | constraint |
-| Retainer bottom Z | ≥ Z_sinker_top = SINKER_Z + sinker_height (~ 83) | constraint |
+| Mating method | Retainer sits ABOVE sinker, mounts to cassette base via shared feeder bolts at PCD 190 | both V1.1 + V1.0 |
+| Retainer Ring OD | 200.0 | Retainer Ring V1.0 (matches cassette base OD) |
+| Retainer Ring through-bore | D118.0 (cylinder OD 114.3 + 1.85mm radial clearance) | Retainer Ring V1.0 |
+| Loop-control lip diameter | D104.0 effective loop aperture | Retainer Ring V1.0 |
+| Lip height (from top of ring) | 2.0mm (top portion only, ring is 8mm total) | Retainer Ring V1.0 |
+| Retainer assembly Z (bottom face) | 83.0 (= SINKER_Z + sinker_height 8) | architecture |
+| Lip underside world Z | 89.0 | derived |
+| Hook clearance under lip | 6.0mm (lip at Z=89-91 vs HOOK_PEAK_Z=83) | derived |
+| Mount bolt PCD | 190.0 (SAME as Cassette Base feeder PCD) | both V1.1 + V1.0 |
+| Mount bolt count | 6× M4 | both |
+| Phase 1 usage | Feeders at 0/180 (2 active); retainer secures at 60/120/240/300 | architecture |
+| Phase 1.5 usage | All 6 bolts shared via stack-mount (bolt → cassette → spacer → retainer) | architecture |
+| Spacer requirement | 6× printed spacers D8 × 20mm (closes gap between cassette top Z=63 and retainer bottom Z=83) | to design |
+| Bolt length | M4 × ~50mm (or threaded rod with nuts) | to verify when ordering |
+| Material | PA12 nylon (wear surface, yarn slides on lip underside) | Retainer Ring V1.0 |
 
 ---
 
@@ -160,7 +168,7 @@ consistent with this ICD.
 | Drive Hub | V2.4.2 (Done) | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_DriveHub_V2_4_2.FCMacro` |
 | Motor Mount | V1.3 (Done) | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_MotorMount_V1_3.FCMacro` |
 | Bearing Housings | V2.5 (Done) | `05_BEARINGS_SHAFT/freecad_macros/CSM_V3_BearingHousings_V2_5.FCMacro` |
-| Retainer Ring | NOT YET | — (next to design) |
+| Retainer Ring | V1.0 (LOCKED) | `02_CASSETTE_HEAD/retainer_ring/freecad_macros/CSM_V3_RetainerRing_V1_0.FCMacro` |
 | Feeder Module | NOT YET | — |
 | Yarn Mast | NOT YET | — |
 | Cassette Base (Phase 2 ribber mount) | provisioned in V1.1 | — |
@@ -189,3 +197,4 @@ consistent with this ICD.
 | Rev | Date | Changes |
 |---|---|---|
 | R1 | 2026-05-17 | Initial ICD. Captures interfaces 1-9 from locked V3 architecture. |
+| R2 | 2026-05-17 | Lock Interface 7 with Retainer Ring V1.0 final geometry. Retainer OD = 200 (was 172, fixed for bolt PCD compatibility). All other interfaces unchanged. |

@@ -1,0 +1,292 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- RETAINER RING V1.0
+# =============================================================================
+# File:    CSM_V3_RetainerRing_V1_0.FCMacro
+# Date:    2026-05-17
+# Output:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\retainer_ring\
+#
+# PURPOSE:
+#   Loop-control ring that sits ABOVE the sinker ring (world Z = 83) and
+#   prevents knit loops from rising too high during the needle's upward
+#   cam stroke. Uses a "two-diameter" architecture:
+#     - Large center bore (D118) for free cylinder rotation clearance
+#     - Inward annular lip (D104) reduces effective loop-control diameter
+#   The lip sits ABOVE HOOK_PEAK_Z=83, so needle hooks pass under it freely
+#   while loops are still constrained.
+#
+# DESIGN ORIGIN:
+#   ChatGPT proposal (corrected for RR_OD vs RR_BOLT_PCD geometric conflict).
+#   Original proposal: RR_OD=172 + RR_BOLT_PCD=190 -- bolt centers outside
+#   ring material. Fixed by adopting RR_OD=200 (match cassette base OD).
+#   Trade: +36g PA12 vs gaining: simpler print, more rigid, no fragile ears,
+#   covers more work area, preserves ICD R1 without modifying Cassette Base.
+#
+# MATERIAL:
+#   Phase 1 prototype:  PETG (functional, easy to print)
+#   Working part:       PA12 nylon (LOW FRICTION wear surface -- yarn slides
+#                       against the lip underside; PETG will gall under
+#                       extended use)
+#
+# MOUNTS:
+#   Shares the Cassette Base V1.1 feeder bolt circle (PCD 190, 6x M4).
+#   Phase 1: 2 bolts at 0/180 are active feeders. Remaining 4 bolts at
+#   60/120/240/300 secure the retainer ring.
+#   Phase 1.5 (6-feeder): all 6 bolts shared between feeders + retainer
+#   via stack-mount (bolt passes through retainer, then feeder bracket).
+#
+# AXIAL POSITION (assembly):
+#   Bottom face at world Z = 83 (= SINKER_Z + sinker_height = 75 + 8)
+#   Top face    at world Z = 91 (= RR_ASSEMBLY_Z + RR_THICK)
+#   Lip at world Z = 89-91 (top 2mm of ring)
+#   Hook peak Z = 83 -> 6mm vertical clearance below the lip
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# =============================================================================
+# MACHINE DATUMS  (copy verbatim from MACHINE_DATUMS.md, Revision R1)
+# =============================================================================
+CYLINDER_Z0          =  0.0
+CAM_DATUM_Z          = 49.0
+CASSETTE_TOP_Z       = 63.0
+SINKER_Z             = 75.0
+CYLINDER_TOP_Z       = 75.0
+FEEDER_REFERENCE_Z   = 78.0
+HOOK_PEAK_Z          = 83.0
+
+# =============================================================================
+# OUTPUT PATHS
+# =============================================================================
+BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\retainer_ring"
+PATH_STL = os.path.join(BASE, "CSM_V3_RetainerRing_V1_0_FULL.stl")
+PATH_PNG = os.path.join(BASE, "images", "RetainerRing_V1_0_ISO.png")
+for p in [PATH_STL, PATH_PNG]:
+    os.makedirs(os.path.dirname(p), exist_ok=True)
+
+# =============================================================================
+# PARAMETERS  (all mm)
+# =============================================================================
+
+# ---- Main body ----
+RR_OD               = 200.0    # MATCH Cassette Base OD (was 172 in proposal,
+                                # fixed to keep bolt holes within material)
+RR_THICK            = 8.0      # total ring height
+RR_CENTER_BORE_D    = 118.0    # cylinder rotation clearance
+                                # (cylinder OD 114.3 + 1.85mm radial slip)
+
+# ---- Loop-control lip (inward annular projection at TOP of ring) ----
+RR_LIP_ID           = 104.0    # effective loop-control aperture diameter
+RR_LIP_OD           = 118.0    # = RR_CENTER_BORE_D (lip starts at bore wall)
+RR_LIP_DROP         = 2.0      # lip occupies top 2mm of ring height
+
+# ---- Mount holes (shared with cassette base feeder PCD) ----
+RR_BOLT_PCD         = 190.0    # MATCH Cassette Base V1.1 FEEDER_PCD
+RR_BOLT_COUNT       = 6
+RR_BOLT_D           = 4.2      # M4 + 0.2mm clearance (matches CB V1.1)
+RR_BOLT_OFFSET      = 0.0      # 0/60/120/180/240/300 (matches CB feeder pattern)
+
+# ---- Assembly position (used by Blender assembly, not by this macro) ----
+RR_ASSEMBLY_Z       = 83.0     # world Z of ring bottom face (= SINKER_Z + 8)
+
+# ---- Edge treatment ----
+EDGE_CHAMFER        = 0.5
+
+# =============================================================================
+# DERIVED VALUES
+# =============================================================================
+RR_OUTER_R          = RR_OD / 2.0           # 100.0
+RR_BORE_R           = RR_CENTER_BORE_D / 2.0 # 59.0
+RR_LIP_INNER_R      = RR_LIP_ID / 2.0       # 52.0
+RR_LIP_OUTER_R      = RR_LIP_OD / 2.0       # 59.0
+
+# =============================================================================
+# VALIDATION CHECKS
+# =============================================================================
+# Cylinder clearance must be safe
+cylinder_clearance = (RR_CENTER_BORE_D - 114.3) / 2.0
+assert cylinder_clearance >= 1.0, f"Cylinder clearance {cylinder_clearance}mm too tight"
+
+# Bolt holes must be inside ring material
+hole_radius = RR_BOLT_D / 2.0
+ring_inner_wall = (RR_BOLT_PCD / 2.0) - RR_BORE_R - hole_radius
+ring_outer_wall = RR_OUTER_R - (RR_BOLT_PCD / 2.0) - hole_radius
+assert ring_inner_wall >= 2.0, f"Bolt inner wall {ring_inner_wall:.2f}mm too thin"
+assert ring_outer_wall >= 2.0, f"Bolt outer wall {ring_outer_wall:.2f}mm too thin"
+
+# Lip aperture must be inside bore
+assert RR_LIP_ID < RR_CENTER_BORE_D, "Lip ID must be smaller than center bore"
+assert RR_LIP_ID > 100.0, "Lip ID < 100mm -- too restrictive (may intrude on needle path)"
+assert RR_LIP_ID < 110.0, "Lip ID > 110mm -- loop control too loose"
+
+# Hook clearance (lip is at top 2mm of ring, ring bottom at world Z=83)
+lip_underside_world_z = RR_ASSEMBLY_Z + (RR_THICK - RR_LIP_DROP)  # 83 + 6 = 89
+hook_clearance = lip_underside_world_z - HOOK_PEAK_Z              # 89 - 83 = 6
+assert hook_clearance >= 3.0, f"Hook clearance {hook_clearance}mm too small"
+
+# =============================================================================
+# STARTUP REPORT
+# =============================================================================
+print("=" * 72)
+print("CSM V3 - RETAINER RING V1.0")
+print("=" * 72)
+print("MACHINE DATUMS (cylinder Z coords):")
+print(f"  HOOK_PEAK_Z       = {HOOK_PEAK_Z}")
+print(f"  SINKER_Z          = {SINKER_Z}")
+print(f"  RR_ASSEMBLY_Z     = {RR_ASSEMBLY_Z}  (retainer ring bottom face)")
+print()
+print("GEOMETRY (local Z, ring bottom = 0):")
+print(f"  Outer disc:       OD {RR_OD} x H {RR_THICK} mm")
+print(f"  Center bore:      D {RR_CENTER_BORE_D} mm  (cylinder clearance)")
+print(f"  Loop-control lip: D {RR_LIP_ID} (inner) x D {RR_LIP_OD} (outer) x {RR_LIP_DROP}mm tall")
+print(f"  Lip occupies top {RR_LIP_DROP}mm of ring height")
+print()
+print("BOLT PATTERN:")
+print(f"  6 x M4 (D{RR_BOLT_D}) at PCD {RR_BOLT_PCD}, 60 deg spacing")
+print(f"  Inner wall: {ring_inner_wall:.2f}mm  (OK)")
+print(f"  Outer wall: {ring_outer_wall:.2f}mm  (OK)")
+print()
+print("CLEARANCES:")
+print(f"  Cylinder OD 114.3 vs bore D {RR_CENTER_BORE_D}:")
+print(f"    Total: {RR_CENTER_BORE_D - 114.3:.2f}mm  ({cylinder_clearance:.2f}mm per side)")
+print(f"  Hook peak Z={HOOK_PEAK_Z} vs lip underside world Z={lip_underside_world_z}:")
+print(f"    Vertical clearance: {hook_clearance}mm")
+print()
+print("MATERIAL:")
+print(f"  Phase 1 prototype: PETG (acceptable for early testing)")
+print(f"  Working part:      PA12 nylon (low friction wear surface)")
+print()
+print("Validation: PASS")
+print()
+
+# =============================================================================
+# BUILD
+# =============================================================================
+doc = FreeCAD.newDocument("Retainer_Ring_V1_0")
+
+# ---- (1) Main outer disc with center bore ----
+print("[1/4] Building main ring (OD 200, bore D 118)...")
+outer = Part.makeCylinder(RR_OUTER_R, RR_THICK)
+bore = Part.makeCylinder(RR_BORE_R, RR_THICK + 1.0)
+bore.translate(FreeCAD.Vector(0, 0, -0.5))
+body = outer.cut(bore)
+
+# ---- (2) Loop-control lip (annular ring at TOP, inside the bore) ----
+print(f"[2/4] Loop-control lip (D{RR_LIP_ID} aperture, top {RR_LIP_DROP}mm)...")
+lip_outer = Part.makeCylinder(RR_LIP_OUTER_R, RR_LIP_DROP)
+lip_inner = Part.makeCylinder(RR_LIP_INNER_R, RR_LIP_DROP + 0.1)
+lip_inner.translate(FreeCAD.Vector(0, 0, -0.05))
+lip = lip_outer.cut(lip_inner)
+lip.translate(FreeCAD.Vector(0, 0, RR_THICK - RR_LIP_DROP))
+body = body.fuse(lip)
+
+# ---- (3) Mount holes ----
+print(f"[3/4] {RR_BOLT_COUNT}x M4 mount holes at PCD {RR_BOLT_PCD}...")
+holes = []
+for i in range(RR_BOLT_COUNT):
+    ang = math.radians(i * 60.0 + RR_BOLT_OFFSET)
+    x = (RR_BOLT_PCD / 2.0) * math.cos(ang)
+    y = (RR_BOLT_PCD / 2.0) * math.sin(ang)
+    h = Part.makeCylinder(RR_BOLT_D / 2.0, RR_THICK + 1.5)
+    h.translate(FreeCAD.Vector(x, y, -0.5))
+    holes.append(h)
+
+# Tree-fuse hole cutters for performance
+def tree_fuse(shapes):
+    while len(shapes) > 1:
+        nxt = []
+        for i in range(0, len(shapes), 2):
+            if i + 1 < len(shapes):
+                nxt.append(shapes[i].fuse(shapes[i + 1]))
+            else:
+                nxt.append(shapes[i])
+        shapes = nxt
+    return shapes[0]
+
+master = tree_fuse(holes)
+body = body.cut(master)
+
+# ---- (4) Edge chamfers ----
+print(f"[4/4] Edge chamfers @ {EDGE_CHAMFER}mm...")
+try:
+    edges = []
+    for e in body.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.z - v2.z) < 0.01:
+            r1 = math.sqrt(v1.x**2 + v1.y**2)
+            # Outer OD edges (top + bottom)
+            if abs(r1 - RR_OUTER_R) < 0.05:
+                if abs(v1.z) < 0.05 or abs(v1.z - RR_THICK) < 0.05:
+                    edges.append(e)
+            # Inner bore edge at bottom (top is hidden under lip)
+            elif abs(r1 - RR_BORE_R) < 0.05 and abs(v1.z) < 0.05:
+                edges.append(e)
+            # Lip inner aperture edge at top
+            elif abs(r1 - RR_LIP_INNER_R) < 0.05 and abs(v1.z - RR_THICK) < 0.05:
+                edges.append(e)
+    if edges:
+        body = body.makeChamfer(EDGE_CHAMFER, edges)
+        print(f"  Chamfered {len(edges)} edges")
+except Exception as ex:
+    print(f"  Chamfer skipped: {ex}")
+
+# =============================================================================
+# DOCUMENT + EXPORT
+# =============================================================================
+obj = doc.addObject("Part::Feature", "RetainerRing_V1_0")
+obj.Shape = body
+obj.ViewObject.ShapeColor = (0.95, 0.92, 0.85)  # PA12 nylon natural color
+doc.recompute()
+
+vol = body.Volume
+mass_petg = vol * 1.27 / 1000
+mass_pa12 = vol * 1.05 / 1000
+print(f"\nVolume: {vol:.0f} mm^3")
+print(f"Mass:   ~{mass_petg:.0f}g PETG  /  ~{mass_pa12:.0f}g PA12")
+
+# STL
+try:
+    tmp = doc.addObject("Part::Feature", "_tmp_export")
+    tmp.Shape = body.copy()
+    Part.export([tmp], PATH_STL)
+    doc.removeObject("_tmp_export")
+    print(f"  [OK] {PATH_STL}")
+except Exception as ex:
+    print(f"  STL error: {ex}")
+
+# PNG
+try:
+    import FreeCADGui
+    if FreeCAD.GuiUp:
+        gd = FreeCADGui.getDocument(doc.Name)
+        view = gd.activeView()
+        view.viewIsometric()
+        view.fitAll()
+        view.saveImage(PATH_PNG, 1920, 1080, "White")
+        print(f"  [OK] {PATH_PNG}")
+except Exception as ex:
+    print(f"  PNG error: {ex}")
+
+print()
+print("=" * 72)
+print("RETAINER RING V1.0 -- COMPLETE")
+print("=" * 72)
+print()
+print("ASSEMBLY NOTE:")
+print(f"  Position retainer ring at world Z = {RR_ASSEMBLY_Z} (bottom face)")
+print(f"  Z gap from cassette top (Z=63) to retainer bottom (Z=83) = 20mm")
+print(f"  Bolts at PCD 190 are OUTSIDE the sinker ring (sinker is at r=57-67)")
+print(f"  Six M4 bolts span:")
+print(f"    Below cassette base flange (bolt head)")
+print(f"    Through cassette base CB_THICK=14mm at PCD 190")
+print(f"    Through 20mm open air (Z=63 to Z=83) -- use spacers/standoffs here")
+print(f"    Through retainer ring 8mm (PCD 190)")
+print(f"    Total bolt length: ~M4 x 50mm or M4 threaded rod with two nuts")
+print(f"  Recommended: 6 printed spacers (D8 x 20mm, ID 4.5mm) between")
+print(f"    cassette base top and retainer bottom for axial rigidity.")
+print(f"  Torque: ~1.5 N-m on M4 (PA12 nylon threads strip easier than steel)")
+print()
+print("FUTURE IMPROVEMENT (Phase 1.5+):")
+print("  Add 6 shallow underside pockets (2mm deep, 6mm floor) between bolt")
+print("  positions. Saves ~20-25% material, reduces PA12 warp on long prints.")
+print("  Defer until V1.0 is validated mechanically.")

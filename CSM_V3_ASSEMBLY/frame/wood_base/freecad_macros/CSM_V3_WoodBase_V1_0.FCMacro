@@ -1,0 +1,37 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- WOOD BASE V1.0
+# =============================================================================
+# Solid hardwood base of the stand. Bottom face sits on the table.
+# Top face supports the four 2020 aluminum uprights.
+#
+# Reference: INTERFACE_CONTROL.md R2 (frame architecture)
+#   - 500 x 400 x 18 mm hardwood, same footprint as mid-shelf
+#   - Top surface at Z = -282 mm (== mid-shelf bottom -300 + shelf 18)
+#                              (sets stand height with uprights ~331 mm long)
+# =============================================================================
+
+import FreeCAD, Part, os
+
+BASE_W   = 500.0
+BASE_D   = 400.0
+BASE_T   =  18.0
+TOP_Z    = -282.0          # top surface
+BOT_Z    = TOP_Z - BASE_T
+
+print(f"[WoodBase V1.0]  {BASE_W} x {BASE_D} x {BASE_T} mm")
+print(f"  top at Z={TOP_Z}, bottom at Z={BOT_Z}")
+
+doc = FreeCAD.newDocument("WoodBase")
+slab = Part.makeBox(BASE_W, BASE_D, BASE_T,
+                    FreeCAD.Vector(-BASE_W/2, -BASE_D/2, BOT_Z))
+
+obj = doc.addObject("Part::Feature", "WoodBase_V1_0")
+obj.Shape = slab
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_WoodBase_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")
+print(f"     volume: {slab.Volume:.0f} mm^3")

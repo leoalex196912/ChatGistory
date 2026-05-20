@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- 2020 ALUMINUM UPRIGHT V1.0
+# =============================================================================
+# One vertical 2020 aluminum extrusion. Four of these placed at the
+# corners of the wood base + mid-shelf stand. Modeled with characteristic
+# T-slot cross section (visible from the marketing render's POV).
+#
+# Length spans wood-base TOP (Z=-282) to wood-mid-shelf BOTTOM (Z=31).
+# That is 313 mm. We add 18 mm so the extrusion passes THROUGH both wood
+# slabs (looks more realistic than touching their faces). Total 331 mm.
+#
+# Reference: INTERFACE_CONTROL.md R2 (frame architecture)
+#   - 20 x 20 mm extruded aluminum profile, anodized black
+#   - Standard T-slot extrusion with 6 mm slot opening
+# =============================================================================
+
+import FreeCAD, Part, os
+
+EXT_W       = 20.0       # cross-section width (mm)
+EXT_LEN     = 331.0      # length (mm) -- spans base top to shelf top
+SLOT_OPEN   = 6.0        # T-slot opening width (visual)
+SLOT_DEPTH  = 5.5        # T-slot opening depth (visual)
+CTR_BORE_D  = 4.2        # center bore (M5 tap clearance, cosmetic)
+EDGE_CHAM   = 0.8        # chamfer at corner edges (cosmetic)
+
+BOT_Z = -300.0           # bottom of upright -- pokes through base bottom
+TOP_Z = BOT_Z + EXT_LEN  # -300 + 331 = 31  (just above mid-shelf bottom)
+
+print(f"[Upright_2020 V1.0]  {EXT_W} x {EXT_W} x {EXT_LEN} mm")
+print(f"  bottom Z={BOT_Z}, top Z={TOP_Z}")
+
+doc = FreeCAD.newDocument("Upright2020")
+
+# Body
+bar = Part.makeBox(EXT_W, EXT_W, EXT_LEN,
+                   FreeCAD.Vector(-EXT_W/2, -EXT_W/2, BOT_Z))
+
+# Center bore (cosmetic)
+bore = Part.makeCylinder(CTR_BORE_D/2.0, EXT_LEN + 2.0,
+                         FreeCAD.Vector(0, 0, BOT_Z - 1.0))
+bar = bar.cut(bore)
+
+# Four T-slot openings (one per face). Each is a long thin box centered
+# on each face, extending into the bar by SLOT_DEPTH.
+def slot_cut(face_normal_axis, sign):
+    # face_normal_axis: 'x' or 'y'  -- which face the slot is on
+    # sign: +1 or -1  -- which side of that axis
+    if face_normal_axis == 'x':
+        sx = SLOT_DEPTH + 0.1
+        sy = SLOT_OPEN
+        cx = sign * (EXT_W/2 - SLOT_DEPTH/2.0) - (sign * 0.05)
+        cy = 0.0
+    else:
+        sx = SLOT_OPEN
+        sy = SLOT_DEPTH + 0.1
+        cx = 0.0
+        cy = sign * (EXT_W/2 - SLOT_DEPTH/2.0) - (sign * 0.05)
+    box = Part.makeBox(sx, sy, EXT_LEN + 2.0,
+                       FreeCAD.Vector(cx - sx/2, cy - sy/2, BOT_Z - 1.0))
+    return box
+
+for ax, sgn in [('x', +1), ('x', -1), ('y', +1), ('y', -1)]:
+    bar = bar.cut(slot_cut(ax, sgn))
+
+# Optional edge chamfer (skip if it slows things down -- it's cosmetic).
+try:
+    edges = []
+    for e in bar.Edges:
+        v1 = e.Vertexes[0].Point
+        v2 = e.Vertexes[1].Point
+        # Vertical edges only (long Z extent)
+        if abs(v1.x - v2.x) < 0.01 and abs(v1.y - v2.y) < 0.01 and abs(v1.z - v2.z) > 100:
+            # corner edges (|x| and |y| both close to EXT_W/2)
+            if abs(abs(v1.x) - EXT_W/2) < 0.05 and abs(abs(v1.y) - EXT_W/2) < 0.05:
+                edges.append(e)
+    if edges:
+        bar = bar.makeChamfer(EDGE_CHAM, edges)
+        print(f"  chamfered {len(edges)} corner edges @ {EDGE_CHAM} mm")
+except Exception as ex:
+    print(f"  chamfer skipped: {ex}")
+
+obj = doc.addObject("Part::Feature", "Upright_2020_V1_0")
+obj.Shape = bar
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_Upright2020_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")
+print(f"     volume: {bar.Volume:.0f} mm^3")

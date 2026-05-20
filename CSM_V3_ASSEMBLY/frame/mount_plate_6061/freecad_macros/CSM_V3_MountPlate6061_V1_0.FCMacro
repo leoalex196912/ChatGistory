@@ -1,0 +1,94 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- ALUMINUM MOUNT PLATE V1.0
+# =============================================================================
+# 6061 aluminum mount plate. Sits between cassette base bottom (Z=49)
+# and the wood mid-shelf. Carries the four M5 frame-mount bolts that
+# anchor the cassette base assembly to the wood + 2020 frame.
+#
+# Reference: INTERFACE_CONTROL.md R2 Interface 6
+#   - 150 x 150 x 6 mm 6061 aluminum
+#   - 4x M5 bolt holes at PCD 180.0, angular offset 45 deg
+#     (i.e. corners: 45, 135, 225, 315)
+#   - Top surface at Z = 49 mm (CAM_DATUM_Z, cassette base bottom)
+#
+# DESIGN NOTE:
+#   At PCD 180 (radius 90) with 45 deg offset, each bolt center sits at
+#   (63.6, 63.6) mm from plate center -- inside the 150x150 footprint
+#   (corner at 75, 75). So the bolt pattern fits.
+#
+#   Cam ring OD = 165 mm. A naive centered hole would have to be 166+ mm
+#   diameter -- larger than the plate footprint. Two ways to resolve:
+#     a) Make plate larger (e.g. 200x200) and cut a centered through-hole.
+#     b) Keep plate small (150x150), no center hole; the wood mid-shelf
+#        below has a hole big enough for the cam ring, and the cassette
+#        base just bolts to the top of this plate. Plate sits AROUND the
+#        cam ring through-hole opening in the wood.
+#
+#   V1.0 implements (b): solid plate, no center hole, four corner bolt
+#   holes only. This is a working configuration and we can revisit later.
+# =============================================================================
+
+import FreeCAD, Part, math, os
+
+# ---- params ----
+PLATE_W      = 150.0      # X, Y span
+PLATE_T      =   6.0      # thickness
+BOLT_PCD     = 180.0      # pitch circle for the 4 frame-mount bolts
+BOLT_OFFSET  =  45.0      # angular offset (deg)
+BOLT_COUNT   =   4
+BOLT_HOLE_D  =   5.5      # M5 clearance hole
+TOP_Z        =  49.0      # top surface = CAM_DATUM_Z
+
+# ---- derived ----
+BOT_Z = TOP_Z - PLATE_T
+
+print(f"[MountPlate6061 V1.0]  {PLATE_W} x {PLATE_W} x {PLATE_T} mm")
+print(f"  top at Z={TOP_Z}, bottom at Z={BOT_Z}")
+print(f"  {BOLT_COUNT}x M5 holes (D{BOLT_HOLE_D}) at PCD {BOLT_PCD}, offset {BOLT_OFFSET} deg")
+
+# ---- build ----
+doc = FreeCAD.newDocument("MountPlate6061")
+plate = Part.makeBox(PLATE_W, PLATE_W, PLATE_T,
+                     FreeCAD.Vector(-PLATE_W/2, -PLATE_W/2, BOT_Z))
+
+# bolt holes
+holes = None
+for i in range(BOLT_COUNT):
+    ang = math.radians(i * (360.0 / BOLT_COUNT) + BOLT_OFFSET)
+    bx = (BOLT_PCD / 2.0) * math.cos(ang)
+    by = (BOLT_PCD / 2.0) * math.sin(ang)
+    # Verify bolt sits inside the plate footprint
+    if abs(bx) > PLATE_W/2 or abs(by) > PLATE_W/2:
+        print(f"  WARN: bolt at ({bx:.1f},{by:.1f}) is OUTSIDE plate footprint")
+        continue
+    hole = Part.makeCylinder(BOLT_HOLE_D / 2.0, PLATE_T + 2.0,
+                             FreeCAD.Vector(bx, by, BOT_Z - 1.0))
+    holes = hole if holes is None else holes.fuse(hole)
+
+if holes is not None:
+    plate = plate.cut(holes)
+
+# Subtle edge chamfer for the marketing render
+try:
+    top_edges = []
+    for e in plate.Edges:
+        v1 = e.Vertexes[0].Point
+        v2 = e.Vertexes[1].Point
+        if abs(v1.z - TOP_Z) < 0.01 and abs(v2.z - TOP_Z) < 0.01:
+            top_edges.append(e)
+    if top_edges:
+        plate = plate.makeChamfer(0.5, top_edges)
+        print(f"  chamfered {len(top_edges)} top edges @ 0.5 mm")
+except Exception as ex:
+    print(f"  chamfer skipped: {ex}")
+
+obj = doc.addObject("Part::Feature", "MountPlate_6061_V1_0")
+obj.Shape = plate
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_MountPlate6061_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")
+print(f"     volume: {plate.Volume:.0f} mm^3")

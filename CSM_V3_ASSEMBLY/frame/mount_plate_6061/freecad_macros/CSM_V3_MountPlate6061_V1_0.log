@@ -1,0 +1,6 @@
+[MountPlate6061 V1.0]  150.0 x 150.0 x 6.0 mm
+  top at Z=49.0, bottom at Z=43.0
+  4x M5 holes (D5.5) at PCD 180.0, offset 45.0 deg
+  chamfer skipped: list index out of range
+[OK] STL: C:\Users\LEONID\Downloads\CSM_V3_GitHub_Ready\csm-v3-repo\CSM_V3_ASSEMBLY\frame\mount_plate_6061\CSM_V3_MountPlate6061_V1_0.stl  (959938 bytes)
+     volume: 134430 mm^3

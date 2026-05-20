@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- WOOD MID-SHELF V1.0
+# =============================================================================
+# Hardwood plate that carries the cassette head assembly. Mounts to 2020
+# uprights at four corners. Has a center through-hole big enough to clear
+# the cam ring (OD 165) so the cassette + cam + cylinder hang BELOW it.
+#
+# Reference: INTERFACE_CONTROL.md R2 Interface 6
+#   - 500 x 400 x 18 mm hardwood
+#   - Cassette base bolts to it via 150x150x6 aluminum plate (PCD 180)
+#   - Top surface at Z = CAM_DATUM_Z = 49 mm (cassette base bottom)
+# =============================================================================
+
+import FreeCAD, Part, os
+
+# ---- params ----
+SHELF_W   = 500.0     # X span (mm)
+SHELF_D   = 400.0     # Y span (mm)
+SHELF_T   =  18.0     # thickness (mm)
+HOLE_D    = 200.0     # center through-hole for cam ring (OD 165) + clearance
+                       # NOTE: oversized for clearance + visible assembly.
+                       # Real cutout would be sized to cam ring OD + 5-10mm.
+TOP_Z     =  49.0     # top surface = CAM_DATUM_Z (cassette base bottom)
+
+# ---- derived ----
+BOT_Z     = TOP_Z - SHELF_T
+CTR_Z     = (TOP_Z + BOT_Z) / 2.0
+
+print(f"[WoodShelfMid V1.0]  {SHELF_W} x {SHELF_D} x {SHELF_T} mm")
+print(f"  top at Z={TOP_Z}, bottom at Z={BOT_Z}")
+print(f"  center through-hole D={HOLE_D}")
+
+# ---- build ----
+doc = FreeCAD.newDocument("WoodShelfMid")
+slab = Part.makeBox(SHELF_W, SHELF_D, SHELF_T,
+                    FreeCAD.Vector(-SHELF_W/2, -SHELF_D/2, BOT_Z))
+hole = Part.makeCylinder(HOLE_D/2.0, SHELF_T + 2.0,
+                         FreeCAD.Vector(0, 0, BOT_Z - 1.0))
+shape = slab.cut(hole)
+
+obj = doc.addObject("Part::Feature", "WoodShelfMid_V1_0")
+obj.Shape = shape
+doc.recompute()
+
+# ---- export ----
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_WoodShelfMid_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")
+print(f"     volume: {shape.Volume:.0f} mm^3")

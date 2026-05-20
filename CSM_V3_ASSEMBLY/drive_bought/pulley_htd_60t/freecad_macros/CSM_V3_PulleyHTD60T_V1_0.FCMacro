@@ -1,0 +1,66 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- HTD 5M 60T PULLEY V1.0  (cylinder side, on 12 mm drive shaft)
+# =============================================================================
+# 60-tooth HTD 5M timing pulley. Bought part.
+#   Pitch diameter:  60 * 5 / pi = 95.49 mm
+#   Outer diameter:  ~97.5 mm  (PD + ~1.0 mm flange + tooth height)
+#   Width:           16 mm    (clears 15 mm wide belt)
+#   Bore:            12 mm    (slip fit on shaft)
+#   Hub flange:      D~40 mm x 8 mm (set-screw side)
+# Cosmetic teeth modeled as 60 small radial notches on the OD.
+# =============================================================================
+import FreeCAD, Part, math, os
+
+TOOTH_COUNT = 60
+PITCH = 5.0
+PD = TOOTH_COUNT * PITCH / math.pi      # 95.49
+OD = PD + 2.0
+BORE_D = 12.0
+WIDTH  = 16.0
+HUB_D  = 40.0
+HUB_H  = 8.0
+
+# Cosmetic tooth: notch depth ~1mm, notch arc covers half the pitch
+TOOTH_NOTCH_D = 1.0
+TOOTH_NOTCH_FRAC = 0.5
+
+print(f"[Pulley HTD 60T V1.0]  PD={PD:.2f}  OD={OD:.2f}  bore={BORE_D}  w={WIDTH}")
+
+doc = FreeCAD.newDocument("PulleyHTD60T")
+
+main = Part.makeCylinder(OD/2.0, WIDTH, FreeCAD.Vector(0, 0, 0))
+hub  = Part.makeCylinder(HUB_D/2.0, HUB_H, FreeCAD.Vector(0, 0, WIDTH))
+body = main.fuse(hub)
+
+# Bore through entire stack
+bore = Part.makeCylinder(BORE_D/2.0, WIDTH + HUB_H + 1.0, FreeCAD.Vector(0,0,-0.5))
+body = body.cut(bore)
+
+# Cosmetic teeth notches on outer rim. Each notch is a small box at angle.
+notch_arc = (2*math.pi / TOOTH_COUNT) * TOOTH_NOTCH_FRAC
+notch_chord = 2 * (OD/2.0) * math.sin(notch_arc/2.0)
+notch_box_w = notch_chord
+notch_box_d = TOOTH_NOTCH_D + 0.05
+notches = None
+for i in range(TOOTH_COUNT):
+    ang = i * (2*math.pi / TOOTH_COUNT)
+    nx = (OD/2.0 - TOOTH_NOTCH_D/2.0) * math.cos(ang)
+    ny = (OD/2.0 - TOOTH_NOTCH_D/2.0) * math.sin(ang)
+    nb = Part.makeBox(notch_box_d, notch_box_w, WIDTH,
+                      FreeCAD.Vector(-notch_box_d/2, -notch_box_w/2, 0))
+    nb.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), math.degrees(ang))
+    nb.translate(FreeCAD.Vector(nx, ny, 0))
+    notches = nb if notches is None else notches.fuse(nb)
+
+if notches is not None:
+    body = body.cut(notches)
+
+obj = doc.addObject("Part::Feature", "PulleyHTD60T_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_PulleyHTD60T_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

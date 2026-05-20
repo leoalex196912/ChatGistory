@@ -1,0 +1,74 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- 6001-2RS BEARING V1.0  (bought part visualization)
+# =============================================================================
+# Sealed deep-groove ball bearing.
+#   OD: 28 mm
+#   ID: 12 mm
+#   Width: 8 mm
+# Modeled as a thick ring with visible inner race (slightly smaller OD)
+# and outer race (slightly larger ID) joined by a thin shield disk visible
+# on each face. Good enough for marketing render -- balls not modeled.
+# =============================================================================
+import FreeCAD, Part, os
+
+OD      = 28.0
+ID      = 12.0
+WIDTH   =  8.0
+SHIELD_T = 0.4       # cosmetic seal thickness, set back from end face
+RACE_GAP = 0.6       # visible groove between inner and outer race shoulders
+
+# Inner race nominal OD ~ (ID + 2 + a couple mm), outer race nominal ID
+# ~ (OD - 2 - 2 mm). We just want a visible step on each end face.
+INNER_OD_AT_END = ID + 6.0    # 18.0
+OUTER_ID_AT_END = OD - 6.0    # 22.0
+
+print(f"[Bearing 6001-2RS V1.0]  D{OD}/D{ID}x{WIDTH}")
+
+doc = FreeCAD.newDocument("Bearing6001")
+
+# Start with a solid disk
+ring = Part.makeCylinder(OD/2.0, WIDTH, FreeCAD.Vector(0, 0, 0))
+bore = Part.makeCylinder(ID/2.0, WIDTH + 1.0, FreeCAD.Vector(0, 0, -0.5))
+ring = ring.cut(bore)
+
+# Cut a recess on the +Z end face that shows the race step
+def end_recess(z_face_top):
+    # Outer race ID step (cuts at OUTER_ID_AT_END radius)
+    outer_step = Part.makeCylinder(OUTER_ID_AT_END/2.0, SHIELD_T + 0.05,
+                                   FreeCAD.Vector(0, 0, z_face_top - SHIELD_T))
+    # Inner race OD step (annular cut between INNER_OD_AT_END and OUTER_ID_AT_END)
+    big = Part.makeCylinder(OUTER_ID_AT_END/2.0, SHIELD_T + 0.05,
+                            FreeCAD.Vector(0, 0, z_face_top - SHIELD_T))
+    small = Part.makeCylinder(INNER_OD_AT_END/2.0, SHIELD_T + 0.2,
+                              FreeCAD.Vector(0, 0, z_face_top - SHIELD_T - 0.05))
+    annular = big.cut(small)
+    return annular
+
+# Apply to both faces
+ring = ring.cut(end_recess(WIDTH))
+ring = ring.cut(end_recess(SHIELD_T).translated(FreeCAD.Vector(0, 0, -0.0)) if False else end_recess(SHIELD_T))
+
+# Note: above pattern is awkward; use direct call for bottom face:
+# (Re-do cleanly so both ends have the cosmetic step.)
+ring2 = Part.makeCylinder(OD/2.0, WIDTH, FreeCAD.Vector(0, 0, 0))
+ring2 = ring2.cut(Part.makeCylinder(ID/2.0, WIDTH + 1.0, FreeCAD.Vector(0, 0, -0.5)))
+
+def end_step_cut(z_face_top):
+    big = Part.makeCylinder(OUTER_ID_AT_END/2.0, SHIELD_T + 0.05,
+                            FreeCAD.Vector(0, 0, z_face_top - SHIELD_T))
+    small = Part.makeCylinder(INNER_OD_AT_END/2.0, SHIELD_T + 0.2,
+                              FreeCAD.Vector(0, 0, z_face_top - SHIELD_T - 0.05))
+    return big.cut(small)
+
+ring2 = ring2.cut(end_step_cut(WIDTH))                           # +Z face
+ring2 = ring2.cut(end_step_cut(WIDTH).translated(FreeCAD.Vector(0,0,-WIDTH+SHIELD_T)))  # -Z face mirror
+
+obj = doc.addObject("Part::Feature", "Bearing6001_V1_0")
+obj.Shape = ring2
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_Bearing6001_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

@@ -1,0 +1,47 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- 12 mm DRIVE SHAFT V1.0  (bought part)
+# =============================================================================
+# Steel shaft (FEYRINX h8 tolerance). Runs vertically through bearing
+# housings, carries the 60T cylinder pulley, mates with drive hub on top.
+#
+#   OD: 12 mm
+#   Length: 150 mm   (drive hub bottom at ~Z=-15, pulley at Z=-60,
+#                     bearings at Z=-70, ends below at Z=-165)
+#                    -- ample length for the assembly
+# Material in Blender will be brushed steel.
+# =============================================================================
+import FreeCAD, Part, os
+
+SHAFT_D = 12.0
+SHAFT_L = 150.0
+END_CHAMFER = 0.5    # 0.5x45 chamfer at each end (cosmetic)
+
+print(f"[Shaft 12mm V1.0]  D{SHAFT_D} x {SHAFT_L} mm")
+
+doc = FreeCAD.newDocument("Shaft12mm")
+
+shaft = Part.makeCylinder(SHAFT_D/2.0, SHAFT_L, FreeCAD.Vector(0, 0, 0))
+
+# Chamfer both ends
+try:
+    end_edges = []
+    for e in shaft.Edges:
+        v1 = e.Vertexes[0].Point
+        v2 = e.Vertexes[1].Point
+        # Circular edges at z=0 or z=SHAFT_L
+        if abs(v1.z - v2.z) < 0.01 and (abs(v1.z) < 0.05 or abs(v1.z - SHAFT_L) < 0.05):
+            end_edges.append(e)
+    if end_edges:
+        shaft = shaft.makeChamfer(END_CHAMFER, end_edges)
+except Exception as ex:
+    print(f"  chamfer skipped: {ex}")
+
+obj = doc.addObject("Part::Feature", "Shaft12mm_V1_0")
+obj.Shape = shaft
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_Shaft12mm_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

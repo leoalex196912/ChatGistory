@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- NEMA 17 STEPPER MOTOR V1.0  (bought part visualization)
+# =============================================================================
+# Standard NEMA 17 stepper. We only need a recognizable shape for the
+# render -- not the real internal geometry.
+#   - 42.3 x 42.3 mm body cross-section
+#   - 40 mm body length (3D-print-ready common variant)
+#   - 22 mm round boss in front, 5 mm shaft x 24 mm length
+#   - 4x M3 mounting holes at PCD 31 mm (corners, 90 deg apart)
+# Body color in Blender will be black anodized.
+# =============================================================================
+import FreeCAD, Part, math, os
+
+BODY_W   = 42.3
+BODY_L   = 40.0
+BOSS_D   = 22.0
+BOSS_H   =  2.0
+SHAFT_D  =  5.0
+SHAFT_L  = 24.0
+MOUNT_PCD = 31.0       # M3 mounting holes
+MOUNT_HOLE_D = 3.2
+MOUNT_DEPTH  = 4.5
+CORNER_R = 2.5         # body corner rounding
+
+# Body oriented along +Z so shaft points up (will rotate in assembly)
+print(f"[NEMA17 V1.0]  {BODY_W}x{BODY_W}x{BODY_L}  shaft D{SHAFT_D}x{SHAFT_L}")
+
+doc = FreeCAD.newDocument("NEMA17")
+
+body = Part.makeBox(BODY_W, BODY_W, BODY_L,
+                    FreeCAD.Vector(-BODY_W/2, -BODY_W/2, 0))
+
+# Round the 4 vertical edges
+try:
+    rnd_edges = []
+    for e in body.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.x - v2.x) < 0.01 and abs(v1.y - v2.y) < 0.01 and abs(v1.z - v2.z) > BODY_L/2:
+            rnd_edges.append(e)
+    if rnd_edges:
+        body = body.makeFillet(CORNER_R, rnd_edges)
+except Exception:
+    pass
+
+# Mounting holes (4 corners) -- M3 through, on the +Z end face
+for i in range(4):
+    ang = math.radians(45 + i * 90)
+    bx = (MOUNT_PCD / 2.0) * math.cos(ang)
+    by = (MOUNT_PCD / 2.0) * math.sin(ang)
+    hole = Part.makeCylinder(MOUNT_HOLE_D / 2.0, MOUNT_DEPTH + 0.5,
+                             FreeCAD.Vector(bx, by, BODY_L - MOUNT_DEPTH - 0.1))
+    body = body.cut(hole)
+
+# Front round boss (where shaft exits)
+boss = Part.makeCylinder(BOSS_D / 2.0, BOSS_H,
+                         FreeCAD.Vector(0, 0, BODY_L))
+body = body.fuse(boss)
+
+# Shaft
+shaft = Part.makeCylinder(SHAFT_D / 2.0, SHAFT_L,
+                          FreeCAD.Vector(0, 0, BODY_L + BOSS_H))
+body = body.fuse(shaft)
+
+obj = doc.addObject("Part::Feature", "NEMA17_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_NEMA17_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

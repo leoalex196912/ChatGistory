@@ -1,0 +1,61 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- HTD 5M 16T PULLEY V1.0  (motor side, on 5 mm NEMA 17 shaft)
+# =============================================================================
+# 16-tooth HTD 5M timing pulley. Bought part.
+#   Pitch diameter:  16 * 5 / pi = 25.46 mm
+#   Outer diameter:  ~27.4 mm
+#   Width:           16 mm  (matches belt width 15 mm)
+#   Bore:            5 mm   (NEMA 17 shaft)
+#   Hub flange:      D~17 mm x 8 mm (set-screw side)
+# Cosmetic teeth as 16 small radial notches on the OD.
+# =============================================================================
+import FreeCAD, Part, math, os
+
+TOOTH_COUNT = 16
+PITCH = 5.0
+PD = TOOTH_COUNT * PITCH / math.pi      # 25.46
+OD = PD + 2.0
+BORE_D = 5.0
+WIDTH  = 16.0
+HUB_D  = 17.0
+HUB_H  =  8.0
+
+TOOTH_NOTCH_D = 0.8
+TOOTH_NOTCH_FRAC = 0.5
+
+print(f"[Pulley HTD 16T V1.0]  PD={PD:.2f}  OD={OD:.2f}  bore={BORE_D}  w={WIDTH}")
+
+doc = FreeCAD.newDocument("PulleyHTD16T")
+
+main = Part.makeCylinder(OD/2.0, WIDTH, FreeCAD.Vector(0, 0, 0))
+hub  = Part.makeCylinder(HUB_D/2.0, HUB_H, FreeCAD.Vector(0, 0, WIDTH))
+body = main.fuse(hub)
+
+bore = Part.makeCylinder(BORE_D/2.0, WIDTH + HUB_H + 1.0, FreeCAD.Vector(0,0,-0.5))
+body = body.cut(bore)
+
+notch_arc = (2*math.pi / TOOTH_COUNT) * TOOTH_NOTCH_FRAC
+notch_chord = 2 * (OD/2.0) * math.sin(notch_arc/2.0)
+notches = None
+for i in range(TOOTH_COUNT):
+    ang = i * (2*math.pi / TOOTH_COUNT)
+    nx = (OD/2.0 - TOOTH_NOTCH_D/2.0) * math.cos(ang)
+    ny = (OD/2.0 - TOOTH_NOTCH_D/2.0) * math.sin(ang)
+    nb = Part.makeBox(TOOTH_NOTCH_D + 0.05, notch_chord, WIDTH,
+                      FreeCAD.Vector(-(TOOTH_NOTCH_D + 0.05)/2, -notch_chord/2, 0))
+    nb.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0,0,1), math.degrees(ang))
+    nb.translate(FreeCAD.Vector(nx, ny, 0))
+    notches = nb if notches is None else notches.fuse(nb)
+
+if notches is not None:
+    body = body.cut(notches)
+
+obj = doc.addObject("Part::Feature", "PulleyHTD16T_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_PulleyHTD16T_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

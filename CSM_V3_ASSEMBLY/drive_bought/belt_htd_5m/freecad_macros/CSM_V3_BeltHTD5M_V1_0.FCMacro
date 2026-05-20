@@ -1,0 +1,95 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- HTD 5M BELT V1.0  (closed loop, 15 mm wide)
+# =============================================================================
+# Closed-loop HTD 5M belt connecting the 60T cylinder pulley to the 16T
+# motor pulley. For marketing render only -- not load-rated geometry.
+#
+# Topology: belt centerline = two external tangent line segments +
+# two arc segments wrapping each pulley. Cross-section is a thin band
+# (3 mm thick x 15 mm wide). Built by:
+#   1. Trace closed planar wire of belt centerline in XY plane.
+#   2. Make face from wire, extrude along Z by belt width.
+#   3. Make a slightly INNER face, extrude, subtract -- gives the band.
+#
+# Standard belt length for 60T + 16T at C=90 is approximately:
+#   L = 2C + pi*(D1+D2)/2 + (D1-D2)^2/(4C)
+#   D1=95.49, D2=25.46, C=90 -> L = 180 + 190.0 + 9.6 = 379.6 mm
+#   Nearest standard HTD 5M length: 380 mm (76 teeth)
+# =============================================================================
+import FreeCAD, Part, math, os
+
+D1 = 95.49 + 0.5     # belt rides on pitch diameter (cylinder pulley)
+D2 = 25.46 + 0.5     # belt rides on pitch diameter (motor pulley)
+R1 = D1 / 2.0
+R2 = D2 / 2.0
+C  = 90.0            # center-to-center distance (mm)
+BELT_W = 15.0        # belt width (along Z)
+BELT_T =  3.0        # belt thickness (radial, into/out of pulley)
+BELT_Z = 0.0         # belt centerline plane Z
+
+print(f"[Belt HTD 5M V1.0]  R1={R1:.2f}  R2={R2:.2f}  C={C}  w={BELT_W}")
+
+doc = FreeCAD.newDocument("BeltHTD5M")
+
+# External tangent line angles
+# For uncrossed belt: contact angle alpha where sin(alpha)=(R1-R2)/C
+sin_a = (R1 - R2) / C
+alpha = math.asin(sin_a)        # rad
+
+# Pulley 1 centered at (0,0), pulley 2 centered at (C, 0)
+# Top tangent: from p1_top = (R1*sin(a), R1*cos(a)) tangent to
+#                  p2_top = (C + R2*sin(a), R2*cos(a))
+def wire_belt(radial_offset):
+    """Build a closed wire that traces the belt at a given radial offset
+    (positive = outside the pulleys, negative = inside)."""
+    r1 = R1 + radial_offset
+    r2 = R2 + radial_offset
+    # Recompute alpha for offset radii
+    s = (r1 - r2) / C
+    a = math.asin(s)
+    cos_a = math.cos(a)
+    sin_a_ = math.sin(a)
+
+    p1_top = FreeCAD.Vector(r1 * sin_a_,  r1 * cos_a, BELT_Z)
+    p1_bot = FreeCAD.Vector(r1 * sin_a_, -r1 * cos_a, BELT_Z)
+    p2_top = FreeCAD.Vector(C + r2 * sin_a_,  r2 * cos_a, BELT_Z)
+    p2_bot = FreeCAD.Vector(C + r2 * sin_a_, -r2 * cos_a, BELT_Z)
+
+    # Arc midpoints (on the far side of each pulley)
+    p1_far = FreeCAD.Vector(-r1, 0, BELT_Z)
+    p2_far = FreeCAD.Vector(C + r2, 0, BELT_Z)
+
+    # Wire: line(p1_top -> p2_top), arc(p2_top -> p2_far -> p2_bot),
+    #       line(p2_bot -> p1_bot), arc(p1_bot -> p1_far -> p1_top)
+    line_top = Part.LineSegment(p1_top, p2_top).toShape()
+    arc_p2   = Part.Arc(p2_top, p2_far, p2_bot).toShape()
+    line_bot = Part.LineSegment(p2_bot, p1_bot).toShape()
+    arc_p1   = Part.Arc(p1_bot, p1_far, p1_top).toShape()
+
+    wire = Part.Wire([line_top, arc_p2, line_bot, arc_p1])
+    return wire
+
+outer_wire = wire_belt(+BELT_T / 2.0)   # belt outer skin
+inner_wire = wire_belt(-BELT_T / 2.0)   # belt inner skin
+
+outer_face = Part.Face(outer_wire)
+inner_face = Part.Face(inner_wire)
+
+# Extrude both along +Z by belt width, then cut inner from outer => band shell
+outer_solid = outer_face.extrude(FreeCAD.Vector(0, 0, BELT_W))
+inner_solid = inner_face.extrude(FreeCAD.Vector(0, 0, BELT_W))
+belt = outer_solid.cut(inner_solid)
+
+# Center the belt's Z extent on z=0
+belt.translate(FreeCAD.Vector(0, 0, -BELT_W / 2.0))
+
+obj = doc.addObject("Part::Feature", "BeltHTD5M_V1_0")
+obj.Shape = belt
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_BeltHTD5M_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")
+print(f"  belt center-to-center C={C}, pulley 2 centered at ({C}, 0)")

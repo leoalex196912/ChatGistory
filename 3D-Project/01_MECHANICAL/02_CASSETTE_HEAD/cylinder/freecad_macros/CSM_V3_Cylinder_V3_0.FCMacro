@@ -205,14 +205,20 @@ WEDGE_A_SLOTS = [   # WIDTH sweep at fixed depth 3.0
     (1.28, 3.0),
 ]
 
-WEDGE_B_SLOTS = [   # DEPTH sweep at fixed width 1.22
-    # (slot_width_mm, slot_depth_mm)
-    (1.22, 2.5),    # matches reference STL depth (2.55mm)
-    (1.22, 2.8),
-    (1.22, 3.0),    # <-- baseline (matches SLOT_DEPTH)
-    (1.22, 3.2),
-    (1.22, 3.4),
-    (1.22, 3.6),
+WEDGE_B_SLOTS = [   # OPTION B: coupled DEPTH + GROOVE sweep at fixed width 1.22
+    # Each entry is (slot_width_mm, slot_depth_mm, groove_depth_mm).
+    # Groove depth is chosen so that for ALL slots:
+    #     groove_depth = slot_depth - 1.8 + 0.2
+    # That preserves a constant 0.20mm spring preload across the whole sweep,
+    # so the test isolates the effect of slot depth alone on needle retention.
+    # (Constraint: slot_depth <= groove_depth + needle_thickness 1.8mm
+    #  for the spring inner face to bear on the needle outer face.)
+    (1.22, 2.5, 0.9),
+    (1.22, 3.0, 1.4),    # <-- baseline (matches SLOT_DEPTH=3.0, groove 1.4)
+    (1.22, 3.5, 1.9),
+    (1.22, 4.0, 2.4),
+    (1.22, 4.5, 2.9),
+    (1.22, 5.0, 3.4),
 ]
 
 # Derived
@@ -530,12 +536,30 @@ print(f"\nVolume: {vol_mm3:.0f} mm^3  (~{vol_mm3 * 1.27 / 1000:.0f}g PETG)")
 # BUILD TEST WEDGES (two 30 deg pie slices with isolated variables)
 # =============================================================================
 def build_wedge(wedge_slots, x_offset, color, label):
-    """Build a 30 deg test wedge with the given list of (width, depth) slots.
+    """Build a 30 deg test wedge with the given list of slot entries.
+       Each entry is either:
+         (slot_width, slot_depth)                  -- shared global groove
+         (slot_width, slot_depth, groove_depth)    -- per-slot angular groove
        Includes test insert + magnet pockets, spring groove, top chamfers."""
+    # Normalize: ensure every entry is a (w, d, g_or_None) triple
+    norm_slots = []
+    per_slot_groove = False
+    for entry in wedge_slots:
+        if len(entry) == 3:
+            norm_slots.append((entry[0], entry[1], entry[2]))
+            per_slot_groove = True
+        else:
+            norm_slots.append((entry[0], entry[1], None))
+
     print()
     print(f"[{label}] Building 30 deg test wedge:")
-    for i, (sw, sd) in enumerate(wedge_slots):
-        print(f"        Slot {i+1}: width={sw}mm  depth={sd}mm")
+    for i, (sw, sd, gd) in enumerate(norm_slots):
+        if gd is None:
+            print(f"        Slot {i+1}: width={sw}mm  depth={sd}mm  (shared groove)")
+        else:
+            preload = (gd + 1.8) - sd
+            print(f"        Slot {i+1}: width={sw}mm  depth={sd}mm  "
+                  f"groove={gd}mm  -> spring preload {preload:+.2f}mm")
 
     w_outer = Part.makeCylinder(CYL_OUTER_R, CYL_HEIGHT)
     w_inner_up = Part.makeCylinder(CYL_INNER_R, CYL_HEIGHT - BOTTOM_THICK + 2.0)
@@ -555,8 +579,10 @@ def build_wedge(wedge_slots, x_offset, color, label):
 
     # Slot cuts
     wedge_cutters = []
-    for i, (sw, sd) in enumerate(wedge_slots):
+    slot_angles = []   # (center_angle_deg) per slot -- for per-slot groove segs
+    for i, (sw, sd, _gd) in enumerate(norm_slots):
         angle = (i + 0.5) * SLOT_PITCH_DEG
+        slot_angles.append(angle)
         wedge_cutters.append(build_slot_cutter(sw, angle, slot_d=sd))
     wb = wb.cut(tree_fuse(wedge_cutters))
 
@@ -575,23 +601,48 @@ def build_wedge(wedge_slots, x_offset, color, label):
     tp_m.translate(FreeCAD.Vector(tb_mx, tb_my, -0.05))
     wb = wb.cut(tp_m)
 
-    # Spring groove restricted to wedge sector
-    wg_outer = Part.makeCylinder(
-        CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
-        FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT),
-    )
-    wg_inner = Part.makeCylinder(
-        CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
-        FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05),
-    )
-    wg_cutter = wg_outer.cut(wg_inner)
-    wg_sector = Part.makeCylinder(
-        CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
-        FreeCAD.Vector(0, 0, -1.0),
-        FreeCAD.Vector(0, 0, 1.0),
-        WEDGE_ANGLE_DEG,
-    )
-    wb = wb.cut(wg_cutter.common(wg_sector))
+    if per_slot_groove:
+        # Per-slot angular groove segments: each slot owns a SLOT_PITCH_DEG
+        # angular slice of the spring groove at its own groove depth. The
+        # spring (when installed across the wedge) bears differently on each
+        # slot's needle depending on that slot's groove depth.
+        groove_segs = []
+        for i, (_sw, _sd, gd) in enumerate(norm_slots):
+            seg_start = i * SLOT_PITCH_DEG
+            seg_outer = Part.makeCylinder(
+                CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+                FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT),
+                FreeCAD.Vector(0, 0, 1.0),
+                SLOT_PITCH_DEG,
+            )
+            seg_inner = Part.makeCylinder(
+                CYL_OUTER_R - gd, SPRING_GROOVE_W + 0.1,
+                FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05),
+                FreeCAD.Vector(0, 0, 1.0),
+                SLOT_PITCH_DEG,
+            )
+            seg = seg_outer.cut(seg_inner)
+            seg.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(0, 0, 1), seg_start)
+            groove_segs.append(seg)
+        wb = wb.cut(tree_fuse(groove_segs))
+    else:
+        # Shared groove across the whole wedge sector (used by WEDGE A)
+        wg_outer = Part.makeCylinder(
+            CYL_OUTER_R + 1.0, SPRING_GROOVE_W,
+            FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT),
+        )
+        wg_inner = Part.makeCylinder(
+            CYL_OUTER_R - SPRING_GROOVE_DEPTH, SPRING_GROOVE_W + 0.1,
+            FreeCAD.Vector(0, 0, SPRING_GROOVE_Z_BOT - 0.05),
+        )
+        wg_cutter = wg_outer.cut(wg_inner)
+        wg_sector = Part.makeCylinder(
+            CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
+            FreeCAD.Vector(0, 0, -1.0),
+            FreeCAD.Vector(0, 0, 1.0),
+            WEDGE_ANGLE_DEG,
+        )
+        wb = wb.cut(wg_cutter.common(wg_sector))
 
     # OD top + bore top chamfers
     try:
@@ -838,17 +889,25 @@ print("PRINT ORDER (proper experimental design -- print BOTH wedges first):")
 print()
 print("  WEDGE A (WIDTH sweep, depth fixed at 3.0mm):")
 print("    File: CSM_V3_Cylinder_V3_0_WEDGE_A_WIDTH.stl")
-for i, (w, d) in enumerate(WEDGE_A_SLOTS):
+for i, entry in enumerate(WEDGE_A_SLOTS):
+    w, d = entry[0], entry[1]
     tag = "  <-- baseline" if abs(w - SLOT_WIDTH) < 0.001 else ""
     print(f"      Slot {i+1}:  W={w}mm  D={d}mm{tag}")
 print()
-print("  WEDGE B (DEPTH sweep, width fixed at 1.22mm):")
+print("  WEDGE B (coupled DEPTH + GROOVE sweep, width fixed at 1.22mm):")
 print("    File: CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl")
-for i, (w, d) in enumerate(WEDGE_B_SLOTS):
+for i, entry in enumerate(WEDGE_B_SLOTS):
+    w, d = entry[0], entry[1]
+    g = entry[2] if len(entry) > 2 else None
     tag = "  <-- baseline" if abs(d - SLOT_DEPTH) < 0.001 else ""
     if abs(d - 2.5) < 0.001:
         tag += "  <-- reference STL depth"
-    print(f"      Slot {i+1}:  W={w}mm  D={d}mm{tag}")
+    if g is None:
+        print(f"      Slot {i+1}:  W={w}mm  D={d}mm{tag}")
+    else:
+        preload = (g + 1.8) - d
+        print(f"      Slot {i+1}:  W={w}mm  D={d}mm  groove={g}mm  "
+              f"preload {preload:+.2f}mm{tag}")
 print()
 print("  HOW TO TEST EACH WEDGE:")
 print("    1. Insert a 12g FlyDesigns needle into each of the 6 slots")
@@ -878,7 +937,8 @@ print("  8. Torque diagonally in 2-3 passes, ~3 Nm final")
 print()
 print("FILES:")
 print(f"  STL FULL:    {PATH_STL}")
-print(f"  STL WEDGE:   {PATH_STL_WEDGE}")
+print(f"  STL WEDGE A: {PATH_STL_WEDGE_A}")
+print(f"  STL WEDGE B: {PATH_STL_WEDGE_B}")
 print(f"  PNGs:        {os.path.dirname(PATH_PNG_ISO)}")
 print(f"  SVG:         {PATH_SVG}")
 print("=" * 70)

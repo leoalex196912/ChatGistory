@@ -1,0 +1,337 @@
+# CSM V3 — Claude Code Session Log
+Date: 2026-05-19
+Topic: WEDGE_B_DEPTH clarification + post-compaction continuation
+Repo state at save: ICD R2, MACHINE_DATUMS R1, Cassette Base V1.1, Retainer Ring V1.0 (LOCKED)
+
+================================================================
+CONTEXT (carried over from compacted session)
+================================================================
+
+Project: CSM V3 — DIY automated Circular Sock Machine
+- 114.3mm Legare-compatible cylinder, 72 latch needles (12g FlyDesigns)
+- 3D-printed prototype (PETG), production target PA12 nylon / 6061 Al
+- Architecture: rotating cylinder + stationary cam ring + stationary sinker ring + cassette base + retainer ring + (future) feeders + yarn mast
+
+Locked components (as of this session):
+- Cylinder V3.0
+- Cam Ring V6.5 (FINAL)
+- Sinker Ring V1.2.1 (LOCKED)
+- Cassette Base V1.1
+- Drive Hub V2.4.2
+- Motor Mount V1.3
+- Bearing Housings V2.5
+- Retainer Ring V1.0 (LOCKED, ICD R2)
+
+Master reference docs:
+- C:\3D-Project\00_PROJECT_OVERVIEW\MACHINE_DATUMS.md (R1)
+- C:\3D-Project\00_PROJECT_OVERVIEW\INTERFACE_CONTROL.md (R2)
+
+Machine Z datum planes (all from MACHINE_DATUMS.md R1):
+  CYLINDER_Z0       =  0.0   cylinder bottom
+  CAM_DATUM_Z       = 49.0   cam ring top / cassette base bottom
+  CASSETTE_TOP_Z    = 63.0   outer disc top of cassette base
+  SINKER_Z          = 75.0   sinker register plane
+  CYLINDER_TOP_Z    = 75.0   cylinder top face
+  FEEDER_REFERENCE_Z= 78.0   nominal feeder finger height
+  HOOK_PEAK_Z       = 83.0   needle hook at peak cam lift (75 + 8mm lift)
+
+================================================================
+PHYSICAL TEST RESULTS (user-reported)
+================================================================
+
+WEDGE_A_WIDTH.stl:
+- Printed and tested.
+- Slot #3 (from left to right) = 1.22mm width is correct for user's printer.
+- This confirms the locked SLOT_WIDTH = 1.22mm in Cylinder V3.0.
+
+Needle latch behavior:
+- Latch opens at ~9.5-10mm above cylinder top.
+- Cylinder top = Z=75, so latch-open zone = Z=84.5-85.
+- This validates HOOK_PEAK_Z = 83 (needle hook peaks at 83mm; latch opens slightly above).
+
+WEDGE_B_DEPTH.stl:
+- NOT yet printed/tested.
+- User concern: 3.0mm depth used in WEDGE_A wasn't enough for spring ring retention.
+
+================================================================
+CURRENT QUESTION / DECISION POINT
+================================================================
+
+User asked: "My current depth model has 1.22 or we need rebuild under that size?"
+
+ANSWER:
+Yes — existing WEDGE_B_DEPTH.stl already has 1.22mm width on ALL 6 slots.
+Current code in CSM_V3_Cylinder_V3_0.FCMacro:
+
+    WEDGE_B_SLOTS = [   # (width, depth) — DEPTH sweep at fixed width 1.22
+        (1.22, 2.5),
+        (1.22, 2.8),
+        (1.22, 3.0),    # baseline
+        (1.22, 3.2),
+        (1.22, 3.4),
+        (1.22, 3.6),
+    ]
+
+All entries have 1.22 as the width. No rebuild needed for width.
+The only thing that would change is the DEPTH values.
+
+================================================================
+THREE OPTIONS FOR WEDGE_B DEPTH SWEEP (pending user decision)
+================================================================
+
+Option A — Wider depth sweep, fixed groove:
+  Depths: 3.0, 3.5, 4.0, 4.5, 5.0, 5.5
+  Groove: fixed 1.3mm
+  Issue: spring engagement stops working past depth 3.1
+         (constraint: slot_depth <= groove_depth + needle_depth 1.8)
+  Tests: depth alone, but no spring retention on slots 3-6.
+
+Option B — Coupled depth + groove sweep (RECOMMENDED):
+  All 6 entries maintain 0.20mm spring preload simultaneously.
+  Slot 1: 1.22 × 2.5, groove 0.9
+  Slot 2: 1.22 × 3.0, groove 1.4
+  Slot 3: 1.22 × 3.5, groove 1.9
+  Slot 4: 1.22 × 4.0, groove 2.4
+  Slot 5: 1.22 × 4.5, groove 2.9
+  Slot 6: 1.22 × 5.0, groove 3.4
+  Tests: depth AND spring retention together — best signal.
+
+Option C — Keep current WEDGE_B (2.5-3.6 at fixed 1.3 groove):
+  Already printed/sliced. No design change.
+
+User has not yet picked. My recommendation: Option B.
+
+================================================================
+OTHER OPEN ITEMS
+================================================================
+
+1. Feeder Module V1.0 — NOT YET DESIGNED
+   Interfaces (from ICD R2):
+   - Interface 5: Cassette Base ↔ Feeder, bolt PCD 190, 6× M4
+   - Phase 1: 2 active feeders at 0° and 180°
+   - Feeder finger height: FEEDER_REFERENCE_Z = 78
+   - Must clear retainer assembly (Z=83 bottom face) and HOOK_PEAK_Z = 83
+
+2. Yarn Mast V1.0 — NOT YET DESIGNED
+   Material: 2020 aluminum extrusion (per MACHINE_DATUMS.md)
+
+3. Ribber Disk — Phase 2 deferred
+   Provisioned in Cassette Base V1.1 at bolt PCD 140, 6× M4
+
+4. OpenAI MCP key (rotated): sk-proj-7Zuy...
+   API account has insufficient quota — needs billing top-up at platform.openai.com.
+   Workflow currently runs via copy-paste with ChatGPT web (not blocking).
+
+================================================================
+DECISION (2026-05-19, evening): Option B selected
+================================================================
+
+User selected Option B. Implemented in CSM_V3_Cylinder_V3_0.FCMacro:
+
+1. WEDGE_B_SLOTS changed from 2-tuples to 3-tuples (width, depth, groove):
+       (1.22, 2.5, 0.9)
+       (1.22, 3.0, 1.4)    # baseline
+       (1.22, 3.5, 1.9)
+       (1.22, 4.0, 2.4)
+       (1.22, 4.5, 2.9)
+       (1.22, 5.0, 3.4)
+   All 6 maintain +0.20mm spring preload.
+
+2. build_wedge() extended: when slot entry has 3 elements, the spring
+   groove is cut as 6 separate angular segments (one per slot, each at
+   its slot's groove depth). 2-tuple form (WEDGE_A) unchanged.
+
+3. Final-summary print updated to handle both 2- and 3-tuple entries.
+   Fixed undefined PATH_STL_WEDGE -> PATH_STL_WEDGE_A / PATH_STL_WEDGE_B.
+
+Macro re-run successful in FreeCAD on 2026-05-19 21:51.
+Output files (all freshly written):
+   CSM_V3_Cylinder_V3_0_FULL.stl            14.2 MB
+   CSM_V3_Cylinder_V3_0_WEDGE_A_WIDTH.stl    1.56 MB
+   CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl    1.60 MB  <-- print this next
+
+================================================================
+HOW TO WORK WITH FreeCAD AND Blender MCP SERVERS
+================================================================
+
+The project has two CAD MCP servers configured in .mcp.json:
+  - freecad: uvx freecad-mcp
+  - blender: uvx --python 3.12 blender-mcp
+
+Both work the same way under the hood: a small server inside the app
+(FreeCAD or Blender) listens on a localhost port, and the MCP wrapper
+forwards `execute_code` calls into the app's Python interpreter.
+
+----------------------------------------------------------------
+1) FreeCAD MCP
+----------------------------------------------------------------
+
+PORT: 9875 (XML-RPC)
+
+STARTUP CHECKLIST (do this before asking Claude to run anything):
+  a. Open FreeCAD (the GUI app, not headless).
+  b. View -> Workbench -> "MCP Addon" (or whatever the addon menu is
+     called after install). This starts the XML-RPC server on 9875.
+     Status bar / Report View should print something like
+        "FreeCAD MCP server listening on 127.0.0.1:9875"
+  c. Leave FreeCAD open with at least one document tab visible (an
+     empty New file is fine; the macro itself creates its own doc).
+
+VERIFY IT'S UP (from any terminal):
+     py -c "import xmlrpc.client; s=xmlrpc.client.ServerProxy('http://127.0.0.1:9875',allow_none=True); print(s.execute_code('print(1+1)'))"
+  Expected: {'success': True, 'message': 'Python code execution scheduled. \nOutput: 2\n'}
+
+DIRECT-SOCKET BYPASS (what Claude actually uses):
+  Instead of going through the MCP wrapper, Claude calls XML-RPC
+  directly with the `execute_code(<python source>)` method. This is
+  much more reliable for long-running boolean operations because the
+  MCP wrapper sometimes times out before FreeCAD finishes.
+
+RUNNING A MACRO FROM A TERMINAL:
+  See template at:
+     C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\_run_in_freecad.py
+  Pattern:
+     code = '''
+     import FreeCAD
+     for n in list(FreeCAD.listDocuments().keys()):
+         try: FreeCAD.closeDocument(n)
+         except: pass
+     exec(compile(open(r"<macro_path>", encoding="utf-8").read(),
+                  r"<macro_path>", "exec"),
+          {"__name__": "__main__"})
+     '''
+     xmlrpc.client.ServerProxy("http://127.0.0.1:9875",
+                               allow_none=True).execute_code(code)
+
+GOTCHAS:
+  - `execute_code` returns IMMEDIATELY ("scheduled"). It does NOT wait
+    for FreeCAD to finish. For long jobs (cylinder = ~30-60s) the
+    response message will be EMPTY -- that does not mean failure.
+    Confirm completion by polling the output STL's mtime instead.
+  - For long jobs, the wrapper may raise `_queue.Empty` as a Fault.
+    That's also not a failure -- the code still runs to completion
+    inside FreeCAD. Verify via output files.
+  - FreeCAD must have GUI up for `FreeCADGui` calls (view rotation,
+    PNG render). The macro guards these with `if FreeCAD.GuiUp`.
+  - `import FreeCAD` works inside `execute_code`, but the script's
+    `__name__` defaults to FreeCAD's console module unless you pass
+    `{"__name__": "__main__"}` to exec().
+
+CLOSING DOWN:
+  The MCP server stops when FreeCAD closes. No cleanup needed.
+
+----------------------------------------------------------------
+2) Blender MCP
+----------------------------------------------------------------
+
+PORT: 9876 (raw TCP socket, JSON line protocol -- NOT XML-RPC)
+
+STARTUP CHECKLIST:
+  a. Open Blender 3.x or 4.x (the GUI, not headless).
+  b. Edit -> Preferences -> Add-ons -> search "BlenderMCP" -> enable.
+     (Install from .zip if not already installed -- the blender-mcp
+     repo has the addon.)
+  c. In the 3D viewport, press N to open the side panel.
+  d. Open the "BlenderMCP" tab on the right edge.
+  e. Click "Start MCP Server". The panel should say
+        "Connected on 127.0.0.1:9876"
+  f. Leave Blender open with the default scene (or any scene) loaded.
+
+VERIFY IT'S UP:
+     py -c "import socket,json; s=socket.create_connection(('127.0.0.1',9876),timeout=2); s.sendall((json.dumps({'type':'execute_code','params':{'code':'print(1+1)'}})+chr(10)).encode()); print(s.recv(4096).decode())"
+
+PROTOCOL DIFFERENCE FROM FREECAD:
+  Blender MCP speaks raw TCP with newline-delimited JSON, not XML-RPC.
+  Each message is one JSON object terminated with \n:
+        {"type": "execute_code", "params": {"code": "<python>"}}\n
+  Response is also one JSON line:
+        {"status": "success", "result": "<stdout>"}\n
+
+RUNNING A SCRIPT FROM A TERMINAL:
+     import socket, json
+     s = socket.create_connection(("127.0.0.1", 9876), timeout=30)
+     msg = json.dumps({"type":"execute_code",
+                       "params":{"code": open(<path>).read()}}) + "\n"
+     s.sendall(msg.encode())
+     resp = b""
+     while not resp.endswith(b"\n"):
+         resp += s.recv(65536)
+     print(json.loads(resp.decode()))
+
+TYPICAL USE CASES (CSM V3 context):
+  - Import a freshly-built STL from FreeCAD:
+        bpy.ops.import_mesh.stl(filepath=r"<path>.stl")
+  - Apply machine-coordinate transforms (Z up matches CSM convention).
+  - Render assembly previews with PBR materials (PETG translucency).
+  - Composite multiple components into one scene for visual ICD
+    verification (cassette base + cylinder + cam + sinker + retainer).
+
+GOTCHAS:
+  - Blender's bpy operators sometimes need a valid context. Wrap
+    risky ops in:
+        with bpy.context.temp_override(area=..., region=...):
+            bpy.ops.xxx()
+    or use the lower-level bpy.data API instead.
+  - bpy.ops.import_mesh.stl was REMOVED in Blender 4.0+. Use
+    bpy.ops.wm.stl_import(filepath=...) instead (or check the
+    Blender version first and branch).
+  - Long renders block the socket. If a job will take more than ~10s,
+    spawn it asynchronously inside Blender and poll for the output
+    file (same pattern as the FreeCAD STL mtime poll).
+
+----------------------------------------------------------------
+3) Shared workflow tips
+----------------------------------------------------------------
+
+CLAUDE-DRIVEN WORKFLOW WE'RE USING:
+  1. Edit the macro source in the repo (e.g. CSM_V3_Cylinder_V3_0.FCMacro).
+  2. Ask Claude to run it -- Claude calls execute_code() and polls the
+     output STL mtime to know when it's finished.
+  3. Claude reports file sizes / volumes back to you.
+  4. You open the STL in your slicer (or import it in Blender via the
+     Blender MCP for visual check) and print.
+  5. After physical test, you tell Claude which slot won; Claude
+     updates the macro's locked values and the ICD if interfaces
+     changed; commit.
+
+WHY DIRECT XML-RPC / TCP INSTEAD OF THE WRAPPED MCP TOOLS:
+  - More reliable for long-running CAD jobs.
+  - Easier to debug (one print statement away).
+  - Works even when the MCP harness restarts -- the in-app server
+    keeps running.
+  - You can also use the wrapped MCP tools from Claude's tool menu;
+    they go to the same port. Direct calls just bypass a layer.
+
+WHEN MCP TOOLS STOP RESPONDING:
+  - First: is the app (FreeCAD / Blender) still open?
+  - Second: did the in-app server addon get unloaded? (Toggle off/on.)
+  - Third: try a `py -c` probe from terminal to confirm the port.
+  - Fourth: restart the app, then re-enable the addon.
+
+EXAMPLE END-TO-END (what just happened in this session):
+  - Edited WEDGE_B_SLOTS in CSM_V3_Cylinder_V3_0.FCMacro
+    (4 small Edit calls).
+  - Created _run_in_freecad.py driver next to the macro.
+  - Ran `py _run_in_freecad.py` -- got a _queue.Empty Fault, ignored it
+    because that just means "still running."
+  - Polled the FULL.stl + WEDGE_B_DEPTH.stl mtimes every 5s.
+  - Detected completion at 21:51:43 / 21:51:44.
+  - Confirmed file sizes (1.60 MB for WEDGE_B) -- plausible for
+    a 30-degree wedge with 6 slot cuts + 6 groove segments.
+
+----------------------------------------------------------------
+4) Quick reference -- ports and processes
+----------------------------------------------------------------
+
+  Service         Port    Protocol       Method
+  --------------  ----    ------------   -------------------
+  FreeCAD MCP     9875    XML-RPC        execute_code(code)
+  Blender MCP     9876    TCP+JSON line  {"type":"execute_code",
+                                          "params":{"code":...}}
+
+  Both run on 127.0.0.1 only (no remote access).
+  Both require the host app's GUI to be open.
+
+================================================================
+END OF LOG
+================================================================

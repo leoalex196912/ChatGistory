@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- TOUCHSCREEN MOUNT ARM V1.0  (3D-printed PETG)
+# =============================================================================
+# Single-piece rigid arm that clamps onto a 2020 upright (front-left) and
+# holds the 7-inch touchscreen at a comfortable viewing angle.
+# Geometry:
+#   - Clamp block at base (40 x 35 x 30 mm, with a 22x22 mm slot to slip
+#     over a 20x20 upright + bolt hole through the side for clamping)
+#   - Arm shaft: 25 mm diameter rod, 120 mm long, angled up 30 deg
+#   - Screen mount plate at the top: 100 x 60 x 5 mm with VESA-style
+#     4-bolt pattern (75mm spacing) for screen attachment
+# =============================================================================
+import FreeCAD, Part, math, os
+
+CLAMP_W = 40.0
+CLAMP_D = 35.0
+CLAMP_H = 30.0
+SLOT_W  = 22.0     # slips over 20x20 upright with 1mm/side clearance
+SLOT_D  = 22.0
+CLAMP_SLIT = 1.0   # cut slit to make the clamp able to squeeze closed
+
+ARM_D = 25.0
+ARM_L = 120.0
+ARM_ANGLE = 30.0   # degrees up from horizontal
+
+PLATE_W = 100.0
+PLATE_D =  60.0
+PLATE_T =   5.0
+VESA_PCD = 75.0    # bolt hole pattern on plate
+
+print(f"[TouchscreenArm V1.0]  clamp {CLAMP_W}x{CLAMP_D}x{CLAMP_H} + arm D{ARM_D}x{ARM_L} + plate {PLATE_W}x{PLATE_D}x{PLATE_T}")
+
+doc = FreeCAD.newDocument("TouchscreenArm")
+
+# Clamp block centered at origin, slot opens upward (+Z) so it can drop
+# over the top of a 2020 upright in the assembly (we'll position it).
+clamp = Part.makeBox(CLAMP_W, CLAMP_D, CLAMP_H,
+                     FreeCAD.Vector(-CLAMP_W/2, -CLAMP_D/2, 0))
+slot = Part.makeBox(SLOT_W, SLOT_D, CLAMP_H + 1.0,
+                    FreeCAD.Vector(-SLOT_W/2, -SLOT_D/2, -0.5))
+clamp = clamp.cut(slot)
+# Squeeze slit on one side (allows clamp to flex when tightened)
+slit = Part.makeBox(CLAMP_W + 1.0, CLAMP_SLIT, CLAMP_H + 1.0,
+                    FreeCAD.Vector(-CLAMP_W/2 - 0.5, -CLAMP_SLIT/2, -0.5))
+clamp = clamp.cut(slit)
+
+# Arm shaft -- starts at top of clamp, angled up
+arm_start = FreeCAD.Vector(CLAMP_W/2 - 5.0, 0, CLAMP_H)
+arm_dir = FreeCAD.Vector(math.cos(math.radians(ARM_ANGLE)), 0, math.sin(math.radians(ARM_ANGLE)))
+arm = Part.makeCylinder(ARM_D/2.0, ARM_L,
+                        arm_start,
+                        arm_dir)
+
+# Screen mount plate at far end of arm
+arm_end = arm_start + arm_dir * ARM_L
+plate = Part.makeBox(PLATE_W, PLATE_D, PLATE_T,
+                     FreeCAD.Vector(-PLATE_W/2, -PLATE_D/2, 0))
+# Rotate plate so it's perpendicular to arm direction (-30 deg tilt)
+plate.rotate(FreeCAD.Vector(0,0,0), FreeCAD.Vector(0, 1, 0), -ARM_ANGLE)
+plate.translate(arm_end + FreeCAD.Vector(0, 0, PLATE_T/2))
+
+body = clamp.fuse(arm).fuse(plate)
+
+obj = doc.addObject("Part::Feature", "TouchscreenArm_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_TouchscreenArm_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

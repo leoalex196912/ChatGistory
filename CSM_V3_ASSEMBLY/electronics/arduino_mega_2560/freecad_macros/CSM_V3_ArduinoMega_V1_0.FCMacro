@@ -1,0 +1,51 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- ARDUINO MEGA 2560 V1.0  (bought part)
+# =============================================================================
+# Marketing visualization of an Arduino Mega 2560 board.
+#   PCB:          101.5 x 53.3 x 1.6 mm
+#   Total Z:      ~15 mm including USB-B + barrel jack height
+#   USB-B jack:   sticks out one short edge ~3 mm
+#   Barrel jack:  same edge, beside USB
+# Modeled as: green PCB box + USB-B box + barrel jack cylinder.
+# =============================================================================
+import FreeCAD, Part, os
+
+PCB_W = 101.5
+PCB_D =  53.3
+PCB_T =   1.6
+USB_W = 13.0
+USB_D = 17.0
+USB_H = 6.5
+
+JACK_D = 9.0
+JACK_L = 14.0
+
+print(f"[ArduinoMega V1.0]  {PCB_W} x {PCB_D} x {PCB_T} (+ USB/jack)")
+
+doc = FreeCAD.newDocument("ArduinoMega")
+
+# PCB
+pcb = Part.makeBox(PCB_W, PCB_D, PCB_T,
+                   FreeCAD.Vector(-PCB_W/2, -PCB_D/2, 0))
+
+# USB-B jack (sticks out -X edge, on top of PCB)
+usb = Part.makeBox(USB_D, USB_W, USB_H,
+                   FreeCAD.Vector(-PCB_W/2 - 3.0, -PCB_D/2 + 5.0, PCB_T))
+pcb = pcb.fuse(usb)
+
+# Barrel power jack
+jack = Part.makeCylinder(JACK_D/2.0, JACK_L,
+                         FreeCAD.Vector(-PCB_W/2 - JACK_L/2, -PCB_D/2 + 25.0, PCB_T + JACK_D/2.0))
+jack.rotate(FreeCAD.Vector(-PCB_W/2, -PCB_D/2 + 25.0, PCB_T + JACK_D/2.0),
+            FreeCAD.Vector(0, 1, 0), 90)
+pcb = pcb.fuse(jack)
+
+obj = doc.addObject("Part::Feature", "ArduinoMega_V1_0")
+obj.Shape = pcb
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_ArduinoMega_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

@@ -1,0 +1,40 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- YARN CONE V1.0  (decorative bobbin)
+# =============================================================================
+# Hollow truncated cone representing a wound yarn bobbin. Decorative
+# only. Two of these will be placed near the cassette head in the
+# assembly with different color materials.
+#   Base D: 70 mm
+#   Top  D: 40 mm
+#   Height: 130 mm
+#   Wall:    2 mm hollow (visible if camera looks down inside)
+# =============================================================================
+import FreeCAD, Part, os
+
+BASE_D = 70.0
+TOP_D  = 40.0
+HEIGHT = 130.0
+WALL   =  2.0
+CORE_D = 30.0   # central tube diameter (cardboard core look)
+
+print(f"[YarnCone V1.0]  base D{BASE_D}, top D{TOP_D}, h {HEIGHT}")
+
+doc = FreeCAD.newDocument("YarnCone")
+
+# Outer cone (solid)
+outer = Part.makeCone(BASE_D/2.0, TOP_D/2.0, HEIGHT, FreeCAD.Vector(0,0,0))
+
+# Central hollow core (cylindrical tube through middle)
+core = Part.makeCylinder(CORE_D/2.0, HEIGHT + 0.2,
+                         FreeCAD.Vector(0, 0, -0.1))
+cone = outer.cut(core)
+
+obj = doc.addObject("Part::Feature", "YarnCone_V1_0")
+obj.Shape = cone
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_YarnCone_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

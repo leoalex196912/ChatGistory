@@ -1,0 +1,53 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- 7" HDMI TOUCHSCREEN V1.0  (bought part)
+# =============================================================================
+# Marketing visualization of a 7-inch HDMI touchscreen module.
+#   Body:        165 x 100 x 10 mm
+#   Bezel:       5 mm border (slightly recessed active area)
+#   Active area: 155 x 90 mm (the "screen" face -- different material)
+# The active-area shape will be tagged with a separate Part::Feature so
+# the Blender import can apply an emissive "screen" material to it.
+# =============================================================================
+import FreeCAD, Part, os
+
+BODY_W = 165.0
+BODY_H = 100.0
+BODY_T =  10.0
+BEZEL  =   5.0
+SCREEN_T = 0.3   # slight protrusion of the active area
+
+ACT_W = BODY_W - 2 * BEZEL
+ACT_H = BODY_H - 2 * BEZEL
+
+print(f"[Touchscreen 7in V1.0]  {BODY_W} x {BODY_H} x {BODY_T}  active {ACT_W}x{ACT_H}")
+
+doc = FreeCAD.newDocument("Touchscreen7in")
+
+body = Part.makeBox(BODY_W, BODY_H, BODY_T,
+                    FreeCAD.Vector(-BODY_W/2, -BODY_H/2, 0))
+# Slight active area pocket on +Z face
+pocket = Part.makeBox(ACT_W, ACT_H, SCREEN_T + 0.1,
+                      FreeCAD.Vector(-ACT_W/2, -ACT_H/2, BODY_T - SCREEN_T))
+body = body.cut(pocket)
+
+obj = doc.addObject("Part::Feature", "Touchscreen7in_V1_0")
+obj.Shape = body
+
+# Separate screen plane (slightly below pocket bottom so it shows up in
+# Blender import as a distinct mesh that can get an emission material)
+screen = Part.makeBox(ACT_W - 0.4, ACT_H - 0.4, 0.1,
+                      FreeCAD.Vector(-(ACT_W - 0.4)/2, -(ACT_H - 0.4)/2,
+                                     BODY_T - SCREEN_T - 0.1))
+obj_scr = doc.addObject("Part::Feature", "Touchscreen7in_Screen_V1_0")
+obj_scr.Shape = screen
+
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_BODY = os.path.join(BASE, "CSM_V3_Touchscreen7in_V1_0.stl")
+OUT_SCR  = os.path.join(BASE, "CSM_V3_Touchscreen7in_Screen_V1_0.stl")
+Part.export([obj],     OUT_BODY)
+Part.export([obj_scr], OUT_SCR)
+print(f"[OK] body STL: {OUT_BODY}  ({os.path.getsize(OUT_BODY)} bytes)")
+print(f"[OK] screen STL: {OUT_SCR}  ({os.path.getsize(OUT_SCR)} bytes)")

@@ -1,0 +1,44 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- LRS-50 POWER SUPPLY V1.0  (Mean Well 24V, bought part)
+# =============================================================================
+# Marketing visualization of the LRS-50-24 enclosed PSU.
+#   Body:          99 x 82 x 30 mm steel enclosure
+#   Terminal:      14 mm wide block on one short edge with screw terminals
+#   Mounting tabs: extend ~6 mm from each long edge (cosmetic)
+# =============================================================================
+import FreeCAD, Part, os
+
+BODY_L = 99.0
+BODY_W = 82.0
+BODY_H = 30.0
+TAB_W  =  6.0
+TAB_T  =  1.0
+
+print(f"[LRS50 V1.0]  {BODY_L} x {BODY_W} x {BODY_H}")
+
+doc = FreeCAD.newDocument("LRS50")
+
+body = Part.makeBox(BODY_L, BODY_W, BODY_H,
+                    FreeCAD.Vector(-BODY_L/2, -BODY_W/2, 0))
+
+# Mounting tabs on +Y and -Y long edges (bottom-level lip)
+tab_pos = Part.makeBox(BODY_L * 0.85, TAB_W, TAB_T,
+                       FreeCAD.Vector(-BODY_L * 0.425,  BODY_W/2, 0))
+tab_neg = Part.makeBox(BODY_L * 0.85, TAB_W, TAB_T,
+                       FreeCAD.Vector(-BODY_L * 0.425, -BODY_W/2 - TAB_W, 0))
+body = body.fuse(tab_pos).fuse(tab_neg)
+
+# Terminal block (sits on +X end face)
+tb = Part.makeBox(7.0, BODY_W - 8.0, BODY_H * 0.6,
+                  FreeCAD.Vector(BODY_L/2, -(BODY_W - 8.0)/2, BODY_H * 0.2))
+body = body.fuse(tb)
+
+obj = doc.addObject("Part::Feature", "LRS50_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_LRS50_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

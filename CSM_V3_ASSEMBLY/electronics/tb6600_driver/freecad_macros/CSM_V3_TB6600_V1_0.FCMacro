@@ -1,0 +1,48 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- TB6600 STEPPER DRIVER V1.0  (bought part)
+# =============================================================================
+# Marketing visualization of the TB6600 4A stepper driver.
+#   Body:           96 x 56 x 33 mm aluminum extrusion with heatsink fins
+#   Terminal block: 18 mm wide x 14 mm tall on one short edge
+#   Switches:       small dipswitch bank on top -- represented by recess
+# =============================================================================
+import FreeCAD, Part, os
+
+BODY_L = 96.0
+BODY_W = 56.0
+BODY_H = 33.0
+FIN_COUNT = 7
+FIN_DEPTH = 3.0
+FIN_W     = 4.0
+
+print(f"[TB6600 V1.0]  {BODY_L} x {BODY_W} x {BODY_H}  with {FIN_COUNT} fins")
+
+doc = FreeCAD.newDocument("TB6600")
+
+# Body
+body = Part.makeBox(BODY_L, BODY_W, BODY_H,
+                    FreeCAD.Vector(-BODY_L/2, -BODY_W/2, 0))
+
+# Cosmetic heatsink fins on top face: alternating grooves along the long axis
+fin_spacing = BODY_W / (FIN_COUNT + 1)
+for i in range(FIN_COUNT):
+    y = -BODY_W/2 + (i + 1) * fin_spacing
+    groove = Part.makeBox(BODY_L - 6.0, FIN_W * 0.5, FIN_DEPTH + 0.1,
+                          FreeCAD.Vector(-BODY_L/2 + 3.0, y - FIN_W * 0.25,
+                                         BODY_H - FIN_DEPTH))
+    body = body.cut(groove)
+
+# Terminal block (sits on +X short edge)
+tb = Part.makeBox(8.0, BODY_W - 8.0, 14.0,
+                  FreeCAD.Vector(BODY_L/2, -(BODY_W - 8.0)/2, BODY_H - 14.0))
+body = body.fuse(tb)
+
+obj = doc.addObject("Part::Feature", "TB6600_V1_0")
+obj.Shape = body
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_TB6600_V1_0.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)} bytes)")

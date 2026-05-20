@@ -1,0 +1,214 @@
+# CSM V3 -- Claude Code Session Log
+Date: 2026-05-20
+Topic: Full assembly plan (real-geometry Blender first, ChatGPT illustration second)
+Repo state at save: ICD R2, MACHINE_DATUMS R1, all locked components per 2026-05-19 log
+
+================================================================
+CONTEXT
+================================================================
+
+The 2026-05-19 Blender hero render used real STLs for the locked
+mechanical parts (cylinder, cam ring, sinker, cassette base, retainer,
+drive hub, motor mount, bearing housings) BUT used Blender primitives
+(boxes, cylinders, cones) for everything else (motor, pulleys, belt,
+shaft, frame, electronics, yarn cones).
+
+The user (correctly) pointed out that the render "doesn't look good"
+because half the scene is engineering-grade STLs and half is grade-school
+primitives. The right approach is to build EVERY part of the assembly
+the same way we built the mechanical components: as a parametric FreeCAD
+macro that exports an STL with dimensions pulled from MACHINE_DATUMS.md.
+
+================================================================
+PROXIMA AUDIT SUMMARY (security check before install)
+================================================================
+
+Repo:  https://github.com/Zen4-bit/Proxima
+Stage: v4.1.0
+What:  Local Electron app that drives ChatGPT/Claude/Gemini/Perplexity
+       web sessions via injected JS engines, exposes them as MCP +
+       REST + WebSocket on localhost:3210.
+
+Audit verdict: SAFE TO INSTALL.
+
+Checks:
+  - Dependencies clean (only @modelcontextprotocol/sdk, ws, zod)
+  - No telemetry/analytics packages
+  - No autoUpdater / electron-updater
+  - No child_process / exec() / spawn() shell calls
+  - No eval() / Function() / vm.runInThisContext
+  - Engine scripts (claude-engine.js, chatgpt-engine.js, etc.) only
+    talk to their own provider domains using session cookies
+  - Preload bridge is standard contextBridge pattern, no IPC
+    suspiciousness
+  - All fetch() calls in engines are relative URLs that resolve to
+    the provider domain the engine is injected into
+
+Risks (real but manageable):
+  - TOS gray area (OpenAI prohibits automated access to ChatGPT).
+    Low-volume design-review usage is unlikely to trip flags.
+  - Session fragility: 404/410/auth-expired triggers handled in code
+    but each provider API change requires maintainer to ship a fix.
+  - Single-maintainer project (Zen4-bit). Forkable if abandoned.
+  - Non-commercial license. Fine for prototype; matters if CSM V3
+    ships as product.
+
+================================================================
+DECISION: BLENDER-FIRST, PROXIMA-SECOND
+================================================================
+
+Order chosen by user:
+  1. Build all missing components as real parametric STL files
+  2. Re-render the full Blender assembly with 100% real geometry
+  3. Use that render + a detailed brief as input to ChatGPT (via
+     Proxima) for a marketing-quality illustration
+
+The marketing illustration will be DIMENSIONALLY GROUNDED in the
+locked geometry, instead of DALL-E inventing a sock machine from words.
+
+================================================================
+COMPONENT BUILD PLAN (10 macros, ~3-4 hours total)
+================================================================
+
+Approval cadence proposed: GROUP B (3 checkpoints).
+
+----------------------------------------------------------------
+Batch 1: FRAME (then Blender re-render checkpoint #1)
+----------------------------------------------------------------
+
+  1. Wood mid-shelf + wood base
+       Location:  00_PROJECT_OVERVIEW/frame/freecad_macros/
+       Size:      500 x 400 x 18 mm hardwood, ×2
+       Notes:     Top of mid-shelf at Z=49 (matches CAM_DATUM_Z).
+                  Wood base bottom at Z=-300 (sets table height).
+       Time:      ~10 min
+
+  2. 2020 aluminum uprights ×4
+       Location:  00_PROJECT_OVERVIEW/frame/freecad_macros/
+       Size:      20 x 20 x 331 mm anodized aluminum extrusion
+       Notes:     Position at 4 corners of wood frame (inset 5mm).
+                  Span from base top to mid-shelf bottom.
+       Time:      ~10 min
+
+  3. Aluminum mount plate (6061)
+       Location:  00_PROJECT_OVERVIEW/frame/freecad_macros/
+       Size:      150 x 150 x 6 mm
+       Notes:     Sits between cassette base bottom (Z=49) and
+                  wood mid-shelf top.  Has a center cutout for
+                  the cam ring (~166mm) -- needs hole pattern
+                  for Interface 6 bolt PCD 180.
+       Time:      ~10 min
+
+----------------------------------------------------------------
+Batch 2: DRIVE TRAIN (then Blender re-render checkpoint #2)
+----------------------------------------------------------------
+
+  4. NEMA 17 stepper motor
+       Location:  06_DRIVE_SYSTEM/bought/freecad_macros/
+       Size:      42.3 x 42.3 x 40 mm body, 5mm shaft x 24mm
+       Notes:     Add corner mounting holes M3x4, shaft on +Z face.
+       Time:      ~15 min
+
+  5. HTD 5M pulleys
+       Location:  06_DRIVE_SYSTEM/bought/freecad_macros/
+       HTD 5M 60T:  OD ~97.5mm, width 16mm, 12mm bore + clamp
+                    (rides on drive shaft)
+       HTD 5M 16T:  OD ~27.4mm, width 16mm, 5mm bore + clamp
+                    (rides on motor shaft)
+       Notes:     Tooth profile is HTD curve; for marketing we
+                  can model as cylinder with cosmetic tooth cuts.
+       Time:      ~20 min
+
+  6. HTD 5M belt (closed loop)
+       Location:  06_DRIVE_SYSTEM/bought/freecad_macros/
+       Notes:     Generated as a closed Bezier sweep wrapping
+                  around both pulleys.  Width 15mm, thickness 3mm.
+                  Length depends on motor offset distance.
+       Time:      ~15 min
+
+  7. 6001-2RS bearings + 12mm shaft (FEYRINX h8)
+       Location:  05_BEARINGS_SHAFT/bought/freecad_macros/
+       Bearing:   28mm OD x 12mm ID x 8mm width, ×2
+       Shaft:     12mm OD x (length per assembly) mm
+       Notes:     Position bearings inside the BearingHousings_V2_5
+                  pair.  Shaft passes through both, extends up to
+                  drive hub, extends down to motor pulley.
+       Time:      ~15 min
+
+----------------------------------------------------------------
+Batch 3: ELECTRONICS + DECOR (then final render + ChatGPT step)
+----------------------------------------------------------------
+
+  8. Yarn cones (proper conical bobbin, ×2)
+       Location:  00_PROJECT_OVERVIEW/decor/freecad_macros/
+       Size:      Base D70mm, top D40mm, height 130mm, hollow core
+       Notes:     Two colors (red + blue) sitting on top of the
+                  retainer ring area.  Pure decorative.
+       Time:      ~10 min
+
+  9. Electronics: Arduino Mega 2560, TB6600 driver, LRS-50 PSU
+       Location:  02_ELECTRONICS/bought/freecad_macros/
+       Sizes:     Mega    101 x 53 x 15  mm  (USB + jack on edges)
+                  TB6600  96  x 56 x 33  mm  (heatsink fins)
+                  LRS-50  99  x 82 x 30  mm  (terminal block side)
+       Notes:     Mount underneath the wood mid-shelf, between
+                  uprights, visible from front-low angle.
+       Time:      ~30 min
+
+  10. 7" touchscreen + 3D-printed mount arm
+        Location: 02_ELECTRONICS/freecad_macros/  (screen)
+                  02_ELECTRONICS/printed/freecad_macros/  (arm)
+        Sizes:    Screen 165 x 100 x 10 mm
+                  Arm:    parametric goose-neck or rigid arm,
+                          mounts to 2020 upright on front-left
+        Notes:    This completes the "marketing look."  Without
+                  the tablet, the render reads as a workshop tool.
+                  With it, it reads as a finished product.
+        Time:     ~30 min
+
+================================================================
+EXTENSIONS TO MACHINE_DATUMS.md
+================================================================
+
+We'll add a new section to MACHINE_DATUMS.md for "Bought Parts
+Dimensions" so every macro (current and future) references the
+same constants:
+
+    # Drive components (bought)
+    NEMA17_BODY_W        = 42.3
+    NEMA17_BODY_H        = 40.0
+    NEMA17_SHAFT_D       = 5.0
+    NEMA17_SHAFT_L       = 24.0
+    NEMA17_MOUNT_PCD     = 31.0   # 4× M3
+    PULLEY_60T_OD        = 97.5
+    PULLEY_60T_BORE      = 12.0
+    PULLEY_60T_W         = 16.0
+    PULLEY_16T_OD        = 27.4
+    PULLEY_16T_BORE      = 5.0
+    PULLEY_16T_W         = 16.0
+    BELT_HTD_W           = 15.0
+    BELT_HTD_T           = 3.0
+    BEARING_6001_OD      = 28.0
+    BEARING_6001_ID      = 12.0
+    BEARING_6001_W       = 8.0
+    SHAFT_D              = 12.0   # h8 tolerance
+
+    # Electronics (bought)
+    MEGA_W, MEGA_D, MEGA_H = 101, 53, 15
+    TB6600_W, TB6600_D, TB6600_H = 96, 56, 33
+    LRS50_W, LRS50_D, LRS50_H = 99, 82, 30
+    TOUCH_W, TOUCH_D, TOUCH_H = 165, 100, 10
+
+================================================================
+NEXT STEP
+================================================================
+
+Waiting for user to confirm approval cadence (B = three checkpoints).
+Once confirmed, build Batch 1 (frame) -> commit -> Blender re-render ->
+review -> Batch 2 -> commit -> re-render -> review -> Batch 3 ->
+final render -> install Proxima -> feed render + brief to ChatGPT ->
+deliver marketing illustration.
+
+================================================================
+END OF LOG
+================================================================

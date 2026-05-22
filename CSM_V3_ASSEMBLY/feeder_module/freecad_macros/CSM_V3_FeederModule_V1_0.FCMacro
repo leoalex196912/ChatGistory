@@ -1,0 +1,148 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- FEEDER MODULE V1.0  (one unit)
+# =============================================================================
+# Self-contained 3D-printed feeder module that bolts to the cassette
+# base at PCD 190 (ICD R3 Interface 5). 6 mount positions exist on
+# the cassette (60 deg apart). Phase 1 has 2 active feeders at F1
+# (theta=0 deg, +X motor side) and F4 (theta=180 deg, -X service
+# side). Inactive positions are used by the retainer ring.
+#
+# This macro outputs ONE feeder module. The Blender assembly script
+# instantiates 2 copies at F1 and F4 positions (radial mounted at
+# PCD 190 around the cassette).
+#
+# Components of ONE feeder module:
+#   - Base plate (~90 x 70 mm) with 2x M4 clearance holes at PCD-190
+#     spacing (matched to two adjacent cassette mount holes)
+#   - Vertical cone post (D15 x 130 mm) for yarn cone
+#   - NEMA 11 motor housing (28 x 28 x 32 mm rectangular cavity)
+#   - Tensioner / yarn guide tube (cosmetic for V1.0)
+#   - Yarn exit port pointing toward cylinder centerline at
+#     FEEDER_REFERENCE_Z = 90 (cylinder-local), world Z = 271
+#
+# Designed as expandable to 6 without major machine modifications:
+#  - bolt pattern PCD 190 is unchanged for Phase 2
+#  - module physical footprint stays within a 50-degree angular wedge
+#    so that 6 adjacent modules tile without collision (SE3 envelope)
+#
+# Material: PETG prototype; PA12 production (wear-resistant).
+# Reference: ICD R3 Interface 5; MACHINE_DATUMS.md R2 final;
+#            SERVICE_ENVELOPES.md R1 SE3
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ---- mounting (cassette interface) ----
+PCD_FEEDER       = MD.PCD_FEEDER          # 190.0 (Interface 5 invariant A5)
+FEEDER_RADIUS    = PCD_FEEDER / 2.0        # 95.0 mm (mount-bolt radius)
+
+# A feeder uses 2 of the 6 mount holes (e.g. at theta_local = -30 deg
+# and +30 deg from feeder center). At PCD 190, the chord between two
+# adjacent 60-degree-spaced holes is:
+#   chord = 2 * 95 * sin(30 deg) = 95.0 mm
+# So the feeder base spans 95 mm circumferentially between its 2 bolts.
+MOUNT_HOLE_PITCH = 2.0 * FEEDER_RADIUS * math.sin(math.radians(30.0))  # 95.0
+M4_HOLE_D        = 4.5                     # M4 clearance
+
+# ---- base plate ----
+BASE_W           = 95.0    # tangential dimension (between/over both bolts)
+BASE_D           = 70.0    # radial dimension (away from cassette)
+BASE_T           =  6.0    # plate thickness
+BASE_Z_BOTTOM    = MD.CASSETTE_TOP_Z      # 63.0 cyl-local (sits on cassette top)
+                                            # = world 244 (CASSETTE_TOP_WORLD_Z)
+
+# ---- cone post (vertical pin for yarn cone) ----
+POST_D           = 15.0
+POST_H           = 130.0
+POST_Z_BOTTOM    = BASE_Z_BOTTOM + BASE_T  # 69.0 cyl-local
+                                             # world 250
+POST_RADIAL_POS  =  20.0    # mm radial outward of base plate center
+
+# ---- NEMA 11 motor housing (mounts on side of base plate) ----
+MOTOR_W          = MD.NEMA11_BODY_W       # 28.0
+MOTOR_L          = MD.NEMA11_BODY_L       # 32.0
+MOTOR_HOUSING_T  =  3.0    # wall thickness
+MOTOR_BOX_W      = MOTOR_W + 2*MOTOR_HOUSING_T  # 34
+MOTOR_BOX_L      = MOTOR_L + 2*MOTOR_HOUSING_T  # 38
+MOTOR_BOX_Z_BOT  = BASE_Z_BOTTOM + BASE_T
+MOTOR_TANG_POS   = -25.0   # mm tangential offset (to one side of cone post)
+
+# ---- yarn exit nozzle (cosmetic V1.0) ----
+NOZZLE_D         =  4.0
+NOZZLE_L         = 20.0
+NOZZLE_TARGET_Z  = MD.FEEDER_REFERENCE_Z  # 90.0 cyl-local
+NOZZLE_TARGET_R  = 60.0   # roughly cylinder OD outer edge
+
+MATERIAL         = "PETG prototype (Phase 1+) / PA12 production"
+
+# =============================================================================
+# Build geometry. Origin is at the feeder bolt-pair midpoint, in the
+# cassette-tangent frame (X = tangential, Y = radial outward from
+# cylinder axis, Z = vertical world). The assembly script will rotate
+# the whole feeder around the cassette to its position (F1, F4, etc.).
+# =============================================================================
+print(f"[FeederModule V1.0]  base {BASE_W}x{BASE_D}x{BASE_T}, post D{POST_D}x{POST_H}")
+print(f"  mount: 2x M4 at pitch {MOUNT_HOLE_PITCH:.1f} mm (= 2*PCD/2*sin30)")
+print(f"  motor: NEMA 11 housing {MOTOR_BOX_W}x{MOTOR_BOX_L}")
+print(f"  cone post bottom Z = {POST_Z_BOTTOM} (cyl-local) = {MD.world_z(POST_Z_BOTTOM)} world")
+print(f"  nozzle target Z = {NOZZLE_TARGET_Z} (FEEDER_REFERENCE_Z) = {MD.world_z(NOZZLE_TARGET_Z)} world")
+print(f"  material: {MATERIAL}")
+
+doc = FreeCAD.newDocument("FeederModule_V1_0")
+
+# Base plate (centered at feeder origin in tangential X, radial Y forward)
+base = Part.makeBox(BASE_W, BASE_D, BASE_T,
+                    FreeCAD.Vector(-BASE_W/2, -BASE_D/2, BASE_Z_BOTTOM))
+
+# 2 mount holes (M4 clearance) on the cassette-facing edge of the
+# base plate (at Y = -BASE_D/2 + 10, i.e. close to cylinder side)
+mount_y = -BASE_D/2 + 10.0
+for sx in (-1, +1):
+    bx = sx * (MOUNT_HOLE_PITCH/2.0)
+    h = Part.makeCylinder(M4_HOLE_D/2.0, BASE_T + 2.0,
+                          FreeCAD.Vector(bx, mount_y, BASE_Z_BOTTOM - 1.0))
+    base = base.cut(h)
+
+# Cone post (vertical, on the outboard side of the feeder)
+post_x = 0.0
+post_y = +POST_RADIAL_POS      # outboard from cylinder
+post = Part.makeCylinder(POST_D/2.0, POST_H,
+                         FreeCAD.Vector(post_x, post_y, POST_Z_BOTTOM))
+
+# Motor housing (boxy cavity, mounts to one side of cone post)
+motor_x = MOTOR_TANG_POS
+motor_y = +POST_RADIAL_POS - MOTOR_BOX_L/2 - 5  # slightly toward cylinder from post
+motor_outer = Part.makeBox(MOTOR_BOX_W, MOTOR_BOX_L, MOTOR_L + 4.0,
+                           FreeCAD.Vector(motor_x - MOTOR_BOX_W/2,
+                                          motor_y - MOTOR_BOX_L/2,
+                                          MOTOR_BOX_Z_BOT))
+motor_cavity = Part.makeBox(MOTOR_W, MOTOR_L, MOTOR_L + 4.5,
+                            FreeCAD.Vector(motor_x - MOTOR_W/2,
+                                           motor_y - MOTOR_L/2,
+                                           MOTOR_BOX_Z_BOT + MOTOR_HOUSING_T))
+motor_housing = motor_outer.cut(motor_cavity)
+
+# Yarn nozzle (small tube angled toward cylinder centerline)
+# For V1.0 just a horizontal stub at the nozzle target Z, pointing toward -Y (cylinder direction).
+nozzle_z = NOZZLE_TARGET_Z
+nozzle = Part.makeCylinder(NOZZLE_D/2.0, NOZZLE_L,
+                           FreeCAD.Vector(0, -BASE_D/2 - 5, nozzle_z),
+                           FreeCAD.Vector(0, -1, 0))   # axis pointing -Y
+
+# Fuse everything
+feeder = base.fuse(post).fuse(motor_housing).fuse(nozzle)
+
+obj = doc.addObject("Part::Feature", "FeederModule_V1_0")
+obj.Shape = feeder
+doc.recompute()
+
+BASE_OUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE_OUT, "CSM_V3_FeederModule_V1_0.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {feeder.Volume:.0f} mm^3")

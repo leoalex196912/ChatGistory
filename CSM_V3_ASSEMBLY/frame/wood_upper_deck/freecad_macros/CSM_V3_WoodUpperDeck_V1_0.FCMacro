@@ -1,0 +1,91 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- WOOD UPPER DECK V1.0
+# =============================================================================
+# Compact hardwood deck that supports the aluminum master-datum plate
+# (which in turn carries the precision cassette). Sits on the 4
+# precision-frame 2020 uprights.
+#
+# Footprint 320 x 260 mm (vs wood base 500 x 400) -- intentionally
+# smaller so the deck reads as part of the machine, not as a second
+# table. Center through-hole for take-down column clearance.
+#
+# Reference: ICD R3 Interface 6 (frame architecture)
+#            MACHINE_DATUMS.md R2 final
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+DECK_W      = MD.UPPER_DECK_W           # 320.0
+DECK_D      = MD.UPPER_DECK_D           # 260.0
+DECK_T      = MD.UPPER_DECK_T           #  18.0
+TOP_Z       = MD.UPPER_DECK_TOP_Z       # 224.0
+BOT_Z       = MD.UPPER_DECK_BOTTOM_Z    # 206.0
+
+# Center through-hole for take-down column + cam ring clearance.
+# Cam ring OD = 165, so hole must be > 165. Use 170 for 5mm clearance.
+HOLE_D      = 170.0
+
+# 4 bolt clearance holes for upright-to-deck M5 bolts (at corner
+# positions of the deck, aligned with the uprights at ±150, ±120).
+# The wood receives M5 through-bolts that thread into T-nuts in the
+# 2020 channels below, OR into heat-set inserts in the deck if using
+# top-down assembly. V1.0 just provides the holes.
+M5_HOLE_D   =   5.5
+
+# 4 bolt holes for aluminum plate mount (Interface 6, PCD 180, 45 deg).
+# These pass through wood deck and thread into plate inserts above.
+M5_PLATE_PCD       = MD.PCD_FRAME_MOUNT  # 180.0
+M5_PLATE_HOLE_D    = M5_HOLE_D
+M5_PLATE_OFFSET_DEG = 45.0
+M5_PLATE_COUNT      =  4
+
+MATERIAL    = "Hardwood (walnut or maple), Phase 1+ unchanged"
+
+print(f"[WoodUpperDeck V1.0]  {DECK_W} x {DECK_D} x {DECK_T} mm  ({MATERIAL})")
+print(f"  world Z: bottom={BOT_Z}, top={TOP_Z}  (= MD.UPPER_DECK_*_Z)")
+print(f"  center through-hole D={HOLE_D} (cam ring clearance + take-down)")
+print(f"  bolts: 4x M5 corner (uprights) + 4x M5 PCD {M5_PLATE_PCD} @ 45 deg (plate)")
+
+doc = FreeCAD.newDocument("WoodUpperDeck_V1_0")
+
+slab = Part.makeBox(DECK_W, DECK_D, DECK_T,
+                    FreeCAD.Vector(-DECK_W/2, -DECK_D/2, BOT_Z))
+
+# Center cam-ring / take-down clearance hole
+hole = Part.makeCylinder(HOLE_D/2.0, DECK_T + 2.0,
+                         FreeCAD.Vector(0, 0, BOT_Z - 1.0))
+slab = slab.cut(hole)
+
+# 4 corner upright-mount bolt holes (aligned with uprights at ±150, ±120)
+# Note: upright cross-section is 20x20 centered at corner positions.
+# The wood deck must have clearance holes for the M5 bolts that bind
+# the deck to the upright through the 2020 slot.
+for ux in MD.UPRIGHT_X_POSITIONS:
+    for uy in MD.UPRIGHT_Y_POSITIONS:
+        h = Part.makeCylinder(M5_HOLE_D/2.0, DECK_T + 2.0,
+                              FreeCAD.Vector(ux, uy, BOT_Z - 1.0))
+        slab = slab.cut(h)
+
+# 4 plate-mount bolt holes (Interface 6, PCD 180, 45 deg offset)
+for i in range(M5_PLATE_COUNT):
+    ang = math.radians(i * (360.0 / M5_PLATE_COUNT) + M5_PLATE_OFFSET_DEG)
+    bx = (M5_PLATE_PCD/2.0) * math.cos(ang)
+    by = (M5_PLATE_PCD/2.0) * math.sin(ang)
+    h = Part.makeCylinder(M5_PLATE_HOLE_D/2.0, DECK_T + 2.0,
+                          FreeCAD.Vector(bx, by, BOT_Z - 1.0))
+    slab = slab.cut(h)
+
+obj = doc.addObject("Part::Feature", "WoodUpperDeck_V1_0")
+obj.Shape = slab
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_WoodUpperDeck_V1_0.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {slab.Volume:.0f} mm^3")

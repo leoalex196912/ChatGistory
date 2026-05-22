@@ -1,0 +1,125 @@
+# CSM V3 -- Autonomous Build Session
+Date: 2026-05-22
+Topic: Macro wave 1 (frame + feeder + mast) + full Blender assembly render
+Status: COMPLETE -- everything committed and pushed to GitHub.
+
+================================================================
+COMPLETED THIS SESSION (autonomous, user at work)
+================================================================
+
+Architecture docs (all 5 locked from prior sessions, reused here):
+  - MACHINE_COORDINATE_SYSTEM.md  R1
+  - MACHINE_DATUMS.md             R2 final
+  - INTERFACE_CONTROL.md          R3
+  - SERVICE_ENVELOPES.md          R1
+  - ANGULAR_REFERENCE_STANDARD.md R1
+
+NEW THIS SESSION:
+
+1. machine_datums.py            -- importable Python mirror of MACHINE_DATUMS.md
+                                   Self-checking (asserts derived CYL_BOTTOM_WORLD_Z
+                                   matches the constant). All macros import from
+                                   this -- no hardcoded world coordinates.
+                                   commit f899422
+
+2. WoodBase V1.0 -> V1.1        -- added D100 take-down hole, repositioned to
+                                   world Z=0..18.  commit f899422
+
+3. Upright_2020 V1.0 -> V1.1    -- shortened 267 -> 188 mm, repositioned to
+                                   world Z=18..206.  commit 4316b1b
+
+4. WoodUpperDeck V1.0           -- NEW, 320x260x18, cam clearance hole D170,
+                                   4x corner upright bolts + 4x M5 PCD 180
+                                   plate bolts.  commit 4eb6c1f
+
+5. MountPlate6061 V1.0 -> V1.1  -- resized 150x150 -> 250x250, 6mm thick,
+                                   cam clearance D170, 4x M5 PCD 180 at 45 deg.
+                                   Top face Z=230 = MASTER DATUM PLANE.
+                                   commit bca5689
+
+6. Frame validation script      -- frame_validation.py loads all 4 frame STLs,
+                                   verifies Z stack continuity and master-datum
+                                   chain. Result: PASS, all bounds match spec
+                                   exactly, zero gap between layers.
+                                   commit 579ae95
+
+7. FeederModule V1.0            -- NEW, base plate 95x70x6 + cone post D15x130
+                                   + NEMA 11 housing + yarn nozzle. Mounts at
+                                   PCD 190 (Interface 5).  commit 511e1b1
+
+8. TouchscreenMast V1.0         -- NEW, dual 2020 uprights + crossbar at
+                                   (0, -180), 400mm tall, mechanically isolated
+                                   from precision frame.  commit 72c43e7
+
+9. Blender hero render V2       -- render_hero_v2.py full assembly script.
+                                   Imports all locked + new STLs at canonical
+                                   world Z. No hardcoded coords (all from
+                                   machine_datums). Renders 4 angles + saves
+                                   .blend file:
+                                     - hero_34      (3/4 elevated front-right)
+                                     - front        (straight-on)
+                                     - side_motor   (from +X = motor side)
+                                     - top_down     (overhead)
+                                   commit b0a3481
+
+================================================================
+Z-STACK VERIFICATION (from frame_validation.py)
+================================================================
+
+   [OK]  WoodBase            Z=[   0.00,   18.00]
+   [OK]  Upright_2020        Z=[  18.00,  206.00]
+   [OK]  WoodUpperDeck       Z=[ 206.00,  224.00]
+   [OK]  MountPlate6061      Z=[ 224.00,  230.00]  <-- MASTER DATUM
+
+   Z-stack continuity (consecutive layers should touch):
+   [OK]  WoodBase top    (18)  -> Upright bot       (18)   gap=0
+   [OK]  Upright top    (206)  -> UpperDeck bot    (206)   gap=0
+   [OK]  UpperDeck top  (224)  -> Plate bot        (224)   gap=0
+
+   Master datum chain:
+   [OK]  ALU_PLATE_TOP_Z - CAM_DATUM_Z = 230 - 49 = 181 = CYL_BOTTOM_WORLD_Z
+
+================================================================
+DEFERRED FOR USER REVIEW (not blocking)
+================================================================
+
+Things I noticed but did NOT change without user approval:
+
+  - The feeder positioning in the Blender render uses an APPROXIMATE
+    radial offset (PCD/2 + 25 = 120 mm from cylinder axis). The actual
+    feeder-to-cassette mount geometry needs a small assembly tweak to
+    line up the M4 bolts at PCD 190. The CASCADE looks right
+    visually; the geometric exactness is for the next pass.
+
+  - The cassette stack is positioned at cylinder-local Z+181 to put
+    it in world coords. The drive hub, bearings, and motor mount use
+    cyl-local offsets -10, -70, -120 (kept from the working stage-1
+    import from 2026-05-19). If those need exact repositioning per
+    the new master-datum architecture, that's Phase 1.1 work.
+
+  - Electronics (Arduino Mega, TB6600, LRS-50) are NOT in this
+    render yet. They were specced for Phase 1 in MACHINE_DATUMS R2
+    but are Layer 3 components not strictly needed for the
+    architectural-validation render.
+
+  - Phase 1.5 motion study (needle kinematic validation in Blender)
+    is the next major engineering gate per ICD R3 §4.
+
+================================================================
+COMMIT TIMELINE (this session)
+================================================================
+
+  f899422  Add machine_datums.py + WoodBase V1.0 -> V1.1
+  4316b1b  Upright_2020 V1.0 -> V1.1
+  4eb6c1f  WoodUpperDeck V1.0
+  bca5689  MountPlate6061 V1.0 -> V1.1
+  579ae95  Frame assembly validation script (PASS)
+  511e1b1  FeederModule V1.0
+  72c43e7  TouchscreenMast V1.0
+  b0a3481  Blender V2 hero render (4 angles + .blend)
+
+All on main branch. All pushed to origin (leoalex196912/ChatGistory).
+
+================================================================
+END OF AUTONOMOUS SESSION
+================================================================

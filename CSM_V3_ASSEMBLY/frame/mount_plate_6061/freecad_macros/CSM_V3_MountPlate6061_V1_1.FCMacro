@@ -1,0 +1,102 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- ALUMINUM MASTER-DATUM PLATE V1.1
+# =============================================================================
+# 6061-T6 aluminum mount plate. Sits BETWEEN the wood upper deck (below)
+# and the cassette base (above). This plate is the MACHINE MASTER DATUM
+# (ICD R3 invariant B3) -- the only precision-flat surface that the
+# cassette, drive shaft, and bearing alignment all reference.
+#
+# CHANGES FROM V1.0
+# -----------------
+# - Resized 150x150x6 -> 250x250x6 per ICD R3 Interface 6 update.
+# - Added center through-hole (D170) for cam ring clearance (cam ring
+#   OD = 165, hangs DOWN through plate into the cavity under upper deck).
+# - 4x M5 frame-mount bolt holes at PCD 180, 45 deg offset (Interface 6
+#   invariant A6 -- unchanged).
+# - World position: top at Z=230 (= MASTER DATUM PLANE).
+# - Imports machine_datums.py.
+#
+# Reference: ICD R3 Interface 6 (Cassette Base <-> Frame)
+#            ICD R3 invariant B3 (master datum)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+PLATE_W      = MD.ALU_PLATE_W           # 250.0
+PLATE_T      = MD.ALU_PLATE_T           #   6.0
+TOP_Z        = MD.ALU_PLATE_TOP_Z       # 230.0 (MASTER DATUM)
+BOT_Z        = MD.ALU_PLATE_BOTTOM_Z    # 224.0
+
+# Cam ring clearance hole (cam ring OD 165, +5mm radial = 170 dia)
+CAM_HOLE_D   = 170.0
+
+# 4 M5 frame-mount bolt holes (Interface 6)
+BOLT_PCD     = MD.PCD_FRAME_MOUNT       # 180.0
+BOLT_OFFSET  =  45.0
+BOLT_COUNT   =   4
+BOLT_HOLE_D  =   5.5                    # M5 clearance
+
+# Optional: 4 corner mounting holes that bolt the plate to wood upper
+# deck below (matching the deck's plate-mount holes). The deck has
+# holes at PCD 180/45deg -- same as the cassette holes. So the same 4
+# bolts that anchor the cassette ALSO anchor the plate to the deck
+# (sandwich). We don't need extra plate-only holes for V1.1.
+# The plate has matching M5 inserts (heat-set or threaded directly)
+# at PCD 180.
+
+MATERIAL     = "6061-T6 aluminum, mill finish (machine master datum)"
+
+print(f"[MountPlate6061 V1.1]  {PLATE_W} x {PLATE_W} x {PLATE_T} mm  ({MATERIAL})")
+print(f"  world Z: bottom={BOT_Z}, top={TOP_Z}  (= MASTER DATUM PLANE)")
+print(f"  cam-ring clearance hole D={CAM_HOLE_D}")
+print(f"  {BOLT_COUNT}x M5 (D{BOLT_HOLE_D}) at PCD {BOLT_PCD} mm, offset {BOLT_OFFSET} deg")
+
+doc = FreeCAD.newDocument("MountPlate6061_V1_1")
+
+plate = Part.makeBox(PLATE_W, PLATE_W, PLATE_T,
+                     FreeCAD.Vector(-PLATE_W/2, -PLATE_W/2, BOT_Z))
+
+# Center cam-ring clearance
+cam_hole = Part.makeCylinder(CAM_HOLE_D/2.0, PLATE_T + 2.0,
+                             FreeCAD.Vector(0, 0, BOT_Z - 1.0))
+plate = plate.cut(cam_hole)
+
+# 4x M5 frame-mount holes at PCD 180, 45 deg offset
+for i in range(BOLT_COUNT):
+    ang = math.radians(i * (360.0 / BOLT_COUNT) + BOLT_OFFSET)
+    bx = (BOLT_PCD/2.0) * math.cos(ang)
+    by = (BOLT_PCD/2.0) * math.sin(ang)
+    # Verify bolt sits within plate
+    if abs(bx) > PLATE_W/2 - 5 or abs(by) > PLATE_W/2 - 5:
+        print(f"  WARN bolt at ({bx:.1f}, {by:.1f}) close to plate edge")
+    h = Part.makeCylinder(BOLT_HOLE_D/2.0, PLATE_T + 2.0,
+                          FreeCAD.Vector(bx, by, BOT_Z - 1.0))
+    plate = plate.cut(h)
+
+# Subtle top-edge chamfer for the marketing render
+try:
+    top_edges = []
+    for e in plate.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.z - TOP_Z) < 0.01 and abs(v2.z - TOP_Z) < 0.01:
+            top_edges.append(e)
+    if top_edges:
+        plate = plate.makeChamfer(0.5, top_edges)
+        print(f"  chamfered {len(top_edges)} top edges @ 0.5 mm")
+except Exception as ex:
+    print(f"  chamfer skipped: {ex}")
+
+obj = doc.addObject("Part::Feature", "MountPlate6061_V1_1")
+obj.Shape = plate
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_MountPlate6061_V1_1.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {plate.Volume:.0f} mm^3")

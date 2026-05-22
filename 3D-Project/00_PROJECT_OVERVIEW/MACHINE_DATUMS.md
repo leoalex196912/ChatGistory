@@ -76,16 +76,90 @@ HOOK_PEAK_Z          = 83.0    # needle hook position at peak cam lift
 
 ### World-Z mapping (derived from local datums + CYL_BOTTOM_WORLD_Z = 181)
 
-| Cylinder-local plane | Local Z (mm) | World Z (mm) |
-|---|---:|---:|
-| CYLINDER_Z0 | 0 | 181 |
-| Cam track top engagement | 31 | 212 |
-| CAM_DATUM_Z (= master datum plane) | 49 | 230 |
-| CASSETTE_TOP_Z | 63 | 244 |
-| SINKER_Z / CYLINDER_TOP_Z | 75 | 256 |
-| HOOK_PEAK_Z | 83 | 264 |
-| FEEDER_REFERENCE_Z | 90 | 271 |
-| Retainer top | ~91 | ~272 |
+**Semantic note:** `CAM_DATUM_Z` (cylinder-local) and `ALU_PLATE_TOP_Z`
+(world) are **physically coincident** at world Z = 230 mm in the
+nominal assembly — but they are **not the same datum**. The cassette's
+local frame ends at `CAM_DATUM_Z`; the machine's master datum is
+`ALU_PLATE_TOP_Z`. Any future shim/spacer between cassette bottom and
+plate top will offset these two without violating either definition.
+
+| Physical interface plane | Cylinder-local Z | World Z | Notes |
+|---|---:|---:|---|
+| CYLINDER_Z0 (cylinder bottom face) | 0 | 181 | drive hub boss interface |
+| Cam track top engagement | 31 | 212 | upper limit of butt travel |
+| **CAM_DATUM_Z** (cam ring top = cassette base bottom) | 49 | 230 | local datum, coincident with master datum below |
+| **ALU_PLATE_TOP_Z** (machine master datum plane) | — | **230** | world reference, cassette mounts here |
+| CASSETTE_TOP_Z (outer disc top) | 63 | 244 | cassette base outer-disc top face |
+| SINKER_Z / CYLINDER_TOP_Z | 75 | 256 | numerically equal, semantically distinct |
+| HOOK_PEAK_Z | 83 | 264 | = retainer bottom plane |
+| FEEDER_REFERENCE_Z | 90 | 271 | provisional; Phase 1.5 validates |
+| Retainer top (macro-derived, RR_THICK = 8 mm) | 91 | 272 | per Retainer Ring V1.0 geometry |
+
+`RETAINER_ASSEMBLY_OFFSET_Z = 0` in nominal assembly. Any future Z
+shim between retainer and cassette is recorded by raising this value
+in the assembly script — not by editing the retainer macro.
+
+---
+
+## Derived Values (DO NOT EDIT DIRECTLY)
+
+These values are **computed** from the primary constants above. If
+the primary value changes, the derived value updates automatically.
+Hard-coding a derived value as a literal in a macro is a bug.
+
+```python
+# ============================================================
+# DERIVED VALUES -- computed from primary constants. Read-only.
+# ============================================================
+
+# --- Cassette / cylinder kinematics ---
+HOOK_LIFT             = HOOK_PEAK_Z - CYLINDER_TOP_Z      # = 8.0 mm  (cam stroke)
+CASSETTE_DISC_THICK   = CASSETTE_TOP_Z - CAM_DATUM_Z      # = 14.0 mm (cassette outer disc)
+SINKER_TO_HOOK_GAP    = HOOK_PEAK_Z - SINKER_Z            # = 8.0 mm  (yarn catch window)
+FEEDER_ABOVE_HOOK     = FEEDER_REFERENCE_Z - HOOK_PEAK_Z  # = 7.0 mm  (yarn drop distance, provisional)
+
+# --- Frame Z stack ---
+UPRIGHT_BOT_Z         = WOOD_BASE_TOP_Z                    # = 18.0
+UPRIGHT_TOP_Z         = UPRIGHT_BOT_Z + UPRIGHT_LEN        # = 206.0
+UPPER_DECK_BOTTOM_Z   = UPRIGHT_TOP_Z                      # = 206.0
+UPPER_DECK_TOP_Z      = UPPER_DECK_BOTTOM_Z + UPPER_DECK_T # = 224.0
+ALU_PLATE_BOTTOM_Z    = UPPER_DECK_TOP_Z                   # = 224.0
+ALU_PLATE_TOP_Z       = ALU_PLATE_BOTTOM_Z + ALU_PLATE_T   # = 230.0 (master datum)
+CYL_BOTTOM_WORLD_Z    = ALU_PLATE_TOP_Z - CAM_DATUM_Z      # = 181.0 (= the transform constant)
+
+# --- Service envelope SE5 derived geometry ---
+BELT_TENSION_X_RANGE  = (MOTOR_X - BELT_TENSION_TRAVEL, MOTOR_X)   # = (60, 90)
+                       # motor shall be free to translate in this X range
+                       # for belt tension + removal (see SERVICE_ENVELOPES.md)
+```
+
+Build-time invariant: `CYL_BOTTOM_WORLD_Z` from the derived block
+MUST equal the constant defined in `MACHINE_COORDINATE_SYSTEM.md`
+(181.0). If frame Z stack ever changes such that the two diverge,
+either the frame Z stack is wrong or the coordinate system constant
+is wrong — fix the cause, not the symptom.
+
+---
+
+## Angular Phase Reference (θ = 0°)
+
+```
+═══════════════════════════════════════════════════════════════
+θ = 0° MACHINE PHASE REFERENCE
+═══════════════════════════════════════════════════════════════
+  - Cylinder slot #0 aligned with +X axis (motor side)
+  - Hall sensor index magnet at PCD 95 on bottom face,
+    at angular position 0° (Cylinder V3.0 geometry)
+  - Hall sensor index pulse occurs once per cylinder revolution
+    when slot #0 crosses the sensor
+  - All feeder timing, future pattern control, ribber sync, and
+    heel/toe sequencing reference this phase origin
+  - Rotation direction: CCW looking from +Z (standard knitting)
+```
+
+This is **foundational** for Phase 1.5 kinematic validation and all
+subsequent automation. Changing θ = 0° alignment is a breaking
+architectural change requiring an ICD revision bump.
 
 ---
 
@@ -133,10 +207,20 @@ The structural frame is now **isolated** from the precision knitting
 core. Frame dimensions are world coordinates (Z = 0 at wood base
 bottom = rubber-feet contact plane).
 
+**XY origin:** all frame coordinates below are measured from the
+**cylinder rotation axis** projected onto Z = 0 (i.e. `FRAME_ORIGIN_XY
+= (0.0, 0.0)`). The wood base is centered on the cylinder axis;
+corner positions are at (±W/2, ±D/2). This is **not** a "wood base
+corner = origin" convention.
+
 ```python
 # ============================================================
-# FRAME (world coordinates)
+# FRAME (world coordinates -- origin at cylinder axis projected to Z=0)
 # ============================================================
+FRAME_ORIGIN_XY       = (0.0, 0.0)   # cylinder axis / machine centerline
+                                      # all X, Y values below are signed
+                                      # offsets from this point.
+
 
 # Wood base (the only large wood piece)
 WOOD_BASE_W           = 500.0     # X
@@ -232,6 +316,17 @@ BELT_THICKNESS          =   3.00
 MOTOR_X                 =  90.0      # world X (motor side, +X axis)
 MOTOR_Y                 = -100.0     # world Y (back, -Y axis)
 MOTOR_BODY_BOTTOM_Z     =  18.0      # sits on wood base top
+
+# Belt geometry (derived from motor and drive shaft positions)
+BELT_CENTER_DISTANCE    = 134.5      # sqrt(MOTOR_X^2 + MOTOR_Y^2)
+                                      # mm between drive shaft axis (0,0)
+                                      # and motor shaft axis. Provisional --
+                                      # final value depends on belt pitch
+                                      # length selection and tension slot
+                                      # travel. Validated when actual
+                                      # HTD 5M belt pitch length chosen.
+BELT_TENSION_TRAVEL     =  30.0      # mm of motor X-travel for belt
+                                      # tensioning + removal (per SE5)
 
 # ============================================================
 # FEEDER MOTORS (purchased — for Phase 1 feeder modules)
@@ -334,6 +429,7 @@ MATERIAL = "PETG"    # or "PA12" or "AL6061" / "STEEL"
 |---|---|---|---|
 | R1 | 2026-05-17 | leoalex196912 | Initial datums document. Captured cylinder-local datums + interfaces from existing committed macros. |
 | R2 | 2026-05-20 | leoalex196912 | (a) Demote coord-convention ownership to new `MACHINE_COORDINATE_SYSTEM.md`; (b) Add world-Z mapping for cassette datums; (c) FEEDER_REFERENCE_Z 78→90 (provisional, validated in Phase 1.5); (d) Three-layer frame architecture: wood base 500×400×18 with D100 center hole + 4× 2020 uprights (188 mm, at ±150 ±120) + wood upper deck 320×260×18 + aluminum plate 250×250×6 as master datum; (e) Delete wood mid-shelf 500×400 (was wrong, didn't match poster); (f) Add dual-upright touchscreen mast at (0, −180); (g) NEW bought-parts dimensions section (NEMA 11 for feeders, electronics, touchscreen, HTD pulleys/belt, Hall sensor); (h) Material progression flags per component; (i) Refresh locked versions table with new frame components. |
+| R2 final | 2026-05-20 | leoalex196912 | Pre-lock refinements per architectural review: (1) Disambiguated CAM_DATUM_Z (local) vs ALU_PLATE_TOP_Z (world master datum) — they are coincident but not the same datum; (2) Clarified retainer top derivation from macro geometry (world Z 272) and added RETAINER_ASSEMBLY_OFFSET_Z placeholder for future shimming; (3) Explicit `FRAME_ORIGIN_XY = (0, 0)` statement in frame section; (4) Added `BELT_CENTER_DISTANCE = 134.5` mm + `BELT_TENSION_TRAVEL = 30` mm for service envelope SE5; (5) NEW "Derived Values" section separating primary constants from computed ones; (6) Elevated θ=0° angular phase reference to its own dedicated section. R2 now formally locked. |
 
 ---
 

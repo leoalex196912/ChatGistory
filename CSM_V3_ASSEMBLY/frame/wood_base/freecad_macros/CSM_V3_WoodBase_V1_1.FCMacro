@@ -1,0 +1,67 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- WOOD BASE V1.1
+# =============================================================================
+# Hardwood base of the stand. Bottom face sits on the table (with rubber
+# feet at corners). Top face supports the 4 precision-frame 2020 uprights
+# AND the touchscreen mast.
+#
+# CHANGES FROM V1.0
+# -----------------
+# - Repositioned to world Z = 0..18 (was Z = -300..-282 in V1.0)
+#   per MACHINE_DATUMS.md R2 final + ICD R3.
+# - ADDED D100 center through-hole for sock take-down (ICD Interface 11,
+#   invariant C2). The take-down column is reserved space -- nothing
+#   may obstruct it.
+# - Imports constants from machine_datums.py (no hardcoded coords).
+#
+# Reference: INTERFACE_CONTROL.md R3
+#   - Interface 6  (Cassette Base <-> Frame)
+#   - Interface 11 (Sock Take-Down Column)
+#   - Interface 10 (Touchscreen Mast attaches via T-nuts on wood base top)
+# =============================================================================
+
+import FreeCAD, Part, os, sys
+
+# ---- import machine datums (single source of truth) ----
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ---- params (pulled from MD, never hardcoded) ----
+SHELF_W    = MD.WOOD_BASE_W           # 500.0
+SHELF_D    = MD.WOOD_BASE_D           # 400.0
+SHELF_T    = MD.WOOD_BASE_T           #  18.0
+HOLE_D     = MD.TAKEDOWN_HOLE_D       # 100.0
+TOP_Z      = MD.WOOD_BASE_TOP_Z       #  18.0 (world)
+BOT_Z      = MD.WOOD_BASE_BOTTOM_Z    #   0.0 (world)
+
+# Material flag (Layer 2 structural, see ICD R3 §0)
+MATERIAL   = "Hardwood (walnut or maple), Phase 1+ unchanged"
+
+print(f"[WoodBase V1.1]  {SHELF_W} x {SHELF_D} x {SHELF_T} mm  ({MATERIAL})")
+print(f"  world Z: bottom={BOT_Z}, top={TOP_Z}  (= MD.WOOD_BASE_*_Z)")
+print(f"  center through-hole: D={HOLE_D}  (sock take-down, ICD I11)")
+
+# ---- build ----
+doc = FreeCAD.newDocument("WoodBase_V1_1")
+
+slab = Part.makeBox(SHELF_W, SHELF_D, SHELF_T,
+                    FreeCAD.Vector(-SHELF_W/2, -SHELF_D/2, BOT_Z))
+
+# Sock take-down center hole (ICD Interface 11 / invariant C2)
+hole = Part.makeCylinder(HOLE_D / 2.0, SHELF_T + 2.0,
+                         FreeCAD.Vector(0, 0, BOT_Z - 1.0))
+shape = slab.cut(hole)
+
+obj = doc.addObject("Part::Feature", "WoodBase_V1_1")
+obj.Shape = shape
+doc.recompute()
+
+# ---- export STL (peer of the macro folder) ----
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_WoodBase_V1_1.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {shape.Volume:.0f} mm^3")
+print(f"     expected volume = {SHELF_W*SHELF_D*SHELF_T - 3.14159*((HOLE_D/2)**2)*SHELF_T:.0f} mm^3")

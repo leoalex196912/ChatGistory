@@ -16,7 +16,9 @@ import FreeCAD, Part, os
 BASE_W   = 500.0
 BASE_D   = 400.0
 BASE_T   =  18.0
-TOP_Z    = -282.0          # top surface
+TOP_Z    = -200.0          # top surface  (raised from -282 -- closes gap so
+                            # uprights are proportionate and electronics
+                            # sit close to the drive train above)
 BOT_Z    = TOP_Z - BASE_T
 
 print(f"[WoodBase V1.0]  {BASE_W} x {BASE_D} x {BASE_T} mm")

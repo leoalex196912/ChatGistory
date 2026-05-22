@@ -121,5 +121,65 @@ COMMIT TIMELINE (this session)
 All on main branch. All pushed to origin (leoalex196912/ChatGistory).
 
 ================================================================
-END OF AUTONOMOUS SESSION
+SECOND AUTONOMOUS WAVE (continuation, same day)
+================================================================
+
+User instruction: "Please continue build and assemble entire machine.
+Why do you need my instruction?"  -- giving full autonomous authority.
+
+Discovery: 11 component STLs were already built in a prior session
+not visible in this conversation. Verified all present, non-empty,
+and consistent with MACHINE_DATUMS R2 final.
+
+Components already present (pre-built):
+  - Arduino Mega 2560 (electronics/arduino_mega_2560)
+  - TB6600 stepper driver (electronics/tb6600_driver)
+  - LRS-50 PSU (electronics/lrs50_psu)
+  - 7" Touchscreen + screen panel (electronics/touchscreen_7in)
+  - Touchscreen mounting arm (electronics/touchscreen_arm)
+  - HTD 5M 60T pulley (drive_bought/pulley_htd_60t)
+  - HTD 5M 16T pulley (drive_bought/pulley_htd_16t)
+  - HTD 5M belt loop (drive_bought/belt_htd_5m)
+  - 6001-2RS bearing (bearings_bought/bearing_6001_2rs)
+  - 12 mm shaft (bearings_bought/shaft_12mm)
+  - Yarn cone V1.0 (decor/yarn_cone)
+
+V3 RENDER COMPLETED:
+  - render_hero_v3.py written, incorporates all 11 new components
+  - Renders 4 angles + saves .blend
+  - All world-Z positions from machine_datums.py (no hardcoded coords)
+  - Output: CSM_V3_Assembly_v3_{hero_34, front, side_motor, top_down}.png
+           + CSM_V3_Assembly_V3.blend
+  - commit f4b8ecb
+
+V3 vs V2:
+  - Adds: real HTD pulleys (60T + 16T), HTD belt loop, 12 mm drive shaft,
+          6001 bearings inside housings, real yarn cones (with base flange),
+          electronics on wood base (Mega + TB6600 + LRS-50),
+          real touchscreen panel + mount arm
+  - Same: locked cassette (cylinder, cam, sinker, cassette base, retainer),
+          drive hub, bearing housings pair, motor mount, NEMA 17 drive motor,
+          frame (wood base, uprights, upper deck, aluminum plate, mast),
+          feeder modules at F1 + F4
+
+OPEN ITEMS for next session review (documented, not blocking):
+  - Touchscreen arm/screen placement appears tilted forward from arm
+    geometry. Visual is suggestive but not precisely calibrated.
+  - Electronics positions on wood base are reasonable but not yet
+    aligned with cable-routing standoffs (Phase 1.5 work).
+  - Drive shaft Z range may need verification (currently shaft STL
+    placed at Z=30 mm; bearings at Z=90 and Z=130; needs to fit
+    cleanly inside the BearingHousings_V2_5 STL geometry).
+  - Belt position is approximate -- horizontal midpoint between drive
+    shaft and motor pulley X-positions. Real belt geometry would wrap
+    around both pulleys at their actual Z (drive pulley at Z=70,
+    motor pulley at Z=80ish).
+  - Feeder bolt-to-cassette PCD 190 alignment still approximate.
+  - Phase 1.5 needle motion study still pending.
+
+COMMIT TIMELINE (second wave):
+  f4b8ecb  Blender V3 render (full machine assembly with 11 added STLs)
+
+================================================================
+END OF AUTONOMOUS SESSION (rev 2)
 ================================================================

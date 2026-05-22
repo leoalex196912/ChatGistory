@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- TOUCHSCREEN MAST V1.0
+# =============================================================================
+# Dual-upright 2020 mast + top crossbar that holds the 7" touchscreen.
+# Bolted to the wood base ONLY (NOT to any precision-frame upright).
+# Mechanically isolated from the cassette so that taps, vibration, and
+# resonance from the touchscreen do not transfer to the knitting head.
+#
+# Reference: ICD R3 Interface 10 (Touchscreen Mast)
+#            ICD R3 invariant C4 (subsystem isolation)
+#            MACHINE_DATUMS.md R2 final (mast constants)
+#
+# Position: mast center at (X=0, Y=-180) on wood base. Two parallel
+# 2020 uprights at X = ±30 from mast center, 400 mm tall. Top crossbar
+# spans the 60 mm between upright tops.
+# =============================================================================
+
+import FreeCAD, Part, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ---- params ----
+MAST_LEN          = MD.MAST_UPRIGHT_LEN          # 400.0
+MAST_CTR_X        = MD.MAST_CENTER_X             #   0.0
+MAST_CTR_Y        = MD.MAST_CENTER_Y             # -180.0
+MAST_X_OFFSETS    = MD.MAST_X_OFFSETS             # (+30, -30)
+CROSSBAR_LEN      = MD.MAST_TOP_CROSSBAR_LEN     #  60.0
+MAST_BOTTOM_Z     = MD.WOOD_BASE_TOP_Z           #  18.0 (sits on wood base top)
+MAST_TOP_Z        = MD.MAST_TOP_Z                # 418.0
+EXT_W             = MD.UPRIGHT_W                 #  20.0 (same 2020 profile)
+
+SLOT_OPEN         =  6.0
+SLOT_DEPTH        =  5.5
+CTR_BORE_D        =  4.2
+EDGE_CHAM         =  0.8
+
+MATERIAL          = "Aluminum extrusion 6063-T5, anodized black"
+
+print(f"[TouchscreenMast V1.0]  dual 2020 + crossbar  ({MATERIAL})")
+print(f"  center: ({MAST_CTR_X}, {MAST_CTR_Y}); X-offsets: {MAST_X_OFFSETS}")
+print(f"  upright length: {MAST_LEN} mm  ->  Z: {MAST_BOTTOM_Z} .. {MAST_TOP_Z}")
+print(f"  crossbar length: {CROSSBAR_LEN} mm  (top, between upright tops)")
+
+doc = FreeCAD.newDocument("TouchscreenMast_V1_0")
+
+def build_2020(length, x, y, z_bottom):
+    """Build one 2020 vertical extrusion at (x, y, z_bottom), pointing +Z."""
+    bar = Part.makeBox(EXT_W, EXT_W, length,
+                       FreeCAD.Vector(x - EXT_W/2, y - EXT_W/2, z_bottom))
+    # center bore (cosmetic)
+    bore = Part.makeCylinder(CTR_BORE_D/2.0, length + 2.0,
+                             FreeCAD.Vector(x, y, z_bottom - 1.0))
+    bar = bar.cut(bore)
+    # 4 T-slots
+    for ax, sgn in [('x', +1), ('x', -1), ('y', +1), ('y', -1)]:
+        if ax == 'x':
+            sx = SLOT_DEPTH + 0.1
+            sy = SLOT_OPEN
+            cx = x + sgn * (EXT_W/2 - SLOT_DEPTH/2.0) - (sgn * 0.05)
+            cy = y
+        else:
+            sx = SLOT_OPEN
+            sy = SLOT_DEPTH + 0.1
+            cx = x
+            cy = y + sgn * (EXT_W/2 - SLOT_DEPTH/2.0) - (sgn * 0.05)
+        slot = Part.makeBox(sx, sy, length + 2.0,
+                            FreeCAD.Vector(cx - sx/2, cy - sy/2, z_bottom - 1.0))
+        bar = bar.cut(slot)
+    return bar
+
+# Two vertical uprights
+left_x  = MAST_CTR_X + MAST_X_OFFSETS[0]    # +30
+right_x = MAST_CTR_X + MAST_X_OFFSETS[1]    # -30
+upr_left  = build_2020(MAST_LEN, left_x,  MAST_CTR_Y, MAST_BOTTOM_Z)
+upr_right = build_2020(MAST_LEN, right_x, MAST_CTR_Y, MAST_BOTTOM_Z)
+
+# Top crossbar (horizontal 2020 spanning between the two upright tops)
+# Crossbar is along X axis, centered at (MAST_CTR_X, MAST_CTR_Y, MAST_TOP_Z - EXT_W/2)
+crossbar = Part.makeBox(CROSSBAR_LEN, EXT_W, EXT_W,
+                        FreeCAD.Vector(MAST_CTR_X - CROSSBAR_LEN/2,
+                                       MAST_CTR_Y - EXT_W/2,
+                                       MAST_TOP_Z - EXT_W))
+
+# Fuse everything
+mast = upr_left.fuse(upr_right).fuse(crossbar)
+
+obj = doc.addObject("Part::Feature", "TouchscreenMast_V1_0")
+obj.Shape = mast
+doc.recompute()
+
+BASE_OUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE_OUT, "CSM_V3_TouchscreenMast_V1_0.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {mast.Volume:.0f} mm^3")

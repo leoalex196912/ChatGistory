@@ -18,14 +18,14 @@
 import FreeCAD, Part, os
 
 EXT_W       = 20.0       # cross-section width (mm)
-EXT_LEN     = 331.0      # length (mm) -- spans base top to shelf top
+EXT_LEN     = 267.0      # length (mm) -- spans base bottom (-218) to mid-shelf top (49)
 SLOT_OPEN   = 6.0        # T-slot opening width (visual)
 SLOT_DEPTH  = 5.5        # T-slot opening depth (visual)
 CTR_BORE_D  = 4.2        # center bore (M5 tap clearance, cosmetic)
 EDGE_CHAM   = 0.8        # chamfer at corner edges (cosmetic)
 
-BOT_Z = -300.0           # bottom of upright -- pokes through base bottom
-TOP_Z = BOT_Z + EXT_LEN  # -300 + 331 = 31  (just above mid-shelf bottom)
+BOT_Z = -218.0           # bottom of upright -- flush with wood base bottom
+TOP_Z = BOT_Z + EXT_LEN  # -218 + 267 = 49  (= CAM_DATUM_Z, mid-shelf top)
 
 print(f"[Upright_2020 V1.0]  {EXT_W} x {EXT_W} x {EXT_LEN} mm")
 print(f"  bottom Z={BOT_Z}, top Z={TOP_Z}")

@@ -1,9 +1,12 @@
 # MACHINE_DATUMS.md — CSM V3 Dimensional Reference
 
 ```
-Revision:  R2
-Date:      2026-05-20
-Status:    Active — all macros must reference these constants
+Revision:  R3
+Date:      2026-05-22
+Status:    Active — all macros must reference these constants.
+           R3 aligns ALL bought-parts dimensions to the actual BOM V11
+           after discovering R2 had wrong motor + feeder actuator
+           assumptions. See revision history for details.
 ```
 
 This is the **single source of truth for all dimensional constants**
@@ -269,101 +272,142 @@ MAST_TOP_Z            = 418.0     # = WOOD_BASE_TOP_Z + MAST_UPRIGHT_LEN
 
 ---
 
-## Bought-Parts Dimensions (NEW section)
+## Bought-Parts Dimensions (R3 BOM-aligned)
 
-Constants for purchased components used in assembly placement,
-clearance checking, and Blender render geometry. Source: vendor
-datasheets, BOM_V11.
+Constants for purchased components used in assembly placement, clearance
+checking, and Blender render geometry.
+
+**Source of truth: `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`** (the
+physical inventory). R3 corrects the R2 errors where the docs assumed
+NEMA 17 drive motor + NEMA 11 feeder steppers — the actual purchases are
+**NEMA 23 + 5:1 planetary gearbox** for drive and **MG90S metal-gear
+servos** for feeders.
 
 ```python
 # ============================================================
-# DRIVE COMPONENTS (purchased)
+# DRIVE SHAFT + BEARINGS  (in inventory)
 # ============================================================
-SHAFT_D                 =  12.00     # FEYRINX h8 steel shaft
-SHAFT_LENGTH            = 150.00     # approx -- final cut to fit
-BEARING_6001_OD         =  28.00     # 6001-2RS bearing outer race
-BEARING_6001_ID         =  12.00     # = SHAFT_D
-BEARING_6001_W          =   8.00     # axial width
-
-NEMA17_BODY_W           =  42.30     # 42×42×40 mm class
-NEMA17_BODY_L           =  40.00
-NEMA17_SHAFT_D          =   5.00
-NEMA17_SHAFT_L          =  24.00
-NEMA17_MOUNT_PCD        =  31.00     # 4× M3
-NEMA17_BOSS_D           =  22.00     # round boss in front of body
-NEMA17_BOSS_H           =   2.00
-
-# Drive hub (FreeCAD macro V2.4.2)
-DRIVE_HUB_BOSS_OD       =  18.00     # mates with cylinder D18.2 pocket
-DRIVE_HUB_BOSS_H        =   3.00
-DRIVE_HUB_FLANGE_OD     =  90.00
-DRIVE_HUB_BOLT_PCD      =  70.00     # matches cylinder PCD 70 + 45° offset
-
-# HTD 5M timing belt + pulleys
-PULLEY_BIG_TEETH        =  60        # on drive shaft (cylinder side)
-PULLEY_BIG_OD           =  97.50
-PULLEY_BIG_BORE         =  12.00     # = SHAFT_D
-PULLEY_BIG_W            =  16.00     # axial width including flange
-PULLEY_SMALL_TEETH      =  16        # on NEMA 17 motor shaft
-PULLEY_SMALL_OD         =  27.40
-PULLEY_SMALL_BORE       =   5.00     # = NEMA17_SHAFT_D
-PULLEY_SMALL_W          =  16.00
-GEAR_RATIO              =  60.0 / 16.0   # = 3.75 (motor → cylinder)
-BELT_WIDTH              =  15.00
-BELT_THICKNESS          =   3.00
-
-# Motor placement on wood base (back-right per ICD Interface 6 locked)
-MOTOR_X                 =  90.0      # world X (motor side, +X axis)
-MOTOR_Y                 = -100.0     # world Y (back, -Y axis)
-MOTOR_BODY_BOTTOM_Z     =  18.0      # sits on wood base top
-
-# Belt geometry (derived from motor and drive shaft positions)
-BELT_CENTER_DISTANCE    = 134.5      # sqrt(MOTOR_X^2 + MOTOR_Y^2)
-                                      # mm between drive shaft axis (0,0)
-                                      # and motor shaft axis. Provisional --
-                                      # final value depends on belt pitch
-                                      # length selection and tension slot
-                                      # travel. Validated when actual
-                                      # HTD 5M belt pitch length chosen.
-BELT_TENSION_TRAVEL     =  30.0      # mm of motor X-travel for belt
-                                      # tensioning + removal (per SE5)
+SHAFT_D                 = 12.00      # FEYRINX 12 mm h8 (B08HX2LG53)
+SHAFT_LENGTH            = 300.00     # actually-purchased
+BEARING_6001_OD         = 28.00      # 6001-2RS radial (eBay 10pk)
+BEARING_6001_ID         = 12.00
+BEARING_6001_W          =  8.00
+BEARING_51101_OD        = 26.00      # 51101 thrust (B0G25X5L23)
+BEARING_51101_ID        = 12.00
+BEARING_51101_W         =  9.00
+BEARING_608_OD          = 22.00      # 608-2RS skate (B0FH6QH8VQ)
+BEARING_608_ID          =  8.00
+BEARING_608_W           =  7.00
+SHAFT_COLLAR_D          = 12.00      # clamping collars (B0DMMB1FHF)
 
 # ============================================================
-# FEEDER MOTORS (purchased — for Phase 1 feeder modules)
+# DRIVE MOTOR: NEMA 23 + 5:1 PLANETARY GEARBOX
+# Part: StepperOnline 23HS22-2804S-HG5  ($95)
+# Bipolar 2.8 A, 2.8 N.m holding before gearbox → ~14 N.m at output
 # ============================================================
-NEMA11_BODY_W           =  28.0      # 28×28×32 mm class
-NEMA11_BODY_L           =  32.0
-NEMA11_SHAFT_D          =   5.0      # standard variant; hollow optional
-NEMA11_SHAFT_L          =  20.0
-NEMA11_MOUNT_PCD        =  23.0      # 4× M2.5
+NEMA23_BODY_W           = 57.00      # NEMA 23 = 57×57 mm square frame
+NEMA23_BODY_L           = 56.00      # 23HS22 = 56 mm body length
+NEMA23_SHAFT_D          =  8.00      # input shaft (motor side)
+NEMA23_MOUNT_PCD_SQ     = 47.14      # 4× M5 square hole pattern, centre-to-centre
+NEMA23_MOUNT_HOLE_D     =  5.50      # M5 clearance
+NEMA23_BOSS_D           = 38.10      # round register boss on output face
+NEMA23_BOSS_H           =  1.60
+NEMA23_CURRENT_A        =  2.80      # under TB6600 4 A rating (good)
+NEMA23_HOLDING_NM       =  2.80
+
+GEARBOX_RATIO           =  5.0       # HG5 planetary
+GEARBOX_FLANGE_OD       = 60.00      # typical HG-series for NEMA 23
+GEARBOX_LENGTH          = 50.00      # housing length
+GEARBOX_OUTPUT_SHAFT_D  = 14.00      # output shaft (D-cut or keyed)
+GEARBOX_OUTPUT_SHAFT_L  = 25.00
+GEARBOX_MOUNT_PCD       = 70.00      # output-flange mount pattern (M5)
+
+# Total drive assembly length = NEMA23_BODY_L + GEARBOX_LENGTH = 106 mm
 
 # ============================================================
-# ELECTRONICS (purchased)
+# HTD 5M PULLEYS + BELT  (kit B0C6Y1462P: 60T + 20T + 405 mm belt)
 # ============================================================
-MEGA_W                  = 101.0      # Arduino Mega 2560 PCB
-MEGA_D                  =  53.0
-MEGA_H                  =  15.0      # incl. through-hole headers
-TB6600_W                =  96.0      # stepper driver enclosure
-TB6600_D                =  56.0
-TB6600_H                =  33.0      # incl. heatsink fins
-LRS50_W                 =  99.0      # Mean Well LRS-50-24 PSU
-LRS50_D                 =  82.0
-LRS50_H                 =  30.0
+PULLEY_BIG_TEETH        = 60         # mounts on GEARBOX output (14 mm bore)
+PULLEY_BIG_OD           = 97.50      # pitch dia 95.49, OD ~97.5
+PULLEY_BIG_BORE         = 14.00      # = GEARBOX_OUTPUT_SHAFT_D
+PULLEY_BIG_W            = 16.00
+PULLEY_SMALL_TEETH      = 20         # mounts on 12 mm DRIVE SHAFT  (NOT 16T as R2 had)
+PULLEY_SMALL_OD         = 33.30      # pitch dia 31.83, OD ~33.3
+PULLEY_SMALL_BORE       = 12.00      # = SHAFT_D
+PULLEY_SMALL_W          = 16.00
+BELT_WIDTH              = 15.00
+BELT_THICKNESS          =  3.00
+BELT_PITCH              =  5.00      # HTD 5M
+BELT_PITCH_LENGTH       = 405.0      # mm  -- locks center distance
+GEAR_RATIO_BELT         = 60.0 / 20.0      # 3:1 belt reduction
+GEAR_RATIO_TOTAL        = GEARBOX_RATIO * GEAR_RATIO_BELT   # = 15:1 motor → cylinder
+
+# Drive motor placement on wood base (back-right per ICD R3 Interface 6)
+# (Note: motor body sits on wood base, gearbox flange faces the drive shaft side)
+MOTOR_X                 =  90.0      # world X (+X side = motor side)
+MOTOR_Y                 = -100.0     # world Y (-Y = back, accessible from front)
+MOTOR_BODY_BOTTOM_Z     =  18.0      # = WOOD_BASE_TOP_Z
+BELT_TENSION_TRAVEL     =  30.0      # mm motor X-travel slot for SE5
 
 # ============================================================
-# DISPLAY (purchased)
+# FEEDER ACTUATORS: MG90S METAL-GEAR SERVOS (NOT NEMA 11 steppers)
+# 8× purchased: 6 for feeders F1..F6 + 2 spares
+# 9 g micro servo, 4.8-6 V, 2.5-3.0 kg.cm, 180 deg PWM
 # ============================================================
-TOUCH_W                 = 165.0      # 7" HDMI capacitive touchscreen
+SERVO_MG90S_W           = 22.80      # body width
+SERVO_MG90S_D           = 12.20      # body depth
+SERVO_MG90S_H           = 28.50      # body height (incl. spline output)
+SERVO_MG90S_MOUNT_W     = 32.00      # tab-to-tab including mounting tabs
+SERVO_MG90S_MOUNT_HOLES_PITCH = 28.00    # 2× M2 mounting holes pitch
+SERVO_MG90S_SHAFT_D     =  4.80      # spline output shaft
+SERVO_MG90S_VOLTAGE     =  6.0       # via LM2596 buck converter from 24 V
+SERVO_MG90S_TORQUE_KGCM =  3.0
+SERVO_MG90S_BUCK_CONVERTER = "LM2596 (B008BHB4L8) 24V -> 6V"
+
+# ============================================================
+# DRIVE HUB (locked V2.4.2 -- unchanged, fits 12 mm shaft via collar)
+# ============================================================
+DRIVE_HUB_BOSS_OD       = 18.00      # mates with cylinder D18.2 pocket
+DRIVE_HUB_BOSS_H        =  3.00
+DRIVE_HUB_FLANGE_OD     = 90.00
+DRIVE_HUB_BOLT_PCD      = 70.00      # matches cylinder PCD 70 + 45° offset
+
+# ============================================================
+# ELECTRONICS (Layer 3, sit on wood base)
+# ============================================================
+# Compute
+MEGA_W,   MEGA_D,   MEGA_H   = 101.0, 53.0, 15.0    # Arduino Mega 2560 (B0046AMGW0) -- stepper control
+RPI4_W,   RPI4_D,   RPI4_H   =  88.0, 58.0, 19.0    # Raspberry Pi 4 4GB (B07V5JTMV9) -- touchscreen UI
+
+# Stepper driver
+TB6600_W, TB6600_D, TB6600_H = 96.0, 56.0, 33.0     # B08SG7L54W, 4 A
+
+# Power supply (replaces R2 LRS-50 -- actual purchase is S-250-24)
+S250_24_W, S250_24_D, S250_24_H = 199.0, 98.0, 38.0  # Mean Well S-250-24 (B07Y7L664K) 24 V 10 A
+
+# Servo power: 24 V from S-250 -> LM2596 buck -> 6 V to MG90S servos
+LM2596_W, LM2596_D, LM2596_H = 43.0, 21.0, 13.0      # B008BHB4L8 buck module
+
+# ============================================================
+# TOUCHSCREEN DISPLAY (purchased)
+# ============================================================
+TOUCH_W                 = 165.0      # ELECROW 7" HDMI capacitive (B08FMNDDSL)
 TOUCH_D                 = 100.0
-TOUCH_H                 =  10.0      # active panel depth
+TOUCH_H                 =  10.0
 
 # ============================================================
-# HALL SENSOR + MAGNET (purchased)
+# HALL SENSOR + INDEX MAGNET (purchased)
 # ============================================================
 HALL_SENSOR_PART        = "SS49E"    # linear Hall, B09MSDC3GR
 MAGNET_PART             = "B0F4KS6KV3"   # N52 D6×2.0 mm neodymium
 MAGNET_POCKET_D         =   6.0
 MAGNET_POCKET_H         =   2.2      # 2.0 mm magnet + 0.2 mm epoxy bed
+
+# ============================================================
+# CYLINDER SPRINGS (V10 NEW, from FlyDesigns)
+# ============================================================
+SPRING_WIRE_D           =   2.79     # 0.110" music wire
+SPRING_QTY_PURCHASED    =   3        # ordered open/straight for sizing flexibility
 ```
 
 ---
@@ -384,7 +428,7 @@ fixed; the material may evolve from PETG prototype → PA12 functional
 | Drive Hub | ✓ | n/a | machined 6061 |
 | Motor Mount | ✓ | ✓ | 6061 |
 | Bearing Housings | ✓ | ✓ | 6061 |
-| Feeder Modules | ✓ | ✓ | PA12 retained (cost) |
+| Feeder Modules | ✓ (housing for MG90S servo) | ✓ | PA12 retained (cost) |
 | Wood Base | hardwood (walnut/maple) | unchanged | unchanged |
 | Wood Upper Deck | hardwood | unchanged | unchanged |
 | Aluminum Plate | **6061 from V1** (master datum, not a print) | unchanged | unchanged |
@@ -430,6 +474,7 @@ MATERIAL = "PETG"    # or "PA12" or "AL6061" / "STEEL"
 | R1 | 2026-05-17 | leoalex196912 | Initial datums document. Captured cylinder-local datums + interfaces from existing committed macros. |
 | R2 | 2026-05-20 | leoalex196912 | (a) Demote coord-convention ownership to new `MACHINE_COORDINATE_SYSTEM.md`; (b) Add world-Z mapping for cassette datums; (c) FEEDER_REFERENCE_Z 78→90 (provisional, validated in Phase 1.5); (d) Three-layer frame architecture: wood base 500×400×18 with D100 center hole + 4× 2020 uprights (188 mm, at ±150 ±120) + wood upper deck 320×260×18 + aluminum plate 250×250×6 as master datum; (e) Delete wood mid-shelf 500×400 (was wrong, didn't match poster); (f) Add dual-upright touchscreen mast at (0, −180); (g) NEW bought-parts dimensions section (NEMA 11 for feeders, electronics, touchscreen, HTD pulleys/belt, Hall sensor); (h) Material progression flags per component; (i) Refresh locked versions table with new frame components. |
 | R2 final | 2026-05-20 | leoalex196912 | Pre-lock refinements per architectural review: (1) Disambiguated CAM_DATUM_Z (local) vs ALU_PLATE_TOP_Z (world master datum) — they are coincident but not the same datum; (2) Clarified retainer top derivation from macro geometry (world Z 272) and added RETAINER_ASSEMBLY_OFFSET_Z placeholder for future shimming; (3) Explicit `FRAME_ORIGIN_XY = (0, 0)` statement in frame section; (4) Added `BELT_CENTER_DISTANCE = 134.5` mm + `BELT_TENSION_TRAVEL = 30` mm for service envelope SE5; (5) NEW "Derived Values" section separating primary constants from computed ones; (6) Elevated θ=0° angular phase reference to its own dedicated section. R2 now formally locked. |
+| R3 | 2026-05-22 | leoalex196912 | **BOM ALIGNMENT.** Discovered R2 specified wrong actuators vs. the actual BOM V11 physical inventory. Corrections: (a) Drive motor: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)**. Body 57×57×56 mm, M5 mount PCD 47.14, output shaft 14 mm via HG5 gearbox. (b) Feeder actuators: NEMA 11 steppers → **MG90S metal-gear servos** (8 purchased: 6 active + 2 spare). 9 g 180° PWM. (c) Pulley kit: HTD 5M 60T+16T → actual purchase is **60T+20T+405mm belt** (B0C6Y1462P). New belt reduction 3:1; total motor→cylinder reduction = 5×3 = **15:1**. (d) Big pulley bore: 12 mm → 14 mm (gearbox output). (e) PSU: LRS-50 → **Mean Well S-250-24** (199×98×38 mm). (f) Added Raspberry Pi 4 4GB constants (Pi handles UI, Mega handles steppers). (g) Added secondary bearings (51101 thrust, 608-2RS), shaft collars. (h) Added LM2596 buck converter constants (24V→6V for servos). (i) Added cylinder spring constants (FlyDesigns 0.110" wire, 3 purchased). Source of truth declared: `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. |
 
 ---
 

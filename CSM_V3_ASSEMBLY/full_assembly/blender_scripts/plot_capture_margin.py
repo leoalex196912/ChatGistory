@@ -145,6 +145,49 @@ plt.savefig(out2, dpi=110)
 plt.close()
 print(f"Saved {out2}")
 
+# ============================================================
+# Figure 3: DELTA plot -- Δm(θ) = m_failure(θ) - m_nominal(θ)
+# Reveals instability regions, phase sensitivity, asymmetric behavior.
+# Per-scenario, uses the param=0 (nominal-equivalent) run as baseline.
+# ============================================================
+fig, axes = plt.subplots(3, 1, figsize=(14, 11), sharex=True)
+for ax, scen in zip(axes, ["A1_lag", "B1_slack", "D1_miss"]):
+    pairs = runs.get(scen, [])
+    baseline = nominal_per_scen.get(scen)
+    if not pairs or baseline is None:
+        ax.text(0.5, 0.5, f"no baseline for {scen}", transform=ax.transAxes); continue
+    base_thetas = [r["theta"] for r in baseline]
+    base_margins = {r["theta"]: r["margin_z"] for r in baseline}
+    cmap = cm.get_cmap('plasma')
+    for i, (p, rows) in enumerate(pairs):
+        if p == 0: continue   # skip the baseline against itself
+        thetas = [r["theta"] for r in rows]
+        deltas = [r["margin_z"] - base_margins.get(r["theta"], 0) for r in rows]
+        color = cmap(i / max(1, len(pairs) - 1))
+        ax.plot(thetas, deltas, color=color, marker='.', markersize=3,
+                label=f"{p:g}", linewidth=1.2)
+    ax.axhline(0, color='gray', linewidth=0.8, linestyle='--', label='= nominal')
+    ax.axhline(+2, color='green', linestyle=':', alpha=0.4)
+    ax.axhline(-2, color='green', linestyle=':', alpha=0.4, label='+/- 2 mm threshold')
+    ax.axhline(+5, color='orange', linestyle=':', alpha=0.4)
+    ax.axhline(-5, color='orange', linestyle=':', alpha=0.4, label='+/- 5 mm threshold')
+    ax.set_title(f"{scen_titles.get(scen, scen)}   -- delta from nominal")
+    ax.set_ylabel("Delta margin (mm)\nfailure - nominal")
+    ax.grid(True, alpha=0.3)
+    ax.legend(title="parameter", loc='upper right', fontsize=8, ncol=2)
+    for ft, lbl in [(0, "F1"), (180, "F4")]:
+        ax.axvline(ft, color='red', alpha=0.20, linewidth=1)
+        ax.text(ft, ax.get_ylim()[1]*0.85, lbl, ha='center', fontsize=8, color='red')
+
+axes[-1].set_xlabel("Cylinder rotation theta_cyl (deg)")
+axes[-1].set_xticks(range(0, 361, 30))
+plt.suptitle("CSM V3 Phase 1.5 D-4b -- delta from nominal Δm(θ)", fontsize=13)
+plt.tight_layout()
+out3 = os.path.join(RENDERS_DIR, "delta_from_nominal_plot.png")
+plt.savefig(out3, dpi=110)
+plt.close()
+print(f"Saved {out3}")
+
 print("\nSweep summary table:")
 print("-" * 70)
 for scen in ["A1_lag", "B1_slack", "D1_miss"]:

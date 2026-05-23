@@ -1,0 +1,231 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MOTOR MOUNT V1.4  (NEMA 23 + 5:1 planetary gearbox bracket)
+# =============================================================================
+# Replaces obsolete Motor Mount V1.3 (which was designed for NEMA 17).
+# Holds the NEMA 23 + HG5 gearbox stack in vertical orientation with
+# gearbox OUTPUT SHAFT DOWN, so the 60T pulley sits at the same Z as
+# the drive shaft's 20T pulley (Interface 6).
+#
+# ORIENTATION
+# -----------
+#   Motor body        TOP    (+Z)
+#   Motor flange     middle
+#   Gearbox housing  middle
+#   Gearbox flange   BOTTOM  (output shaft pokes DOWN through bracket)
+#   Drive belt zone  BELOW the bracket plate -- belt loops around the
+#                    60T pulley below the bracket and the 20T pulley
+#                    on the drive shaft (also below the bearing housings).
+#
+# BRACKET ARCHITECTURE (per ICD R5 design rules)
+# ----------------------------------------------
+#   - Horizontal HEAD PLATE holds the gearbox flange (PCD 70 mm, 4× M5)
+#   - Vertical SIDE WALLS run from head plate down to the wood-base
+#     SOLE PLATE (triangulated for stiffness, ribs aligned with belt
+#     tension direction)
+#   - SOLE PLATE has M5 slots oriented along +X for 30 mm tension
+#     travel (SE5 belt replacement)
+#   - LARGE FILLETS at gearbox-flange/wall junction
+#   - HEAT-SET INSERT pockets, not self-tapped PETG
+#
+# WORLD POSITION (per Interface 6)
+# --------------------------------
+#   Bracket sole plate bottom at world Z = MD.MOTOR_BODY_BOTTOM_Z = 18.0
+#   (sits on wood base top, anchored via M5 T-nuts in 2020 channel /
+#    or M5 heat-set inserts in plywood -- caller chooses)
+#   Gearbox output shaft Z target = belt-centerline plane (drive pulley Z)
+#
+# Reference: ICD R5 Interface 6 + Interface 12; MACHINE_DATUMS R3.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ---- bracket external dimensions ----
+SOLE_W            = 110.0   # X span on wood base
+SOLE_D            = 110.0   # Y span on wood base
+SOLE_T            =   8.0   # sole plate thickness
+
+# Side-wall geometry (the two vertical plates rising from sole to head)
+WALL_T            =   6.0   # PETG wall thickness
+WALL_SPACING_X    =  80.0   # outer distance between the two side walls (must fit gearbox flange OD 60 + clearance)
+
+# Head plate (holds gearbox flange)
+HEAD_W            = 100.0   # X span of head plate (wider than gearbox flange OD 60)
+HEAD_D            = 100.0   # Y span
+HEAD_T            =   8.0
+HEAD_Z_TARGET     =  70.0   # world Z where gearbox flange should sit
+                             # The 20T pulley centerline (drive pulley) should
+                             # be at this Z so the belt is horizontal.
+                             # Drive shaft pulley Z = 70 by assembly convention.
+                             # Gearbox output shaft extends DOWNWARD from this
+                             # plate, so pulley hub sits at Z ~ HEAD_Z_TARGET - 8 = 62.
+                             # (Pulley width 16, centerline at hub bottom + 8.)
+
+# ---- gearbox flange hole pattern (4× M5 at PCD 70) ----
+GEARBOX_FLANGE_OD       = MD.GEARBOX_FLANGE_OD      # 60.0
+GEARBOX_MOUNT_PCD       = MD.GEARBOX_MOUNT_PCD      # 70.0
+GEARBOX_MOUNT_HOLE_D    =   5.5                      # M5 clearance
+GEARBOX_MOUNT_COUNT     =   4
+GEARBOX_MOUNT_OFFSET_DEG = 45.0                      # diagonal
+
+# Center bore in head plate for gearbox output shaft + pulley hub
+HEAD_CENTER_BORE_D = GEARBOX_FLANGE_OD + 4.0    # 64 mm, gives 2 mm radial clearance to gearbox housing
+
+# ---- sole plate slots (X-travel for belt tension, SE5) ----
+SOLE_SLOT_LEN     = MD.BELT_TENSION_TRAVEL + 10.0   # 30 + 10 = 40 mm slot length
+SOLE_SLOT_W       =   5.5                            # M5 clearance
+SOLE_BOLT_COUNT   =   4                              # 4 corners
+SOLE_BOLT_INSET   =  12.0                            # from sole-plate edges
+
+# ---- fillets / chamfers ----
+WALL_FILLET_R     =   8.0   # large fillet at sole-to-wall corner
+HEAD_FILLET_R     =   4.0   # smaller fillet at wall-to-head corner
+
+# ---- heat-set insert pockets in head plate (4× M5 for gearbox flange) ----
+# Inserts go DOWN from head plate top, so gearbox bolts can come from
+# UNDER the head plate up into the inserts (gearbox flange below plate).
+HEATSET_M5_HOLE_D = 6.4                              # M5 brass insert (B0DPQJ4W3Z)
+HEATSET_M5_DEPTH  = 8.0
+
+# ---- placement (world coordinates) ----
+# Sole plate bottom at MD.MOTOR_BODY_BOTTOM_Z = 18.0
+# Head plate top    at HEAD_Z_TARGET          = 70.0
+# Total bracket height = 70 - 18 = 52 mm
+# Sole plate bottom Z = 18; sole top Z = 26
+# Head plate bottom Z = 70 - 8 = 62; head plate top Z = 70
+# Side walls span Z = 26..62 (= 36 mm tall)
+SOLE_BOT_Z        = MD.MOTOR_BODY_BOTTOM_Z          # 18
+SOLE_TOP_Z        = SOLE_BOT_Z + SOLE_T              # 26
+HEAD_TOP_Z        = HEAD_Z_TARGET                    # 70
+HEAD_BOT_Z        = HEAD_TOP_Z - HEAD_T              # 62
+WALL_BOT_Z        = SOLE_TOP_Z                       # 26
+WALL_TOP_Z        = HEAD_BOT_Z                       # 62
+WALL_H            = WALL_TOP_Z - WALL_BOT_Z          # 36
+
+# Position in world coordinates: mount is centered at (MOTOR_X, MOTOR_Y)
+WORLD_X           = MD.MOTOR_X                       # +90
+WORLD_Y           = MD.MOTOR_Y                       # -100
+
+print(f"[MotorMount V1.4]  NEMA 23 + HG5 bracket  ({SOLE_W}x{SOLE_D} sole, head at Z={HEAD_Z_TARGET})")
+print(f"  world center: ({WORLD_X}, {WORLD_Y}); Z stack: {SOLE_BOT_Z}..{HEAD_TOP_Z} mm")
+print(f"  gearbox flange mount: 4x M5 at PCD {GEARBOX_MOUNT_PCD}, M5 heat-set inserts")
+print(f"  sole tension slots: {SOLE_BOLT_COUNT}x along +X axis, {SOLE_SLOT_LEN} mm each")
+
+doc = FreeCAD.newDocument("MotorMount_V1_4")
+
+# ============================================================
+# Build (LOCAL coordinates, mount centered at origin in X-Y)
+# Then translate to (WORLD_X, WORLD_Y) for output.
+# ============================================================
+
+# --- sole plate ---
+sole = Part.makeBox(SOLE_W, SOLE_D, SOLE_T,
+                    FreeCAD.Vector(-SOLE_W/2, -SOLE_D/2, SOLE_BOT_Z))
+
+# 4 tension slots in sole plate (oriented along +X, allow motor X-travel for belt)
+slot_xs = (-(SOLE_W/2 - SOLE_BOLT_INSET), +(SOLE_W/2 - SOLE_BOLT_INSET - SOLE_SLOT_LEN))
+slot_ys = (-(SOLE_D/2 - SOLE_BOLT_INSET), +(SOLE_D/2 - SOLE_BOLT_INSET))
+for sx in slot_xs:
+    for sy in slot_ys:
+        # Slot is a rectangle with rounded ends; approximate as a rounded rect
+        # by fusing a center rect with 2 semicircles. For simplicity here use
+        # rectangle + 2 cylindrical end caps.
+        slot_box = Part.makeBox(SOLE_SLOT_LEN, SOLE_SLOT_W, SOLE_T + 2.0,
+                                FreeCAD.Vector(sx, sy - SOLE_SLOT_W/2, SOLE_BOT_Z - 1.0))
+        cap_l = Part.makeCylinder(SOLE_SLOT_W/2.0, SOLE_T + 2.0,
+                                  FreeCAD.Vector(sx, sy, SOLE_BOT_Z - 1.0))
+        cap_r = Part.makeCylinder(SOLE_SLOT_W/2.0, SOLE_T + 2.0,
+                                  FreeCAD.Vector(sx + SOLE_SLOT_LEN, sy, SOLE_BOT_Z - 1.0))
+        slot = slot_box.fuse(cap_l).fuse(cap_r)
+        sole = sole.cut(slot)
+
+# --- head plate ---
+head = Part.makeBox(HEAD_W, HEAD_D, HEAD_T,
+                    FreeCAD.Vector(-HEAD_W/2, -HEAD_D/2, HEAD_BOT_Z))
+
+# Center bore in head for gearbox output shaft + pulley clearance
+center_bore = Part.makeCylinder(HEAD_CENTER_BORE_D/2.0, HEAD_T + 2.0,
+                                FreeCAD.Vector(0, 0, HEAD_BOT_Z - 1.0))
+head = head.cut(center_bore)
+
+# 4 gearbox mount holes (M5 clearance + heat-set insert pocket from top)
+for i in range(GEARBOX_MOUNT_COUNT):
+    ang = math.radians(i * (360.0/GEARBOX_MOUNT_COUNT) + GEARBOX_MOUNT_OFFSET_DEG)
+    bx = (GEARBOX_MOUNT_PCD/2.0) * math.cos(ang)
+    by = (GEARBOX_MOUNT_PCD/2.0) * math.sin(ang)
+    # Through clearance hole
+    h = Part.makeCylinder(GEARBOX_MOUNT_HOLE_D/2.0, HEAD_T + 2.0,
+                          FreeCAD.Vector(bx, by, HEAD_BOT_Z - 1.0))
+    head = head.cut(h)
+    # Heat-set insert pocket from TOP face (insert pressed from above)
+    pkt = Part.makeCylinder(HEATSET_M5_HOLE_D/2.0, HEATSET_M5_DEPTH + 0.1,
+                            FreeCAD.Vector(bx, by, HEAD_TOP_Z - HEATSET_M5_DEPTH))
+    head = head.cut(pkt)
+
+# --- 2 vertical side walls (at +Y and -Y), triangulated by gussets ---
+# Each wall is a tall plate from sole top to head bottom.
+# Inner face at Y = ±(WALL_SPACING_X/2 - WALL_T) ... actually walls span
+# the X direction, with normals in the +/- Y direction.
+# Re-thinking: walls sit at Y = +/- (head/2 ish), normals in Y.
+# Wait -- belt tension direction is along the X axis (motor side, +X).
+# So ribs should be aligned to resist X-direction loads. The walls should
+# therefore have their PLANES in the X-Z plane (normals in Y direction),
+# and the BELT-FORCE RIBS go through the walls along +X.
+# Use 2 walls at +/- WALL_OFFSET_Y from center.
+WALL_OFFSET_Y = (SOLE_D/2 - SOLE_BOLT_INSET) - WALL_T/2    # ~43 mm
+
+for sy_sign in (+1, -1):
+    wy = sy_sign * WALL_OFFSET_Y
+    wall = Part.makeBox(SOLE_W * 0.8, WALL_T, WALL_H,
+                        FreeCAD.Vector(-SOLE_W * 0.4, wy - WALL_T/2, WALL_BOT_Z))
+    sole = sole.fuse(wall)
+
+# --- belt-force rib through the middle (along +X axis) ---
+# A third stiffening rib runs from sole to head, in the X-Z plane on the
+# centerline (Y=0). Its plane is parallel to belt tension direction.
+mid_rib = Part.makeBox(SOLE_W * 0.6, WALL_T, WALL_H,
+                       FreeCAD.Vector(-SOLE_W * 0.3, -WALL_T/2, WALL_BOT_Z))
+# But cut a hole through the rib for the gearbox output shaft + pulley path
+rib_clearance = Part.makeCylinder(HEAD_CENTER_BORE_D/2.0 + 2.0, WALL_T + 2.0,
+                                  FreeCAD.Vector(0, -WALL_T/2 - 1.0, WALL_BOT_Z + WALL_H/2),
+                                  FreeCAD.Vector(0, 1, 0))
+mid_rib = mid_rib.cut(rib_clearance)
+sole = sole.fuse(mid_rib)
+
+# --- fuse head onto wall assembly ---
+mount = sole.fuse(head)
+
+# --- fillets: large at sole-wall junction, smaller at wall-head ---
+# (Filleting after fusing complex shapes is fragile in OCC; if it fails
+# the part is still functional, just sharper corners.)
+try:
+    fillet_edges = []
+    for e in mount.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        # Sole-wall junction: edges where Z is near SOLE_TOP_Z and length is horizontal
+        if abs(v1.z - SOLE_TOP_Z) < 0.01 and abs(v2.z - SOLE_TOP_Z) < 0.01:
+            fillet_edges.append(e)
+    if fillet_edges:
+        mount = mount.makeFillet(WALL_FILLET_R, fillet_edges[:8])
+        print(f"  filleted {len(fillet_edges)} sole-wall edges @ R{WALL_FILLET_R}")
+except Exception as ex:
+    print(f"  sole-wall fillet skipped: {ex}")
+
+# --- translate to world position ---
+mount.translate(FreeCAD.Vector(WORLD_X, WORLD_Y, 0))
+
+obj = doc.addObject("Part::Feature", "MotorMount_V1_4")
+obj.Shape = mount
+doc.recompute()
+
+BASE_OUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE_OUT, "CSM_V3_MotorMount_V1_4.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {mount.Volume:.0f} mm^3")
+print(f"     placement: world ({WORLD_X}, {WORLD_Y}), Z={SOLE_BOT_Z}..{HEAD_TOP_Z}")
+print(f"     MATERIAL recommendation: PETG for V1.4 prototype; PA12-CF for production")

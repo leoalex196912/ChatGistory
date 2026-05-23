@@ -1,13 +1,15 @@
 # INTERFACE_CONTROL.md — CSM V3 Interface Control Document (ICD)
 
 ```
-Revision:  R4
+Revision:  R5
 Date:      2026-05-22
 Status:    Active — locked interfaces, change requires version bump on
            BOTH mating parts AND an ICD revision bump.
-           R4 aligns Interface 5 (feeders) and Interface 6 (drive) to the
-           actual BOM V11 inventory after correcting an R3 mismatch
-           with the physical purchases.
+           R5 adds Interface 12 (Shaft/Bearing Stack) -- formal control
+           of axial constraint and bearing arrangement on the drive
+           shaft. Also adds a feeder-control design rule (servo-driven
+           feeders are guided yarn presentation, NOT precision
+           synchronized textile actuation).
 ```
 
 This is the **interface control document** for the CSM V3 modular
@@ -43,6 +45,10 @@ A. DIMENSIONAL INVARIANTS
                                                  feeders AND retainer)
    A6.  Cassette frame-mount PCD   = 180.0  mm  (4× M5, 45° offset)
    A7.  CYL_BOTTOM_WORLD_Z         = 181.0  mm  (world↔local transform)
+   A8.  Shaft bearing stack        = floating-top, fixed-bottom
+                                     (Interface 12) -- lower thrust
+                                     bearing resolves axial load;
+                                     upper bearing free for thermal growth
 
 B. GEOMETRIC / DATUM INVARIANTS
    B1.  Cylinder-local Z origin    = cylinder bottom face
@@ -246,6 +252,21 @@ fit the MG90S servo (smaller cavity 23×13 mm with 2× M2 mounting
 tabs at 28 mm pitch). Cavity and bolt-pattern change only — the
 external footprint and PCD 190 mount geometry unchanged.
 
+**R5 Design Rule — Feeder Control Philosophy:**
+MG90S servos introduce backlash, positional uncertainty, PWM timing
+jitter, and gear wear. Phase 1 feeder logic must treat servos as
+**"guided yarn presentation,"** not as "precision synchronized
+textile actuation." Specifically:
+- ✅ ACCEPTABLE: yarn guide positioning, tension modulation, simple
+  swing-in / swing-out of feeder fingers, color-change selection.
+- ❌ NOT ACCEPTABLE in Phase 1: needle-by-needle synchronized
+  selection (per-stitch jacquard), high-frequency yarn cutting,
+  precision-timed yarn injection mid-stitch.
+- Phase 2 may upgrade to NEMA-class steppers for selected feeders
+  if precision selection becomes a requirement. Bolt pattern at
+  PCD 190 is unchanged, so the swap is per-feeder without
+  architectural impact.
+
 ### Interface 6: Cassette Base ↔ Frame + Drive Motor  *(R4 update — motor change)*
 
 The frame is **completely re-architected** from R2. There is no longer
@@ -344,6 +365,80 @@ The touchscreen mast is part of Layer 3 (Automation/Control). Tap
 forces, vibration, and resonance from the touchscreen are isolated
 from the precision cassette by mounting only to the wood base.
 
+### Interface 12: Shaft / Bearing Stack  *(R5 NEW — formalization)*
+
+The 12 mm drive shaft connects the gearbox-driven 20T pulley (bottom)
+to the Drive Hub V2.4.2 (top, which drives the cylinder). The shaft
+passes through `BearingHousings V2.5` (top + bottom pair). Until R5
+this stack was implied; R5 formalizes the axial constraint strategy.
+
+**Architecture: floating top, fixed bottom.**
+
+```
+Drive Hub V2.4.2  (top of shaft)
+  └ pressed onto / clamped on shaft top
+     ↑ shaft Z = drive hub bottom Z
+
+     ░ 12 mm drive shaft (FEYRINX h8, B08HX2LG53, 300 mm) ░
+
+UPPER bearing 6001-2RS   ── floating axially
+  │ inside upper bearing housing seat
+  │ axial gap on both sides (no preload from above)
+  │ rotates freely; absorbs shaft thermal growth
+  ↓
+
+LOWER bearing 6001-2RS   ── axially fixed
+  │ inside lower bearing housing seat
+  │ inner race clamped between shaft collar (above) and 51101 thrust (below)
+  ↓
+51101 thrust bearing     ── axial load path
+  │ takes upward cassette/yarn force AND downward belt-pull component
+  │ sits between lower 6001 inner race and shaft collar #2
+  ↓
+Shaft collar #2 (12 mm)  ── axially clamps the stack
+  │ B0DMMB1FHF
+  │ tightened against thrust bearing inner race
+  ↓
+Pulley HTD 20T (12 mm bore)
+  │ pinned/grub-screwed to shaft
+  │ sits BELOW the lower bearing -- belt overhang below frame
+  ↓ shaft bottom
+```
+
+**Why floating-top, fixed-bottom:**
+- Axial load on shaft is primarily DOWNWARD (cassette weight + yarn tension + belt-pull component) → resolved at lower thrust bearing
+- Upward load is small (only momentary during yarn pull-up events) → also resolved at lower thrust (51101 takes load in both directions)
+- Upper bearing is purely RADIAL — no axial constraint → allows shaft thermal growth without binding
+- Belt side-load on shaft below lower bearing → cantilever moment; lower bearing handles the radial component, upper bearing stabilizes the moment couple
+
+| Property | Value | Locked by |
+|---|---|---|
+| Shaft | FEYRINX 12 mm h8 hardened, 300 mm length, ground finish | BOM B08HX2LG53 |
+| Upper bearing | 6001-2RS (28 OD × 12 ID × 8 W) — radial only, axial-float seat | BOM |
+| Lower bearing | 6001-2RS (28 OD × 12 ID × 8 W) — radial + fixed axially | BOM |
+| Thrust bearing | 51101 (28 OD × 12 ID × 9 W) — under lower 6001 | BOM B0G25X5L23 |
+| Shaft collars | 12 mm clamping collars (4-pack, B0DMMB1FHF) — 2 used minimum | BOM |
+| Bearing housing | `BearingHousings V2.5.1` (printed PETG) | locked |
+| Axial constraint | LOWER bearing fixed; UPPER bearing floating | R5 invariant |
+| Pulley axial position | BELOW the lower bearing pair (i.e. extending below Bearing Housing bottom) | R5 |
+| Preload | LIGHT — Smalley CM25-L1 wave spring optional (BOM Section 3) | R5 |
+| Service | Pulley + collar removal via SE5 (belt replacement) | SERVICE_ENVELOPES.md |
+
+**Design rules (DO):**
+- ✅ Lock lower bearing inner race against shaft collar + thrust bearing as a sandwich
+- ✅ Leave the upper bearing inner race FREE on the shaft (slip fit, no collar above it)
+- ✅ Apply Loctite 603 only to the lower 6001 outer race if seat is loose; never on the upper bearing
+- ✅ Pulley grub screw uses Loctite 222 (low-strength, removable)
+
+**Design rules (DON'T):**
+- ❌ Do NOT clamp BOTH bearings axially. Will preload the shaft and bind under thermal growth.
+- ❌ Do NOT mount the pulley BETWEEN the two bearings. Belt side-load between bearings inverts the load path and amplifies wobble.
+- ❌ Do NOT replace the 51101 thrust with another 6001 radial. Radial bearings don't take pure axial loads cleanly.
+
+This interface is now part of the DO-NOT-BREAK invariant set (added below as A8). Changes require R5 → R6 with full bearing-stack review.
+
+---
+
 ### Interface 11: Sock Take-Down Column  *(R3 NEW)*
 
 | Property | Value | Locked by |
@@ -441,6 +536,7 @@ coordinate system. This is enabled by the invariants section above.
 | R2 | 2026-05-17 | Lock Interface 7 with Retainer Ring V1.0 final geometry. Retainer OD = 200 (was 172, fixed for bolt PCD compatibility). All other interfaces unchanged. |
 | R3 | 2026-05-20 | Major architectural revision. (a) NEW DO-NOT-BREAK invariants block (machine constitution); (b) NEW §0 three-layer architecture; (c) NEW §1 datum chain; (d) NEW §2 service envelopes SE1–SE5 (summary; full doc in `SERVICE_ENVELOPES.md`); (e) Interface 5 updated (NEMA 11 feeder motors, FEEDER_REFERENCE_Z 78→90 provisional); (f) Interface 6 major rewrite (frame architecture: wood base 500×400 w/ D100 hole + 4× 2020 uprights at ±150 ±120 × 188 mm + wood upper deck 320×260×18 + aluminum plate 250×250×6 master datum). The R2 "wood mid-shelf 500×400" is DELETED; (g) Interface 9 elevated (θ=0° = master phase reference); (h) NEW Interface 10 (Touchscreen Mast — dual 2020, isolated from precision frame); (i) NEW Interface 11 (Sock Take-Down Column — D100 through wood base, reserved space invariant); (j) NEW §4 Phase 1/1.5/2/3 upgrade path with kinematic-validation gate at 1.5; (k) §5 locked-versions refreshed with layer assignment + new components flagged NEEDS V1.1 or NOT YET. |
 | R4 | 2026-05-22 | **BOM ALIGNMENT.** Reconciled Interface 5 + Interface 6 with the actual physical inventory in `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. (a) **Interface 5 feeder actuator**: NEMA 11 stepper → **MG90S metal-gear servo** (8 purchased: 6 active + 2 spare). PWM not step/dir. Feeder Module V1.0 cavity needs V1.1 redesign for 23×13 servo footprint. (b) **Interface 6 drive motor**: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)** ($95 StepperOnline). Body 57×57×56 + 50 mm gearbox = 106 mm total. Motor Mount V1.3 OBSOLETE → V1.4 needed (M5 PCD 47.14 vs old M3 PCD 31). (c) **Interface 6 pulleys**: HTD 5M 60T+16T → actual **60T+20T+405mm belt** (kit B0C6Y1462P). New belt ratio 3:1; total reduction = 5×3 = **15:1**. Big pulley bore 12→14 mm (gearbox shaft). (d) §5 locked-versions table refreshed: NEMA 17 STL flagged OBSOLETE; NEMA 23+gearbox STL needs build; 20T pulley needs build; Feeder Module V1.1 needed. All invariants in DO-NOT-BREAK section unchanged. |
+| R5 | 2026-05-22 | **Shaft-stack formalization + feeder control philosophy.** (a) NEW **Interface 12** (Shaft / Bearing Stack) — formalizes the floating-top / fixed-bottom bearing architecture on the 12 mm drive shaft. Lower 6001 + 51101 thrust + shaft collar resolves axial load; upper 6001 floats radially to allow thermal growth. Pulley sits BELOW lower bearing (not between). DO / DON'T design rules added. (b) NEW **invariant A8**: shaft bearing stack architecture is now part of the DO-NOT-BREAK invariant set. (c) NEW **R5 Design Rule** under Interface 5: MG90S feeders are "guided yarn presentation," NOT precision synchronized actuation. Defines which feeder operations are acceptable in Phase 1 vs. require a Phase 2 stepper upgrade. (d) Updated revision banner to reflect R5 scope. |
 
 ---
 

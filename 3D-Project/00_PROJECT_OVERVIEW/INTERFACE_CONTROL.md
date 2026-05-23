@@ -1,10 +1,13 @@
 # INTERFACE_CONTROL.md — CSM V3 Interface Control Document (ICD)
 
 ```
-Revision:  R3
-Date:      2026-05-20
+Revision:  R4
+Date:      2026-05-22
 Status:    Active — locked interfaces, change requires version bump on
            BOTH mating parts AND an ICD revision bump.
+           R4 aligns Interface 5 (feeders) and Interface 6 (drive) to the
+           actual BOM V11 inventory after correcting an R3 mismatch
+           with the physical purchases.
 ```
 
 This is the **interface control document** for the CSM V3 modular
@@ -220,7 +223,7 @@ all angular units degrees.
 | Slip fit clearance | 0.15 mm/side | derived |
 | Sinker register plane (top of pocket) | Z = 75 (= SINKER_Z, cylinder-local) = 256 world | both |
 
-### Interface 5: Cassette Base ↔ Feeder Modules  *(R3 update)*
+### Interface 5: Cassette Base ↔ Feeder Modules  *(R4 update — actuator change)*
 
 | Property | Value | Locked by |
 |---|---|---|
@@ -228,14 +231,22 @@ all angular units degrees.
 | Bolt count | 6× M4 | Cassette Base V1.1 |
 | Bolt angular offset | 0° (0/60/120/180/240/300) | Cassette Base V1.1 |
 | Hardware | M4 brass heat-set inserts in cassette base | per material — PETG/PA12 supports inserts |
-| Phase 1 active feeders | 2 (positions 0° and 180°) | architecture decision |
+| Phase 1 active feeders | 2 (positions F1 θ=0° and F4 θ=180°) | architecture decision (ANGULAR_REFERENCE_STANDARD) |
 | Retainer Ring mount | Shares same 6 bolt pattern (positions 60/120/240/300 unused by feeders) | Interface 7 |
-| Feeder motor (Phase 1) | NEMA 11 stepper (28×28×32 body) | R3 decision — replaces NEMA 8 |
+| **Feeder actuator (Phase 1)** | **MG90S metal-gear servo (22.8×12.2×28.5 body, 32 mm tab-to-tab)** | R4 — matches BOM V11 (8× purchased: 6 active + 2 spare). REPLACES the R3 NEMA 11 spec. |
+| Servo control signal | PWM 50 Hz, 1.0–2.0 ms pulse, 180° rotation | MG90S spec |
+| Servo power | 6 V (via LM2596 buck from 24 V S-250 PSU) | BOM B008BHB4L8 |
 | Feeder yarn exit Z (world) | 271 (= FEEDER_REFERENCE_Z + CYL_BOTTOM_WORLD_Z = 90 + 181) | provisional; validated in Phase 1.5 |
 | Feeder yarn exit radius | 95 mm (approx, at PCD 190 / 2) | Feeder Module V1.0 spec |
 | Service envelope | SE3 reserved per feeder position | SERVICE_ENVELOPES.md |
 
-### Interface 6: Cassette Base ↔ Frame  *(R3 major rewrite)*
+**R4 Note:** The feeder module 3D-printed enclosure (currently
+`FeederModule V1.0` with a 28×32 mm motor cavity) needs **V1.1** to
+fit the MG90S servo (smaller cavity 23×13 mm with 2× M2 mounting
+tabs at 28 mm pitch). Cavity and bolt-pattern change only — the
+external footprint and PCD 190 mount geometry unchanged.
+
+### Interface 6: Cassette Base ↔ Frame + Drive Motor  *(R4 update — motor change)*
 
 The frame is **completely re-architected** from R2. There is no longer
 a "wood mid-shelf" the size of the wood base. Instead, a compact upper
@@ -255,7 +266,20 @@ the cylinder axis (FRAME_ORIGIN_XY = (0, 0)).
 | Upright top Z | 206 world | R3 |
 | Wood base | 500 × 400 × 18 mm hardwood, with D100 center take-down hole | R3 (hole NEW) |
 | Wood base top Z | 18 world | R3 |
-| Hardware | M5 with T-nuts in 2020 channel + M5 through wood upper deck into aluminum plate inserts | BOM_V11 (TBD final fastener spec) |
+| Hardware | M5 with T-nuts in 2020 channel + M5 through wood upper deck into aluminum plate inserts | BOM_V11 |
+| **Drive motor** | **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)** | R4 — replaces R3 NEMA 17 |
+| Drive motor body | 57×57×56 mm + 50 mm gearbox = 106 mm total length | NEMA 23 + HG5 spec |
+| Drive motor mount | 4× M5 at PCD square 47.14 mm | NEMA 23 frame |
+| Drive motor position | World (X=+90, Y=−100, Z_bot=18) | MD.MOTOR_X/Y/Z |
+| Drive belt | HTD 5M, 405 mm pitch length, 15 mm wide (kit B0C6Y1462P) | BOM_V11 |
+| Drive pulleys | 60T (gearbox, 14 mm bore) + 20T (drive shaft, 12 mm bore) | BOM_V11 |
+| Total reduction | 5 × 3 = **15:1** motor → cylinder | gearbox + belt |
+
+**R4 Note:** `Motor Mount V1.3` was designed for NEMA 17 geometry
+(M3 mount PCD 31). NEMA 23 has M5 mount PCD 47.14. **Motor Mount
+needs V1.4** to accommodate the larger NEMA 23 + gearbox stack.
+Existing Motor Mount V1.3 STL is now obsolete for the drive train
+(may be reusable for other purposes).
 
 ### Interface 7: Cassette Base + Sinker Ring ↔ Retainer Ring  *(unchanged from R2)*
 
@@ -367,18 +391,23 @@ coordinate system. This is enabled by the invariants section above.
 | Cassette Base | V1.1 | 1 | `02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |
 | Retainer Ring | V1.0 (LOCKED) | 1 | `02_CASSETTE_HEAD/retainer_ring/freecad_macros/CSM_V3_RetainerRing_V1_0.FCMacro` |
 | Drive Hub | V2.4.2 (Done) | 2 | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_DriveHub_V2_4_2.FCMacro` |
-| Motor Mount | V1.3 (Done — may need V1.4 for new layout) | 2 | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_MotorMount_V1_3.FCMacro` |
+| Motor Mount | V1.3 (**OBSOLETE for drive** — V1.4 needed for NEMA 23 + gearbox) | 2 | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_MotorMount_V1_3.FCMacro` |
 | Bearing Housings | V2.5 (Done) | 2 | `05_BEARINGS_SHAFT/freecad_macros/CSM_V3_BearingHousings_V2_5.FCMacro` |
 | Wood Base | V1.0 (NEEDS V1.1 — add D100 take-down hole) | 2 | `CSM_V3_ASSEMBLY/frame/wood_base/freecad_macros/CSM_V3_WoodBase_V1_0.FCMacro` |
 | Wood Upper Deck | **NOT YET** | 2 | to build at `CSM_V3_ASSEMBLY/frame/wood_upper_deck/` |
 | Aluminum Plate | V1.0 (NEEDS V1.1 — resize 150 → 250) | 2 | `CSM_V3_ASSEMBLY/frame/mount_plate_6061/freecad_macros/CSM_V3_MountPlate6061_V1_0.FCMacro` |
 | 2020 Upright | V1.0 (NEEDS V1.1 — shorten 267 → 188, reposition) | 2 | `CSM_V3_ASSEMBLY/frame/upright_2020/freecad_macros/CSM_V3_Upright2020_V1_0.FCMacro` |
 | Touchscreen Mast | **NOT YET** | 3 | to build at `CSM_V3_ASSEMBLY/frame/touchscreen_mast/` |
-| NEMA 17 motor (drive) | V1.0 (built) | 3 | `CSM_V3_ASSEMBLY/drive_bought/nema17_stepper/` |
-| HTD pulleys + belt | NOT YET | 3 | `CSM_V3_ASSEMBLY/drive_bought/` |
+| ~~NEMA 17 motor (drive)~~ | **OBSOLETE** — replaced by NEMA 23 + gearbox | 3 | `CSM_V3_ASSEMBLY/drive_bought/nema17_stepper/` (archive) |
+| NEMA 23 + 5:1 gearbox (drive) | **NEEDS BUILD** | 3 | `CSM_V3_ASSEMBLY/drive_bought/nema23_gearbox/` (to create) |
+| HTD 60T pulley (14 mm bore) | V1.0 (built — verify bore) | 3 | `CSM_V3_ASSEMBLY/drive_bought/pulley_htd_60t/` |
+| HTD 20T pulley (12 mm bore) | **NEEDS BUILD** (was 16T in R3) | 3 | `CSM_V3_ASSEMBLY/drive_bought/pulley_htd_20t/` (to create) |
+| HTD belt 405 mm | V1.0 (built) | 3 | `CSM_V3_ASSEMBLY/drive_bought/belt_htd_5m/` |
 | Bearings + shaft | NOT YET | 3 | `CSM_V3_ASSEMBLY/bearings_bought/` |
-| Feeder Module | **NOT YET** | 3 | to build at `CSM_V3_ASSEMBLY/feeder_module/` |
-| Electronics (Mega/TB6600/PSU) | NOT YET | 3 | `CSM_V3_ASSEMBLY/electronics/` |
+| Feeder Module | V1.0 (built — **needs V1.1** for MG90S servo cavity) | 3 | `CSM_V3_ASSEMBLY/feeder_module/` |
+| Electronics (Mega/TB6600/S-250/Pi 4) | V1.0 boxes built; cable routing TBD | 3 | `CSM_V3_ASSEMBLY/electronics/` |
+| MG90S servo (×6 + 2 spare) | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/servo_mg90s/` |
+| LM2596 buck converter | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/lm2596_buck/` |
 | Touchscreen 7" | NOT YET | 3 | `CSM_V3_ASSEMBLY/electronics/touchscreen_7in/` |
 | Ribber (Phase 2) | provisioned only | 1 | future |
 
@@ -411,6 +440,7 @@ coordinate system. This is enabled by the invariants section above.
 | R1 | 2026-05-17 | Initial ICD. Captures interfaces 1-9 from locked V3 architecture. |
 | R2 | 2026-05-17 | Lock Interface 7 with Retainer Ring V1.0 final geometry. Retainer OD = 200 (was 172, fixed for bolt PCD compatibility). All other interfaces unchanged. |
 | R3 | 2026-05-20 | Major architectural revision. (a) NEW DO-NOT-BREAK invariants block (machine constitution); (b) NEW §0 three-layer architecture; (c) NEW §1 datum chain; (d) NEW §2 service envelopes SE1–SE5 (summary; full doc in `SERVICE_ENVELOPES.md`); (e) Interface 5 updated (NEMA 11 feeder motors, FEEDER_REFERENCE_Z 78→90 provisional); (f) Interface 6 major rewrite (frame architecture: wood base 500×400 w/ D100 hole + 4× 2020 uprights at ±150 ±120 × 188 mm + wood upper deck 320×260×18 + aluminum plate 250×250×6 master datum). The R2 "wood mid-shelf 500×400" is DELETED; (g) Interface 9 elevated (θ=0° = master phase reference); (h) NEW Interface 10 (Touchscreen Mast — dual 2020, isolated from precision frame); (i) NEW Interface 11 (Sock Take-Down Column — D100 through wood base, reserved space invariant); (j) NEW §4 Phase 1/1.5/2/3 upgrade path with kinematic-validation gate at 1.5; (k) §5 locked-versions refreshed with layer assignment + new components flagged NEEDS V1.1 or NOT YET. |
+| R4 | 2026-05-22 | **BOM ALIGNMENT.** Reconciled Interface 5 + Interface 6 with the actual physical inventory in `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. (a) **Interface 5 feeder actuator**: NEMA 11 stepper → **MG90S metal-gear servo** (8 purchased: 6 active + 2 spare). PWM not step/dir. Feeder Module V1.0 cavity needs V1.1 redesign for 23×13 servo footprint. (b) **Interface 6 drive motor**: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)** ($95 StepperOnline). Body 57×57×56 + 50 mm gearbox = 106 mm total. Motor Mount V1.3 OBSOLETE → V1.4 needed (M5 PCD 47.14 vs old M3 PCD 31). (c) **Interface 6 pulleys**: HTD 5M 60T+16T → actual **60T+20T+405mm belt** (kit B0C6Y1462P). New belt ratio 3:1; total reduction = 5×3 = **15:1**. Big pulley bore 12→14 mm (gearbox shaft). (d) §5 locked-versions table refreshed: NEMA 17 STL flagged OBSOLETE; NEMA 23+gearbox STL needs build; 20T pulley needs build; Feeder Module V1.1 needed. All invariants in DO-NOT-BREAK section unchanged. |
 
 ---
 

@@ -1,0 +1,198 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- FEEDER MODULE V1.1  (BOM-aligned: MG90S servo cavity)
+# =============================================================================
+# Replaces V1.0 (which had a NEMA 11 stepper cavity 28x32 -- wrong per
+# BOM V11). V1.1 fits the actual purchased actuator: MG90S metal-gear
+# servo (22.8x12.2x28.5 body, 32 mm tab-to-tab, 2x M2 mounting at
+# 28 mm pitch).
+#
+# DESIGN PHILOSOPHY (per ICD R5 Interface 5 Design Rule)
+# ------------------------------------------------------
+# Servo is for "guided yarn presentation," NOT precision actuation.
+#   - Servo arm sweeps yarn guide into/out of cassette feed zone
+#   - PWM 50 Hz, 1.0-2.0 ms pulse, 180 deg range
+#   - Acceptable functions: present/retract, tension modulation,
+#     color-select, simple swing
+#   - NOT acceptable: per-stitch jacquard, micron repeatability
+#
+# CHANGES FROM V1.0
+# -----------------
+# - Removed NEMA 11 motor housing (28x32 cavity)
+# - Added MG90S servo cavity (23x13 with 2x M2 mounting tabs)
+# - Added cable exit slot for 3-wire servo cable (signal, +6V, GND)
+# - Mount footprint, cone post, base plate, M4 bolts: UNCHANGED
+#   so existing cassette PCD 190 interface stays compatible.
+#
+# Reference: ICD R5 Interface 5; MACHINE_DATUMS R3 bought-parts section.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# =============================================================================
+# Mount interface (UNCHANGED from V1.0 -- cassette PCD 190)
+# =============================================================================
+PCD_FEEDER       = MD.PCD_FEEDER          # 190.0
+FEEDER_RADIUS    = PCD_FEEDER / 2.0        # 95.0
+# Two adjacent bolts on cassette span 95 mm chord (sin(30 deg) x 2 x R)
+MOUNT_HOLE_PITCH = 2.0 * FEEDER_RADIUS * math.sin(math.radians(30.0))  # 95.0
+M4_HOLE_D        = 4.5                     # M4 clearance
+
+# =============================================================================
+# Base plate (UNCHANGED -- cassette-tangent rectangle)
+# =============================================================================
+BASE_W           = 95.0
+BASE_D           = 70.0
+BASE_T           =  6.0
+BASE_Z_BOTTOM    = MD.CASSETTE_TOP_Z      # 63.0 cyl-local -> world 244
+
+# =============================================================================
+# Cone post (UNCHANGED -- vertical pin for yarn cone)
+# =============================================================================
+POST_D           = 15.0
+POST_H           = 130.0
+POST_Z_BOTTOM    = BASE_Z_BOTTOM + BASE_T  # 69 cyl-local -> world 250
+POST_RADIAL_POS  =  20.0    # mm outboard from base center
+
+# =============================================================================
+# MG90S servo housing (NEW for V1.1)
+# =============================================================================
+# MG90S body 22.8 x 12.2 x 28.5; mounting tabs extend the WIDTH to 32 mm.
+# We carve a CAVITY in the feeder housing that:
+#   - fits the body (with 0.4 mm clearance)
+#   - has a recessed step for the mounting tabs
+#   - has a thru-hole for the spline output shaft (D4.8 + clearance)
+#   - has a 2x M2 mounting holes
+#   - has a cable exit slot in the back
+SERVO_W          = MD.SERVO_MG90S_W                  # 22.80
+SERVO_D          = MD.SERVO_MG90S_D                  # 12.20
+SERVO_H          = MD.SERVO_MG90S_H                  # 28.50
+SERVO_TAB_W      = MD.SERVO_MG90S_MOUNT_W            # 32.00 (tab-to-tab)
+SERVO_TAB_PITCH  = MD.SERVO_MG90S_MOUNT_HOLES_PITCH  # 28.00 (M2 hole spacing)
+SERVO_SHAFT_D    = MD.SERVO_MG90S_SHAFT_D            # 4.80
+M2_HOLE_D        = 2.4                                # M2 clearance
+SERVO_CLEARANCE  = 0.4                                # printing slop
+
+SERVO_BODY_CAV_W = SERVO_W + 2 * SERVO_CLEARANCE     # 23.60
+SERVO_BODY_CAV_D = SERVO_D + 2 * SERVO_CLEARANCE     # 13.00
+SERVO_BODY_CAV_H = SERVO_H + 2.0                      # full-depth thru
+SERVO_TAB_CAV_W  = SERVO_TAB_W + 2 * SERVO_CLEARANCE  # 32.80
+SERVO_TAB_CAV_D  = SERVO_D + 2 * SERVO_CLEARANCE      # 13.00
+SERVO_TAB_CAV_H  = 2.0    # recessed tab depth from top face of housing
+
+# Housing wraps the servo. Walls 3 mm thick.
+HOUSING_WALL_T   = 3.0
+HOUSING_W        = SERVO_TAB_CAV_W + 2 * HOUSING_WALL_T   # 38.80
+HOUSING_D        = SERVO_BODY_CAV_D + 2 * HOUSING_WALL_T  # 19.00
+HOUSING_H        = SERVO_BODY_CAV_H                       # 30.50
+
+# Housing position relative to base plate -- placed beside cone post
+HOUSING_TANG_POS = -28.0     # tangential offset (one side of cone post)
+HOUSING_RADIAL_POS = POST_RADIAL_POS - SERVO_BODY_CAV_D - 8  # inboard of cone
+HOUSING_Z_BOTTOM = BASE_Z_BOTTOM + BASE_T
+
+# Cable exit slot (3-wire JR connector exits the back side)
+CABLE_SLOT_W = 8.0
+CABLE_SLOT_H = 4.0
+
+# =============================================================================
+# Yarn exit nozzle (UNCHANGED)
+# =============================================================================
+NOZZLE_D         =  4.0
+NOZZLE_L         = 20.0
+NOZZLE_TARGET_Z  = MD.FEEDER_REFERENCE_Z  # 90 cyl-local -> world 271
+
+MATERIAL         = "PETG prototype / PA12 production"
+
+print(f"[FeederModule V1.1]  MG90S servo cavity ({MATERIAL})")
+print(f"  base plate:  {BASE_W} x {BASE_D} x {BASE_T} mm")
+print(f"  cone post:   D{POST_D} x {POST_H} mm  (yarn cone slips over)")
+print(f"  servo cavity: {SERVO_BODY_CAV_W}x{SERVO_BODY_CAV_D}x{SERVO_BODY_CAV_H} body + "
+      f"{SERVO_TAB_CAV_W}x{SERVO_TAB_CAV_D}x{SERVO_TAB_CAV_H} tab recess")
+print(f"  servo M2 mounts:  2x at {SERVO_TAB_PITCH} mm pitch (D{M2_HOLE_D} clearance)")
+print(f"  servo housing:    {HOUSING_W} x {HOUSING_D} x {HOUSING_H} (wall {HOUSING_WALL_T})")
+print(f"  cassette M4 bolts: 2x at pitch {MOUNT_HOLE_PITCH:.1f} mm (PCD {PCD_FEEDER})")
+print(f"  yarn nozzle target Z: {NOZZLE_TARGET_Z} cyl-local = {MD.world_z(NOZZLE_TARGET_Z)} world")
+
+doc = FreeCAD.newDocument("FeederModule_V1_1")
+
+# ---- BASE PLATE ----
+base = Part.makeBox(BASE_W, BASE_D, BASE_T,
+                    FreeCAD.Vector(-BASE_W/2, -BASE_D/2, BASE_Z_BOTTOM))
+
+# 2x M4 mount holes on cassette-facing edge
+mount_y = -BASE_D/2 + 10.0
+for sx in (-1, +1):
+    bx = sx * (MOUNT_HOLE_PITCH/2.0)
+    h = Part.makeCylinder(M4_HOLE_D/2.0, BASE_T + 2.0,
+                          FreeCAD.Vector(bx, mount_y, BASE_Z_BOTTOM - 1.0))
+    base = base.cut(h)
+
+# ---- CONE POST ----
+post_x = 0.0
+post_y = +POST_RADIAL_POS
+post = Part.makeCylinder(POST_D/2.0, POST_H,
+                         FreeCAD.Vector(post_x, post_y, POST_Z_BOTTOM))
+
+# ---- SERVO HOUSING (NEW for V1.1) ----
+# Build outer housing block
+housing = Part.makeBox(HOUSING_W, HOUSING_D, HOUSING_H,
+                       FreeCAD.Vector(HOUSING_TANG_POS - HOUSING_W/2,
+                                      HOUSING_RADIAL_POS - HOUSING_D/2,
+                                      HOUSING_Z_BOTTOM))
+
+# Cavity for servo body (thru-hole)
+body_cav = Part.makeBox(SERVO_BODY_CAV_W, SERVO_BODY_CAV_D, SERVO_BODY_CAV_H + 1.0,
+                        FreeCAD.Vector(HOUSING_TANG_POS - SERVO_BODY_CAV_W/2,
+                                       HOUSING_RADIAL_POS - SERVO_BODY_CAV_D/2,
+                                       HOUSING_Z_BOTTOM - 0.5))
+housing = housing.cut(body_cav)
+
+# Recess for mounting tabs at top of housing
+tab_cav = Part.makeBox(SERVO_TAB_CAV_W, SERVO_TAB_CAV_D, SERVO_TAB_CAV_H + 0.5,
+                       FreeCAD.Vector(HOUSING_TANG_POS - SERVO_TAB_CAV_W/2,
+                                      HOUSING_RADIAL_POS - SERVO_TAB_CAV_D/2,
+                                      HOUSING_Z_BOTTOM + HOUSING_H - SERVO_TAB_CAV_H))
+housing = housing.cut(tab_cav)
+
+# 2x M2 mounting holes through tabs (located at servo tab pitch)
+for sx in (-1, +1):
+    mh_x = HOUSING_TANG_POS + sx * (SERVO_TAB_PITCH/2.0)
+    m2 = Part.makeCylinder(M2_HOLE_D/2.0, SERVO_TAB_CAV_H + 1.0,
+                           FreeCAD.Vector(mh_x, HOUSING_RADIAL_POS,
+                                          HOUSING_Z_BOTTOM + HOUSING_H - SERVO_TAB_CAV_H - 0.5))
+    housing = housing.cut(m2)
+
+# Cable exit slot (in the back wall, facing -Y / outboard from cassette)
+cable_x = HOUSING_TANG_POS
+cable_y = HOUSING_RADIAL_POS + HOUSING_D/2 - 1.0
+cable_z = HOUSING_Z_BOTTOM + HOUSING_H/2
+cable_slot = Part.makeBox(CABLE_SLOT_W, HOUSING_WALL_T + 2.0, CABLE_SLOT_H,
+                          FreeCAD.Vector(cable_x - CABLE_SLOT_W/2,
+                                         cable_y - 1.0,
+                                         cable_z - CABLE_SLOT_H/2))
+housing = housing.cut(cable_slot)
+
+# ---- YARN NOZZLE (UNCHANGED) ----
+nozzle_z = NOZZLE_TARGET_Z
+nozzle = Part.makeCylinder(NOZZLE_D/2.0, NOZZLE_L,
+                           FreeCAD.Vector(0, -BASE_D/2 - 5, nozzle_z),
+                           FreeCAD.Vector(0, -1, 0))
+
+# ---- FUSE ----
+feeder = base.fuse(post).fuse(housing).fuse(nozzle)
+
+obj = doc.addObject("Part::Feature", "FeederModule_V1_1")
+obj.Shape = feeder
+doc.recompute()
+
+BASE_OUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE_OUT, "CSM_V3_FeederModule_V1_1.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz} bytes, {sz/1024:.1f} KB)")
+print(f"     volume: {feeder.Volume:.0f} mm^3")
+print(f"     V1.0 STL preserved in _archive (no auto-removal -- archive manually)")

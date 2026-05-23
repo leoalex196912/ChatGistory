@@ -145,71 +145,118 @@ MAST_TOP_CROSSBAR_LEN  =  60.0
 MAST_TOP_Z             = 418.0   # = WOOD_BASE_TOP_Z + MAST_UPRIGHT_LEN
 
 # ============================================================
-# BOUGHT-PARTS DIMENSIONS (purchased components)
+# BOUGHT-PARTS DIMENSIONS (from BOM V12 -- physical inventory)
+# Source of truth: 04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html
 # ============================================================
 
-# Drive shaft + bearings
-SHAFT_D                = 12.00   # FEYRINX h8 steel
-SHAFT_LENGTH           = 150.00  # provisional, final cut to fit
-BEARING_6001_OD        = 28.00
+# --- Drive shaft + bearings ---
+SHAFT_D                = 12.00   # FEYRINX 12mm h8 (B08HX2LG53)
+SHAFT_LENGTH           = 300.00  # actually-purchased shaft length
+BEARING_6001_OD        = 28.00   # 6001-2RS (eBay 10pk)
 BEARING_6001_ID        = 12.00
 BEARING_6001_W         =  8.00
+BEARING_51101_OD       = 26.00   # 51101 thrust bearings (B0G25X5L23)
+BEARING_51101_ID       = 12.00
+BEARING_51101_W        =  9.00
+BEARING_608_OD         = 22.00   # 608-2RS skate (B0FH6QH8VQ)
+BEARING_608_ID         =  8.00
+BEARING_608_W          =  7.00
+SHAFT_COLLAR_D         = 12.00   # 12mm clamping collars (B0DMMB1FHF)
 
-# NEMA 17 drive motor
-NEMA17_BODY_W          = 42.30
-NEMA17_BODY_L          = 40.00
-NEMA17_SHAFT_D         =  5.00
-NEMA17_SHAFT_L         = 24.00
-NEMA17_MOUNT_PCD       = 31.00
-NEMA17_BOSS_D          = 22.00
-NEMA17_BOSS_H          =  2.00
+# --- DRIVE MOTOR: NEMA 23 + 5:1 PLANETARY GEARBOX (23HS22-2804S-HG5) ---
+# Source: StepperOnline direct  --  $95
+# Bipolar 2.8 A holding ~2.8 N.m before gearbox, ~14 N.m at gearbox output
+NEMA23_BODY_W          = 57.00     # NEMA 23 frame, 57x57 square
+NEMA23_BODY_L          = 56.00     # 23HS22 = 56 mm body length
+NEMA23_SHAFT_D         =  8.00     # input shaft (into gearbox, but motor side has shaft)
+NEMA23_MOUNT_PCD_SQ    = 47.14     # 4x M5 square hole pattern (centre to centre)
+NEMA23_MOUNT_HOLE_D    =  5.50     # M5 clearance
+NEMA23_BOSS_D          = 38.10     # round register boss
+NEMA23_BOSS_H          =  1.60
+NEMA23_CURRENT_A       =  2.80
+NEMA23_HOLDING_NM      =  2.80
 
-# NEMA 11 feeder motor (Phase 1 feeders)
-NEMA11_BODY_W          = 28.0
-NEMA11_BODY_L          = 32.0
-NEMA11_SHAFT_D         =  5.0
-NEMA11_SHAFT_L         = 20.0
-NEMA11_MOUNT_PCD       = 23.0
+# Planetary gearbox (HG5 = 5:1 ratio, attached to motor output)
+GEARBOX_RATIO          =  5.0      # HG5
+GEARBOX_FLANGE_OD      = 60.00     # typical for NEMA 23 + HG-series planetary
+GEARBOX_LENGTH         = 50.00     # planetary gearbox housing length
+GEARBOX_OUTPUT_SHAFT_D = 14.00     # output shaft diameter (gearbox)
+GEARBOX_OUTPUT_SHAFT_L = 25.00     # output shaft length
+GEARBOX_MOUNT_PCD      = 70.00     # output flange mount pattern (M5)
 
-# Drive hub
+# Drive motor placement (Interface 6 -- physical position on wood base)
+# Combined motor + gearbox total length = NEMA23_BODY_L + GEARBOX_LENGTH = 106 mm
+MOTOR_X                =  90.0     # world X (+X side, motor side, Interface 6)
+MOTOR_Y                = -100.0    # world Y (-Y back, accessible from front)
+MOTOR_BODY_BOTTOM_Z    =  18.0     # gearbox-side mounts on wood base top
+BELT_TENSION_TRAVEL    =  30.0     # SE5 X-travel slot
+
+# --- HTD 5M PULLEYS + BELT (from B0C6Y1462P kit: 60T + 20T + 405 mm belt) ---
+PULLEY_BIG_TEETH       = 60
+PULLEY_BIG_OD          = 97.50     # for HTD 5M @ 60 teeth: pitch dia 95.49, OD~97.5
+PULLEY_BIG_BORE        = 14.00     # bored for gearbox output shaft (was 12)
+PULLEY_BIG_W           = 16.00
+PULLEY_SMALL_TEETH     = 20        # 20T (NOT 16T)
+PULLEY_SMALL_OD        = 33.30     # for HTD 5M @ 20 teeth: pitch dia 31.83, OD~33.3
+PULLEY_SMALL_BORE      = 12.00     # bored for 12 mm drive shaft (note inversion below)
+PULLEY_SMALL_W         = 16.00
+BELT_WIDTH             = 15.00
+BELT_THICKNESS         =  3.00
+BELT_PITCH_LENGTH      = 405.0     # mm  -- LOCKS center distance
+BELT_PITCH             =   5.0     # HTD 5M
+
+# Pulley assignment (since gearbox output is 14 mm, big pulley goes on gearbox;
+# small pulley goes on 12 mm drive shaft -- belt reduces from gearbox to cylinder shaft)
+GEAR_RATIO_BELT        = 60.0 / 20.0     # 3:1 belt reduction
+GEAR_RATIO_TOTAL       = GEARBOX_RATIO * GEAR_RATIO_BELT   # 5 * 3 = 15:1 motor-to-cylinder
+
+# --- FEEDER MOTORS: MG90S METAL-GEAR SERVOS (NOT stepper motors) ---
+# 8x purchased: 6 for feeders F1..F6 + 2 spares
+# 9 g micro servo, 4.8-6 V, 2.5-3.0 kg.cm torque, 180 deg PWM
+SERVO_MG90S_W          = 22.80    # body width
+SERVO_MG90S_D          = 12.20    # body depth
+SERVO_MG90S_H          = 28.50    # body height (incl. spline output)
+SERVO_MG90S_MOUNT_W    = 32.00    # tab-to-tab including mounting tabs
+SERVO_MG90S_MOUNT_HOLES_PITCH = 28.00    # 2x M2 mounting holes pitch
+SERVO_MG90S_SHAFT_D    =  4.80    # spline output shaft
+SERVO_MG90S_VOLTAGE    =  6.0
+SERVO_MG90S_TORQUE_KGCM = 3.0
+SERVO_MG90S_BUCK_CONVERTER = "LM2596 (B008BHB4L8) 24V -> 6V"
+
+# --- DRIVE HUB (unchanged -- same 18 mm boss, but now mates to 14 mm shaft via collar) ---
 DRIVE_HUB_BOSS_OD      = 18.00
 DRIVE_HUB_BOSS_H       =  3.00
 DRIVE_HUB_FLANGE_OD    = 90.00
 DRIVE_HUB_BOLT_PCD     = 70.00
 
-# HTD 5M timing belt + pulleys
-PULLEY_BIG_TEETH       = 60
-PULLEY_BIG_OD          = 97.50
-PULLEY_BIG_BORE        = 12.00
-PULLEY_BIG_W           = 16.00
-PULLEY_SMALL_TEETH     = 16
-PULLEY_SMALL_OD        = 27.40
-PULLEY_SMALL_BORE      =  5.00
-PULLEY_SMALL_W         = 16.00
-GEAR_RATIO             = 60.0 / 16.0   # 3.75
-BELT_WIDTH             = 15.00
-BELT_THICKNESS         =  3.00
+# --- ELECTRONICS (sit on wood base, Layer 3) ---
+# Compute
+MEGA_W,  MEGA_D,  MEGA_H   = 101.0, 53.0, 15.0    # Arduino Mega 2560 (B0046AMGW0)
+RPI4_W,  RPI4_D,  RPI4_H   =  88.0, 58.0, 19.0    # Raspberry Pi 4 4GB (B07V5JTMV9)
+                                                    # Pi handles touchscreen UI; Mega handles steppers
 
-# Drive motor placement (Interface 6, +X side, rear -Y)
-MOTOR_X                =  90.0
-MOTOR_Y                = -100.0
-MOTOR_BODY_BOTTOM_Z    =  18.0
-BELT_CENTER_DISTANCE   = 134.5   # sqrt(90^2 + 100^2) provisional
-BELT_TENSION_TRAVEL    =  30.0   # SE5 X-travel slot
+# Stepper driver
+TB6600_W, TB6600_D, TB6600_H = 96.0, 56.0, 33.0   # B08SG7L54W
 
-# Electronics (sit on wood base, Layer 3)
-MEGA_W,  MEGA_D,  MEGA_H   = 101.0, 53.0, 15.0
-TB6600_W, TB6600_D, TB6600_H = 96.0, 56.0, 33.0
-LRS50_W, LRS50_D, LRS50_H  =  99.0, 82.0, 30.0
+# Power supply (replaces LRS50 in earlier docs)
+S250_24_W, S250_24_D, S250_24_H = 199.0, 98.0, 38.0    # Mean Well S-250-24 (B07Y7L664K)
 
 # Touchscreen
-TOUCH_W, TOUCH_D, TOUCH_H  = 165.0, 100.0, 10.0
+TOUCH_W, TOUCH_D, TOUCH_H  = 165.0, 100.0, 10.0   # ELECROW 7" HDMI (B08FMNDDSL)
 
-# Hall sensor + index magnet
+# --- HALL + INDEX ---
 HALL_SENSOR_PART       = "SS49E"
 MAGNET_PART            = "B0F4KS6KV3"
 MAGNET_POCKET_D        =   6.0
 MAGNET_POCKET_H        =   2.2
+
+# --- CYLINDER SPRINGS (V10 NEW, from FlyDesigns) ---
+SPRING_WIRE_D          =   2.79   # 0.110 inch music wire
+SPRING_QTY_PURCHASED   =   3
+
+# --- ALUMINUM PLATE (purchased B0D9S2KH4V, size TBD-verify) ---
+ALU_PLATE_PURCHASED_T  =   6.00   # 6 mm thick confirmed
+# (W and D values come from ALU_PLATE_W and ALU_PLATE_D in frame block above)
 
 # ============================================================
 # CYLINDER (Cylinder V3.0 specifics)

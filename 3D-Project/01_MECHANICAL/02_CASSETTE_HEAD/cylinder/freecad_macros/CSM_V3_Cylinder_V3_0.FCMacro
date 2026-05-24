@@ -205,20 +205,27 @@ WEDGE_A_SLOTS = [   # WIDTH sweep at fixed depth 3.0
     (1.28, 3.0),
 ]
 
-WEDGE_B_SLOTS = [   # OPTION B: coupled DEPTH + GROOVE sweep at fixed width 1.22
+WEDGE_B_SLOTS = [   # V2 (2026-05-24): fine sweep 3.50..5.30 mm at 0.20 mm steps
     # Each entry is (slot_width_mm, slot_depth_mm, groove_depth_mm).
-    # Groove depth is chosen so that for ALL slots:
-    #     groove_depth = slot_depth - 1.8 + 0.2
-    # That preserves a constant 0.20mm spring preload across the whole sweep,
-    # so the test isolates the effect of slot depth alone on needle retention.
-    # (Constraint: slot_depth <= groove_depth + needle_thickness 1.8mm
-    #  for the spring inner face to bear on the needle outer face.)
-    (1.22, 2.5, 0.9),
-    (1.22, 3.0, 1.4),    # <-- baseline (matches SLOT_DEPTH=3.0, groove 1.4)
-    (1.22, 3.5, 1.9),
-    (1.22, 4.0, 2.4),
-    (1.22, 4.5, 2.9),
-    (1.22, 5.0, 3.4),
+    # Groove depth chosen for constant +0.20 mm spring preload:
+    #     groove_depth = slot_depth - 1.8 + 0.2 = slot_depth - 1.6
+    # Physical test results from V1 wedge (May 19 print):
+    #   - Slots 4 (4.0 mm) and 5 (4.5 mm) worked WELL
+    #   - Slots 1 (2.5 mm, groove 0.9) and 6 (5.0 mm, groove 3.4) printed
+    #     poorly (groove too shallow at slot 1, wall too thin at slot 6)
+    # V2 sweep stays within the known-good zone and extends upward to
+    # test the upper print-quality limit.
+    # 10 slots = 50 deg wedge sector (was 30 deg for the V1 6-slot wedge).
+    (1.22, 3.50, 1.90),
+    (1.22, 3.70, 2.10),
+    (1.22, 3.90, 2.30),
+    (1.22, 4.10, 2.50),
+    (1.22, 4.30, 2.70),
+    (1.22, 4.50, 2.90),    # <-- matches V1 known-good slot 5
+    (1.22, 4.70, 3.10),
+    (1.22, 4.90, 3.30),
+    (1.22, 5.10, 3.50),    # print-risk: deep groove
+    (1.22, 5.30, 3.70),    # print-risk: thin wall in spring-groove zone
 ]
 
 # Derived
@@ -526,7 +533,8 @@ except Exception as ex:
 # Add the body to the document
 obj = doc.addObject("Part::Feature", "Cylinder_V3_0")
 obj.Shape = body
-obj.ViewObject.ShapeColor = (0.72, 0.72, 0.74)   # aluminum gray, like Erlbacher
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.72, 0.72, 0.74)   # aluminum gray, like Erlbacher
 doc.recompute()
 
 vol_mm3 = body.Volume
@@ -568,12 +576,16 @@ def build_wedge(wedge_slots, x_offset, color, label):
     w_inner_lo.translate(FreeCAD.Vector(0, 0, -1.0))
     wb = w_outer.cut(w_inner_up).cut(w_inner_lo)
 
-    # Keep only 30 deg sector
+    # Auto-derive wedge angle from slot count.  Each slot occupies
+    # SLOT_PITCH_DEG (5 deg).  6 slots -> 30 deg.  10 slots -> 50 deg.
+    wedge_angle_deg = len(norm_slots) * SLOT_PITCH_DEG
+
+    # Keep only the sector
     sector = Part.makeCylinder(
         CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
         FreeCAD.Vector(0, 0, -1.0),
         FreeCAD.Vector(0, 0, 1.0),
-        WEDGE_ANGLE_DEG,
+        wedge_angle_deg,
     )
     wb = wb.common(sector)
 
@@ -640,7 +652,7 @@ def build_wedge(wedge_slots, x_offset, color, label):
             CYL_OUTER_R + 5.0, CYL_HEIGHT + 2.0,
             FreeCAD.Vector(0, 0, -1.0),
             FreeCAD.Vector(0, 0, 1.0),
-            WEDGE_ANGLE_DEG,
+            wedge_angle_deg,
         )
         wb = wb.cut(wg_cutter.common(wg_sector))
 
@@ -670,11 +682,13 @@ wedge_B = build_wedge(WEDGE_B_SLOTS, x_offset=250.0, color=(0.55, 0.85, 0.45), l
 
 obj_wedge_A = doc.addObject("Part::Feature", "Cylinder_V3_0_WEDGE_A_WIDTH")
 obj_wedge_A.Shape = wedge_A
-obj_wedge_A.ViewObject.ShapeColor = (0.85, 0.55, 0.25)
+if FreeCAD.GuiUp and obj_wedge_A.ViewObject is not None:
+    obj_wedge_A.ViewObject.ShapeColor = (0.85, 0.55, 0.25)
 
 obj_wedge_B = doc.addObject("Part::Feature", "Cylinder_V3_0_WEDGE_B_DEPTH")
 obj_wedge_B.Shape = wedge_B
-obj_wedge_B.ViewObject.ShapeColor = (0.55, 0.85, 0.45)
+if FreeCAD.GuiUp and obj_wedge_B.ViewObject is not None:
+    obj_wedge_B.ViewObject.ShapeColor = (0.55, 0.85, 0.45)
 doc.recompute()
 
 print(f"        Wedge A volume: {wedge_A.Volume:.0f} mm^3  (~{wedge_A.Volume * 1.27 / 1000:.0f}g PETG)")

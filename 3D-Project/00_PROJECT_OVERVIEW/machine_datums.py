@@ -186,10 +186,18 @@ GEARBOX_MOUNT_PCD      = 70.00     # output flange mount pattern (M5)
 
 # Drive motor placement (Interface 6 -- physical position on wood base)
 # Combined motor + gearbox total length = NEMA23_BODY_L + GEARBOX_LENGTH = 106 mm
-MOTOR_X                =  90.0     # world X (+X side, motor side, Interface 6)
-MOTOR_Y                = -100.0    # world Y (-Y back, accessible from front)
+#
+# R4 CORRECTION: motor moved from (+90, -100) to (+85, -47) so that the
+# belt center distance MATCHES the actual purchased 405 mm pitch belt.
+# Old MOTOR_X=90, MOTOR_Y=-100 gave distance sqrt(90^2 + 100^2) = 134.54 mm,
+# which is 37 mm too far for a 405 mm HTD 5M belt with 60T+20T pulleys.
+# Correct center distance derived from belt-length equation: ~97.29 mm
+#  (see BELT_CENTER_DISTANCE below for derivation).
+MOTOR_X                =  85.0     # world X (+X side, motor side, Interface 6)
+MOTOR_Y                = -47.0     # world Y (back-right quadrant per ICD I6)
 MOTOR_BODY_BOTTOM_Z    =  18.0     # gearbox-side mounts on wood base top
-BELT_TENSION_TRAVEL    =  30.0     # SE5 X-travel slot
+BELT_TENSION_TRAVEL    =  30.0     # SE5 X-travel slot (allows ~+/- 5 mm
+                                    # center distance variation around nominal)
 
 # --- HTD 5M PULLEYS + BELT (from B0C6Y1462P kit: 60T + 20T + 405 mm belt) ---
 PULLEY_BIG_TEETH       = 60
@@ -200,15 +208,34 @@ PULLEY_SMALL_TEETH     = 20        # 20T (NOT 16T)
 PULLEY_SMALL_OD        = 33.30     # for HTD 5M @ 20 teeth: pitch dia 31.83, OD~33.3
 PULLEY_SMALL_BORE      = 12.00     # bored for 12 mm drive shaft (note inversion below)
 PULLEY_SMALL_W         = 16.00
-BELT_WIDTH             = 15.00
+BELT_WIDTH             = 15.00     # mm  -- TO VERIFY on receipt (B0C6Y1462P
+                                    #     kit variant ships 9 or 15 mm; this
+                                    #     constant assumes 15 mm. Verify and
+                                    #     fix if 9 mm before locking the
+                                    #     motor-mount slot width.)
 BELT_THICKNESS         =  3.00
-BELT_PITCH_LENGTH      = 405.0     # mm  -- LOCKS center distance
+BELT_PITCH_LENGTH      = 405.0     # mm  -- LOCKS center distance (see below)
 BELT_PITCH             =   5.0     # HTD 5M
 
-# Pulley assignment (since gearbox output is 14 mm, big pulley goes on gearbox;
-# small pulley goes on 12 mm drive shaft -- belt reduces from gearbox to cylinder shaft)
-GEAR_RATIO_BELT        = 60.0 / 20.0     # 3:1 belt reduction
-GEAR_RATIO_TOTAL       = GEARBOX_RATIO * GEAR_RATIO_BELT   # 5 * 3 = 15:1 motor-to-cylinder
+# Belt center distance derivation (HTD 5M, 405 mm pitch, 60T + 20T):
+#   Lp = 2C + pi*(D1+D2)/2 + (D1-D2)^2/(4C)
+#   D1 = 60*5/pi = 95.493     (60T pitch diameter)
+#   D2 = 20*5/pi = 31.831     (20T pitch diameter)
+#   Solving:  C = 97.29 mm   (real solution)
+# Motor placement MOTOR_X/MOTOR_Y above is chosen to give this center distance.
+BELT_CENTER_DISTANCE   = 97.29     # mm  -- LOCKED by belt geometry
+
+# Pulley assignment:
+#   60T mounts on GEARBOX output (14 mm bore)
+#   20T mounts on 12 mm DRIVE SHAFT
+# Three separate reductions chain together:
+#   gearbox  =  5:1   (HG5 planetary)
+#   belt     =  3:1   (60T : 20T)
+#   total    = 15:1   (motor input -> cylinder output)
+GEAR_RATIO_GEARBOX     = GEARBOX_RATIO            # 5.0   (defined earlier)
+GEAR_RATIO_BELT        = 60.0 / 20.0              # 3.0   (60T : 20T)
+GEAR_RATIO_TOTAL       = GEAR_RATIO_GEARBOX * GEAR_RATIO_BELT   # 15.0
+# At 250 RPM motor input -> 16.67 RPM cylinder output.
 
 # --- FEEDER MOTORS: MG90S METAL-GEAR SERVOS (NOT stepper motors) ---
 # 8x purchased: 6 for feeders F1..F6 + 2 spares

@@ -1,0 +1,152 @@
+# CSM V3 -- Session Log 2026-05-24
+
+## Summary
+
+(A) MACHINE_DATUMS R3 -> R4 with belt-geometry correction
+(B) CSM_V3_CANONICAL_POSTER_V2 adopted as canonical visual reference
+
+================================================================
+A. MACHINE_DATUMS R4 -- BELT GEOMETRY FIX
+================================================================
+
+ROOT CAUSE OF R3 BUG
+--------------------
+R3 had:
+    MOTOR_X = 90.0,  MOTOR_Y = -100.0,  BELT_CENTER_DISTANCE = 134.5
+
+That distance (sqrt(8100 + 10000) = 134.54 mm) is geometrically
+impossible for the purchased belt:
+    HTD 5M, 405 mm pitch length, 60T + 20T pulleys.
+
+Belt-length equation:
+    Lp = 2*C + pi*(D1+D2)/2 + (D1-D2)^2/(4*C)
+
+With:
+    D1 = 60*5/pi = 95.493 mm    (60T pitch diameter)
+    D2 = 20*5/pi = 31.831 mm    (20T pitch diameter)
+    Lp = 405 mm
+
+Solving:
+    8*C^2 - 4*k*C + (D1-D2)^2 = 0     where k = Lp - pi*(D1+D2)/2 = 205
+    discriminant = k^2 - 2*(D1-D2)^2 = 33919.31
+    C = (k + sqrt(disc)) / 4 = 97.293 mm    (real solution)
+    C =  5.207 mm                            (degenerate, ignore)
+
+So the only valid center distance is C = 97.29 mm.
+
+R4 CORRECTIONS
+--------------
+- MOTOR_X = 85.0  (was 90.0)
+- MOTOR_Y = -47.0 (was -100.0)
+- New distance: sqrt(85^2 + 47^2) = 97.13 mm  (matches 97.29 within tension travel)
+- NEW constant: BELT_CENTER_DISTANCE = 97.29
+- Motor still in back-right quadrant (positive X = motor side,
+  negative Y = back) -- preserves Interface 6 character
+
+THREE DRIVETRAIN RATIOS now have named constants:
+    GEAR_RATIO_GEARBOX = 5.0   (HG5 planetary)
+    GEAR_RATIO_BELT    = 3.0   (60T : 20T)
+    GEAR_RATIO_TOTAL   = 15.0  (5 * 3)
+    Cylinder speed at 250 RPM motor input = 16.67 RPM
+
+BELT_WIDTH = 15.00 mm flagged as TO-VERIFY
+    BOM kit B0C6Y1462P ships either 9 mm or 15 mm width variants.
+    Verify on physical receipt; update if 9 mm.
+
+CHANGES TO FILES
+----------------
+- machine_datums.py: MOTOR_X / MOTOR_Y / BELT_CENTER_DISTANCE updated;
+                     three named ratio constants; belt width note
+- MACHINE_DATUMS.md: revision banner R3 -> R4; bought-parts section
+                     updated with new motor position + belt geometry
+                     derivation + ratio constants
+
+================================================================
+B. CANONICAL POSTER v2 ADOPTED
+================================================================
+
+FILE
+    CSM_V3_ASSEMBLY/full_assembly/renders/posters/
+        CSM_V3_CANONICAL_POSTER_V2.png   (2.2 MB)
+
+SOURCE
+    ChatGPT-generated unified 6-view engineering plate, 2026-05-24,
+    after audit-driven corrections from the v1 release.
+
+WHAT IT PASSES
+--------------
+All locked invariants represented correctly:
+    Cylinder OD = 114.30 mm
+    Hook Sweep OD = 113.30 mm (= 114.30 - 1.00 hook tip clearance)
+    Retainer Lip ID = 104.00 mm
+    Hook Peak Z (world) = 264 mm
+    Retainer Lip Underside Z (world) = 270 mm
+    Vertical Clearance = 6 mm  (highlighted in Panel 4 SAFETY BUDGET box)
+    Reduction = 15:1  (5:1 gearbox * 3:1 belt)
+    Cylinder Max RPM = 16.7 (at 250 RPM motor input)
+    Needles / Slots = 72
+    Feeder PCD = 190 mm
+    Phase 1 = F1 (0 deg) + F4 (180 deg) ACTIVE; F2/F3/F5/F6 retainer-mount bolts
+    Frame materials = wood + aluminum (no painted steel)
+    Bearing stack = bottom fixed + 51101 thrust + top floating
+    Coordinate system = +Z up, +X motor (0 deg), +Y operator (90 deg), CCW
+    Stitch formation sequence shown (peak lift -> pull-down -> stitch -> release)
+    All 6 panels present: Architecture / Drivetrain / Yarn / Triad / Service / Exploded
+
+NON-BLOCKING CLEANUP ITEMS (for poster v3 later)
+------------------------------------------------
+1. Belt width: poster shows 9 mm; MD assumes 15 mm.
+   Resolution: verify physical kit B0C6Y1462P on receipt, update whichever
+   side is wrong.
+
+2. Center distance: poster shows 110 mm; correct value is 97.29 mm
+   (now in MD R4 -- poster v3 should regenerate from new MD).
+
+3. Pulley Ratio label in Panel 2: incorrectly says "5:1 (Gearbox)"
+   under "Pulley Ratio" -- should be:
+       Pulley Ratio    60T : 20T = 3:1
+       Gearbox Ratio   5:1
+       Total           15:1
+
+4. Layer classification in Panel 6: motor + gearbox listed under L2.
+   Our ICD R5 §0 places them in L3 (Automation) and only motor-MOUNT
+   bracket in L2. Either update poster to match ICD or update ICD to
+   match poster (the poster's choice is defensible -- motor is
+   structurally integrated with the frame).
+
+5. "Interface 14 (Motor Mount)" in footer doesn't exist in ICD R5
+   (we have I1-I12). Motor mount is part of Interface 6. Either remove
+   line or relabel as "Part of Interface 6".
+
+All 5 items are LABELING / CLASSIFICATION -- none affect machine physics.
+Item 2 was the real engineering bug and is fixed in MD R4 above.
+
+================================================================
+ARCHITECTURE STATUS as of 2026-05-24
+================================================================
+
+Documents (canonical, in 3D-Project/00_PROJECT_OVERVIEW/):
+    MACHINE_COORDINATE_SYSTEM.md  R1
+    MACHINE_DATUMS.md             R4    (this update)
+    INTERFACE_CONTROL.md          R5
+    SERVICE_ENVELOPES.md          R1
+    ANGULAR_REFERENCE_STANDARD.md R1
+    machine_datums.py             (Python mirror, R4-synced)
+
+Canonical visual reference:
+    CSM_V3_ASSEMBLY/full_assembly/renders/posters/
+        CSM_V3_CANONICAL_POSTER_V2.png
+
+Machine identity (from poster summary):
+    "CSM V3 is a compact 72-needle circular sock machine built around
+     a protected kinematic core (Layer 1) suspended on a wood/aluminum
+     structural frame (Layer 2) with isolated automation (Layer 3).
+     The architecture prioritizes stitch quality, serviceability,
+     and dynamic behavior within a benchtop footprint."
+
+NEXT ACTIONABLE WORK
+--------------------
+- Receive belt kit -> verify belt width -> finalize BELT_WIDTH
+- F: DYNAMIC_BEHAVIOR_AND_COMPLIANCE.md draft (data available from D-4b)
+- Future poster v3 regeneration after MD R4 propagates
+- BOM V12 with "still need to buy" list

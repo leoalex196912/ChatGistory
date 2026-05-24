@@ -1,12 +1,14 @@
 # MACHINE_DATUMS.md — CSM V3 Dimensional Reference
 
 ```
-Revision:  R3
-Date:      2026-05-22
+Revision:  R4
+Date:      2026-05-24
 Status:    Active — all macros must reference these constants.
-           R3 aligns ALL bought-parts dimensions to the actual BOM V11
-           after discovering R2 had wrong motor + feeder actuator
-           assumptions. See revision history for details.
+           R4 fixes the belt-geometry bug (R3 had wrong motor placement
+           giving an impossible 134.5 mm center distance for the
+           purchased 405 mm HTD 5M belt). Also separates the three
+           drivetrain ratios (gearbox 5:1, belt 3:1, total 15:1)
+           and flags belt width as TO-VERIFY.
 ```
 
 This is the **single source of truth for all dimensional constants**
@@ -328,26 +330,42 @@ GEARBOX_MOUNT_PCD       = 70.00      # output-flange mount pattern (M5)
 # HTD 5M PULLEYS + BELT  (kit B0C6Y1462P: 60T + 20T + 405 mm belt)
 # ============================================================
 PULLEY_BIG_TEETH        = 60         # mounts on GEARBOX output (14 mm bore)
-PULLEY_BIG_OD           = 97.50      # pitch dia 95.49, OD ~97.5
+PULLEY_BIG_OD           = 97.50      # pitch dia 95.493, OD ~97.5
 PULLEY_BIG_BORE         = 14.00      # = GEARBOX_OUTPUT_SHAFT_D
 PULLEY_BIG_W            = 16.00
 PULLEY_SMALL_TEETH      = 20         # mounts on 12 mm DRIVE SHAFT  (NOT 16T as R2 had)
-PULLEY_SMALL_OD         = 33.30      # pitch dia 31.83, OD ~33.3
+PULLEY_SMALL_OD         = 33.30      # pitch dia 31.831, OD ~33.3
 PULLEY_SMALL_BORE       = 12.00      # = SHAFT_D
 PULLEY_SMALL_W          = 16.00
-BELT_WIDTH              = 15.00
+BELT_WIDTH              = 15.00      # mm  -- TO VERIFY on receipt (kit
+                                      # B0C6Y1462P ships 9 mm or 15 mm
+                                      # variants; verify and update if 9)
 BELT_THICKNESS          =  3.00
 BELT_PITCH              =  5.00      # HTD 5M
-BELT_PITCH_LENGTH       = 405.0      # mm  -- locks center distance
-GEAR_RATIO_BELT         = 60.0 / 20.0      # 3:1 belt reduction
-GEAR_RATIO_TOTAL        = GEARBOX_RATIO * GEAR_RATIO_BELT   # = 15:1 motor → cylinder
+BELT_PITCH_LENGTH       = 405.0      # mm  -- LOCKS center distance below
+# Three drivetrain ratios chained:
+GEAR_RATIO_GEARBOX      = GEARBOX_RATIO         # = 5:1   (HG5 planetary)
+GEAR_RATIO_BELT         = 60.0 / 20.0           # = 3:1   (60T : 20T)
+GEAR_RATIO_TOTAL        = GEAR_RATIO_GEARBOX * GEAR_RATIO_BELT   # = 15:1
+# At motor 250 RPM input -> cylinder 16.67 RPM output.
 
-# Drive motor placement on wood base (back-right per ICD R3 Interface 6)
-# (Note: motor body sits on wood base, gearbox flange faces the drive shaft side)
-MOTOR_X                 =  90.0      # world X (+X side = motor side)
-MOTOR_Y                 = -100.0     # world Y (-Y = back, accessible from front)
+# Belt-geometry derivation (HTD 5M, 405 mm pitch, 60T + 20T):
+#   Lp = 2C + π·(D1+D2)/2 + (D1−D2)²/(4C)
+#   D1 = 60·5/π = 95.493    (60T pitch diameter)
+#   D2 = 20·5/π = 31.831    (20T pitch diameter)
+#   Solve for C → 97.29 mm  (real solution)
+BELT_CENTER_DISTANCE    = 97.29      # mm  -- LOCKED by belt geometry
+
+# Drive motor placement on wood base (back-right per ICD R3 Interface 6).
+# Motor position chosen so distance from drive shaft axis (0,0) to motor
+# axis = BELT_CENTER_DISTANCE = 97.29 mm.
+# R4 correction: was (90, -100) = 134.54 mm distance (would not fit belt).
+MOTOR_X                 =  85.0      # world X (+X side = motor side)
+MOTOR_Y                 = -47.0      # world Y (back-right quadrant)
+                                      # sqrt(85² + 47²) = 97.13 mm ≈ 97.29
 MOTOR_BODY_BOTTOM_Z     =  18.0      # = WOOD_BASE_TOP_Z
 BELT_TENSION_TRAVEL     =  30.0      # mm motor X-travel slot for SE5
+                                      # (allows ±5 mm center distance trim)
 
 # ============================================================
 # FEEDER ACTUATORS: MG90S METAL-GEAR SERVOS (NOT NEMA 11 steppers)
@@ -475,6 +493,7 @@ MATERIAL = "PETG"    # or "PA12" or "AL6061" / "STEEL"
 | R2 | 2026-05-20 | leoalex196912 | (a) Demote coord-convention ownership to new `MACHINE_COORDINATE_SYSTEM.md`; (b) Add world-Z mapping for cassette datums; (c) FEEDER_REFERENCE_Z 78→90 (provisional, validated in Phase 1.5); (d) Three-layer frame architecture: wood base 500×400×18 with D100 center hole + 4× 2020 uprights (188 mm, at ±150 ±120) + wood upper deck 320×260×18 + aluminum plate 250×250×6 as master datum; (e) Delete wood mid-shelf 500×400 (was wrong, didn't match poster); (f) Add dual-upright touchscreen mast at (0, −180); (g) NEW bought-parts dimensions section (NEMA 11 for feeders, electronics, touchscreen, HTD pulleys/belt, Hall sensor); (h) Material progression flags per component; (i) Refresh locked versions table with new frame components. |
 | R2 final | 2026-05-20 | leoalex196912 | Pre-lock refinements per architectural review: (1) Disambiguated CAM_DATUM_Z (local) vs ALU_PLATE_TOP_Z (world master datum) — they are coincident but not the same datum; (2) Clarified retainer top derivation from macro geometry (world Z 272) and added RETAINER_ASSEMBLY_OFFSET_Z placeholder for future shimming; (3) Explicit `FRAME_ORIGIN_XY = (0, 0)` statement in frame section; (4) Added `BELT_CENTER_DISTANCE = 134.5` mm + `BELT_TENSION_TRAVEL = 30` mm for service envelope SE5; (5) NEW "Derived Values" section separating primary constants from computed ones; (6) Elevated θ=0° angular phase reference to its own dedicated section. R2 now formally locked. |
 | R3 | 2026-05-22 | leoalex196912 | **BOM ALIGNMENT.** Discovered R2 specified wrong actuators vs. the actual BOM V11 physical inventory. Corrections: (a) Drive motor: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)**. Body 57×57×56 mm, M5 mount PCD 47.14, output shaft 14 mm via HG5 gearbox. (b) Feeder actuators: NEMA 11 steppers → **MG90S metal-gear servos** (8 purchased: 6 active + 2 spare). 9 g 180° PWM. (c) Pulley kit: HTD 5M 60T+16T → actual purchase is **60T+20T+405mm belt** (B0C6Y1462P). New belt reduction 3:1; total motor→cylinder reduction = 5×3 = **15:1**. (d) Big pulley bore: 12 mm → 14 mm (gearbox output). (e) PSU: LRS-50 → **Mean Well S-250-24** (199×98×38 mm). (f) Added Raspberry Pi 4 4GB constants (Pi handles UI, Mega handles steppers). (g) Added secondary bearings (51101 thrust, 608-2RS), shaft collars. (h) Added LM2596 buck converter constants (24V→6V for servos). (i) Added cylinder spring constants (FlyDesigns 0.110" wire, 3 purchased). Source of truth declared: `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. |
+| R4 | 2026-05-24 | leoalex196912 | **BELT GEOMETRY CORRECTION.** R3 had MOTOR_X=90, MOTOR_Y=-100 → distance √(8100+10000) = 134.54 mm from drive shaft axis. This is **impossible** for the purchased 405 mm pitch HTD 5M belt with 60T + 20T pulleys. Correct center distance derived from belt-length equation `Lp = 2C + π(D1+D2)/2 + (D1−D2)²/(4C)` with D1=95.493, D2=31.831, Lp=405 → **C = 97.29 mm**. Motor repositioned to (X=+85, Y=−47) giving distance 97.13 mm ≈ 97.29 mm. (b) Added `BELT_CENTER_DISTANCE = 97.29` constant. (c) Separated three drivetrain ratios as named constants: `GEAR_RATIO_GEARBOX = 5`, `GEAR_RATIO_BELT = 3`, `GEAR_RATIO_TOTAL = 15`. (d) Flagged `BELT_WIDTH = 15.00` as TO-VERIFY (BOM kit B0C6Y1462P ships 9 mm or 15 mm variants — verify on physical receipt). Canonical poster v2 (`CSM_V3_CANONICAL_POSTER_V2`) adopted concurrently. |
 
 ---
 

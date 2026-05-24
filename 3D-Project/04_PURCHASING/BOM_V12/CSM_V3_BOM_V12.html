@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSM V3 Bill of Materials V12</title>
+<style>
+  body { font-family: 'Segoe UI', Arial, sans-serif; margin: 20px; background: #fafaf8; color: #1a1a1a; max-width: 1400px; }
+  h1 { color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 8px; }
+  h2 { color: #1e3a5f; margin-top: 32px; padding: 8px; border-radius: 4px; }
+  h3 { color: #1e3a5f; margin-top: 20px; }
+  .ordered { background: #e8f0e0; border-left: 5px solid #5a8d3e; }
+  .needed { background: #fff3cd; border-left: 5px solid #d97706; }
+  .returns { background: #fee; border-left: 5px solid #d97706; }
+  .verify  { background: #e0f0ff; border-left: 5px solid #2563eb; }
+  .summary { background: #ffffff; border-left: 5px solid #1e3a5f; padding: 16px; }
+  table { border-collapse: collapse; width: 100%; margin: 8px 0 16px 0; background: white; font-size: 13px; }
+  th { background: #1e3a5f; color: white; padding: 8px; text-align: left; font-weight: 600; }
+  td { padding: 8px; border-bottom: 1px solid #e5e5e5; vertical-align: top; }
+  tr:hover { background: #f8f8f5; }
+  .price { text-align: right; font-family: 'Consolas', monospace; }
+  .total-row { font-weight: bold; background: #f0f0e8; }
+  a { color: #1e3a5f; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  .return { color: #b91c1c; font-weight: 600; }
+  .keep { color: #166534; }
+  .new-v12 { background: #d1fae5; }
+  .note { font-size: 11px; color: #666; font-style: italic; }
+  .badge { display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600; margin-right: 4px; }
+  .badge-ordered { background: #5a8d3e; color: white; }
+  .badge-return  { background: #b91c1c; color: white; }
+  .badge-need    { background: #d97706; color: white; }
+  .badge-new12   { background: #059669; color: white; }
+  .badge-verify  { background: #2563eb; color: white; }
+  .header-meta { color: #666; margin-top: -8px; }
+</style>
+</head>
+<body>
+
+<h1>CSM V3 — Bill of Materials V12</h1>
+<p class="header-meta">Updated: 2026-05-24 | Architecture-driven gap analysis after MD R4 + ICD R5 lock | Status: 6 new small items + 2 verifications | All major hardware already ordered</p>
+
+<div class="summary">
+  <h2 style="background: none; padding: 0; margin-top: 0; border: none;">V12 Change Summary</h2>
+  <p><strong>What changed since V11:</strong> Architecture work between V11 (2026-05) and now (2026-05-24) locked the full Phase-1 spec (MACHINE_DATUMS R4 + ICD R5 + ANGULAR_REFERENCE_STANDARD + SERVICE_ENVELOPES + the canonical poster V2). This BOM V12 reconciles the locked spec against the V11 order list and identifies the small set of items still needed.</p>
+
+  <p><strong>Bottom line: ~$65–95 of new spend.</strong></p>
+
+  <table>
+    <tr><td><strong>V11 Final Project Cost (carryover)</strong></td><td>~62 items net</td><td class="price"><strong>$1,467.96</strong></td></tr>
+    <tr class="new-v12"><td><strong>V12 NEW additions (this revision)</strong></td><td>6 items</td><td class="price"><strong>+$65–95</strong></td></tr>
+    <tr><td>Plus: yarn mast for 6-feeder (deferred, Phase 2)</td><td>~3-4 items</td><td class="price">+$40-60</td></tr>
+    <tr class="total-row"><td><strong>NEW TOTAL (Phase 1 fully ready)</strong></td><td>~68 items net</td><td class="price"><strong>~$1,533–1,563</strong></td></tr>
+  </table>
+</div>
+
+<!-- =============================================================== -->
+<h2 class="new-v12">SECTION V12-A: NEW ITEMS TO ORDER (revealed by architecture lock)</h2>
+
+<p>These six items are required by the locked Phase-1 architecture (MACHINE_DATUMS R4 / ICD R5) but were not in V11.</p>
+
+<table>
+  <tr><th>Item</th><th>Why needed (architecture reference)</th><th>Source</th><th>Qty</th><th>Price</th><th>Status</th></tr>
+
+  <tr class="new-v12">
+    <td><strong>Wood Upper Deck 320 × 260 × 18 mm</strong> (hardwood)</td>
+    <td>ICD R5 Interface 6 + MACHINE_DATUMS R4. Carries the aluminum master-datum plate. The R3 architecture established a separate upper deck (smaller than the wood base) — V11 only listed the base. Can be cut from a 4×8 hardwood sheet at Home Depot or ordered as a single piece.</td>
+    <td><a href="https://www.homedepot.com/" target="_blank">Home Depot</a><br>search "birch plywood 14x10" or hardwood project panel</td>
+    <td>1</td>
+    <td class="price">$15–25</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="new-v12">
+    <td><strong>M4 brass heat-set inserts (50pk)</strong></td>
+    <td>Cassette Base V1.1 has 6× feeder mount holes at PCD 190 (ICD R5 Interface 5 — invariant A5). These need M4 heat-set inserts pressed into PETG. V11 has M5 (B0DPQJ4W3Z) and M3 (B0DQL5YWKQ) but no M4. Six feeder positions × 2 bolts each = 12 inserts minimum.</td>
+    <td><a href="https://www.amazon.com/s?k=M4+brass+heat+set+insert+50pk" target="_blank">Amazon: M4 brass heat-set insert</a></td>
+    <td>1 pk (50)</td>
+    <td class="price">$10–12</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="new-v12">
+    <td><strong>M2 brass heat-set inserts (50pk)</strong></td>
+    <td>MG90S servo mounts via 2× M2 screws at 28 mm pitch (FeederModule V1.1). Each feeder needs 2 inserts in the printed feeder body. 6 feeders × 2 inserts = 12 minimum; 50pk gives spares.</td>
+    <td><a href="https://www.amazon.com/s?k=M2+brass+heat+set+insert+50pk" target="_blank">Amazon: M2 brass heat-set insert</a></td>
+    <td>1 pk (50)</td>
+    <td class="price">$8–10</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="new-v12">
+    <td><strong>Take-down weight</strong> (CSM standard hooked weight, 8–12 oz)</td>
+    <td>ICD R5 Interface 11 reserves the take-down column (Ø100 wood base hole). Phase 1 take-down method is "hanging weight (manual)". Standard Erlbacher / AutoKnitter style weight hooks into the knitted sock fabric.</td>
+    <td><a href="https://www.flydesigns.com/products/sock-machine-accessories-take-down-weights" target="_blank">flydesigns.com take-down weights</a><br>or any vintage CSM supplier</td>
+    <td>1</td>
+    <td class="price">$15–25</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="new-v12">
+    <td><strong>Yarn guide eyes / tensioner springs</strong> (small assortment)</td>
+    <td>FeederModule V1.1 has a yarn nozzle/guide feature. Functional yarn guidance needs: ceramic eyelets (low-friction), small compression springs for tensioner, and possibly a yarn drag pad. Generic small parts; can buy hardware-store items.</td>
+    <td><a href="https://www.amazon.com/s?k=ceramic+yarn+guide+eyelet" target="_blank">Amazon: ceramic yarn eyelet</a></td>
+    <td>assortment</td>
+    <td class="price">$10–15</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="new-v12">
+    <td><strong>6× Servo extension cables</strong> (3-pin, 300 mm)</td>
+    <td>MG90S servos have ~150 mm leads. Routing to Arduino Mega across the wood base needs extension. 6 active feeders Phase 2 + 2 spare = 8 cables; minimum 6 for Phase 1.5 testing.</td>
+    <td><a href="https://www.amazon.com/s?k=servo+extension+cable+300mm" target="_blank">Amazon: servo extension cable 300mm</a></td>
+    <td>1 pk (10)</td>
+    <td class="price">$8–10</td>
+    <td><span class="badge badge-new12">V12 NEW</span></td>
+  </tr>
+
+  <tr class="total-row"><td colspan="4"><strong>V12 New Items Total</strong></td><td class="price total-row"><strong>$66–97</strong></td><td></td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 class="verify">SECTION V12-B: VERIFY ON PHYSICAL RECEIPT</h2>
+
+<p>Two items already ordered need <strong>dimensional verification</strong> when they arrive. If they don't match the locked spec, replacement may be needed.</p>
+
+<table>
+  <tr><th>Item</th><th>Locked spec (MD R4)</th><th>What to verify</th><th>If wrong</th><th>Status</th></tr>
+
+  <tr class="verify">
+    <td><a href="https://www.amazon.com/dp/B0D9S2KH4V" target="_blank">Aluminum Plate 6mm thick</a></td>
+    <td><strong>250 × 250 × 6 mm 6061-T6 mill finish</strong> (MASTER DATUM plate, ICD R5 invariant B3)</td>
+    <td>Measure plate size on receipt. V11 ordering didn't lock dimensions.</td>
+    <td>If size differs significantly, return + reorder 250×250×6 from <a href="https://www.onlinemetals.com/" target="_blank">onlinemetals.com</a> (~$25)</td>
+    <td><span class="badge badge-verify">VERIFY</span></td>
+  </tr>
+
+  <tr class="verify">
+    <td><a href="https://www.amazon.com/dp/B0C6Y1462P" target="_blank">HTD 5M Pulley Kit (60T + 20T + 405mm Belt)</a></td>
+    <td><strong>Belt 15 mm wide</strong> (HTD 5M, 405 mm pitch) — `MD.BELT_WIDTH = 15.00`</td>
+    <td>Some kit variants ship 9 mm belt instead of 15 mm. Check belt width with caliper on receipt.</td>
+    <td>If 9 mm: update `MD.BELT_WIDTH = 9.0` and adjust motor mount slot width accordingly. No reorder needed (9 mm still works mechanically).</td>
+    <td><span class="badge badge-verify">VERIFY</span></td>
+  </tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 class="ordered">SECTION 1: V11 carryover — already ordered ($1,263.84)</h2>
+
+<p>All items in V11 SECTION 1 remain valid. The following table shows the highlights aligned to architecture; for the full V11 list see <code>04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html</code>.</p>
+
+<h3>Drive system — Layer 2 + 3 (per MD R4 / ICD R5 Interface 6 + 12)</h3>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td><strong>NEMA 23 + 5:1 Planetary Gearbox 23HS22-2804S-HG5</strong> — StepperOnline</td><td>Drive motor + reducer. 2.8 N·m × 5 gearbox × 3 belt = 15:1 total reduction. Cylinder 16.67 RPM at 250 RPM motor.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>HTD 5M Pulley Kit (60T + 20T + 405mm Belt) B0C6Y1462P</td><td>60T on gearbox output (14 mm bore), 20T on drive shaft (12 mm bore), belt center distance 97.29 mm. <strong>Width pending verification</strong> (see Section V12-B).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>TB6600 Stepper Driver 4A B08SG7L54W</td><td>NEMA 23 at 2.8 A is under 4 A rating — good margin.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>FEYRINX 12mm × 300mm shaft (h8) B08HX2LG53</td><td>Drive shaft. Floating-top / fixed-bottom (ICD R5 Interface 12).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>6001-2RS Bearings (eBay 10pk)</td><td>Upper + lower radial. Top floats axially, bottom fixed.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>51101 Thrust Bearings B0G25X5L23</td><td>Axial load path under lower 6001 (ICD R5 Interface 12).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>12mm Clamping Shaft Collars B0DMMB1FHF</td><td>Clamp bearing/thrust stack; locate pulley below lower bearing.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Feeders — Layer 3 (per ICD R5 Interface 5)</h3>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td><strong>MG90S Metal-Gear Servos (8-pack)</strong></td><td>Phase 1: F1 (θ=0°) + F4 (θ=180°) active. 6 spare for Phase 2 expansion (F2/F3/F5/F6) + 2 backup. PWM-driven yarn guide actuators.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>RioRand LM2596 DC-DC Buck Converter B008BHB4L8</td><td>24 V → 6 V for MG90S servos (max 1 A per servo).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Cassette / Knitting Core — Layer 1 (per ICD R5 invariants A1–A4)</h3>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td>AutoKnitter/Legare 12g Latch Needles (100pk) — flydesigns</td><td>72 needles in cylinder. Slot pitch 5°, slot width 1.22 mm. 28 spares for replacement.</td><td><span class="badge badge-ordered">KEEP (use 72)</span></td></tr>
+<tr><td>Cylinder Springs 0.110" / 2.79 mm — flydesigns × 3</td><td>Retains needles in cylinder slots. Spring groove cut at Z=53–57 (cylinder local).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>M5 Brass Heat-Set Inserts (50pk) B0DPQJ4W3Z</td><td>Cylinder bottom (4× cylinder-to-drive-hub bolts). Cassette base frame mount (4× PCD 180). 2020 T-nut alternative.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>M3 Brass Heat-Set Inserts (50pk) B0DQL5YWKQ</td><td>Various small fasteners on printed parts.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>Neodymium Magnets D6 B0F4KS6KV3</td><td>Hall index magnet (PCD 95, θ=0° per ICD R5 Interface 9). 1 active + spares.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>SS49E Hall Sensors B09MSDC3GR</td><td>Hall index sensor. One pulse per revolution at θ=0°.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Frame — Layer 2 (per ICD R5 Interface 6 + 10 + 11)</h3>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td>Wood Base 500 × 400 × 18 mm hardwood (Home Depot)</td><td>Layer 2 structural base. <strong>D100 mm center hole</strong> for take-down column (Interface 11). 4× rubber feet at corners.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>2020 Aluminum Extrusion (Length A) B0D89YS5VP</td><td>Precision frame uprights × 4 (188 mm each) at corners of upper deck.</td><td><span class="badge badge-ordered">VERIFY LENGTH</span></td></tr>
+<tr><td>2020 Aluminum Extrusion (Length B) B0D89Y43YK</td><td>Touchscreen mast × 2 (400 mm each) at (X=0, Y=−180) per Interface 10.</td><td><span class="badge badge-ordered">VERIFY LENGTH</span></td></tr>
+<tr><td>Corner Brackets for 2020 B0FLD88X6Y</td><td>Frame assembly joints.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>M5 T-Nuts for 2020 (230pk) B0GG4N5GR4</td><td>2020 channel fasteners.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>Aluminum Plate 6mm thick B0D9S2KH4V</td><td>Master datum plate. <strong>Verify 250×250 on receipt</strong> (see Section V12-B).</td><td><span class="badge badge-ordered">VERIFY SIZE</span></td></tr>
+<tr><td>Rubber Anti-Vibration Feet B0B768YVN6</td><td>4× under wood base.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<h3>Electronics — Layer 3</h3>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td>Arduino Mega 2560 REV3 B0046AMGW0</td><td>Stepper + servo control. Lower CPU layer.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>Raspberry Pi 4 4GB Starter B07V5JTMV9</td><td>Touchscreen UI + pattern logic. Higher CPU layer. Talks to Mega via UART/USB.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>ELECROW 7" HDMI Touchscreen B08FMNDDSL</td><td>Operator UI. Mounted on dual-2020 mast (Interface 10).</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>S-250-24 PSU 24V 10A B07Y7L664K</td><td>Main power supply. 240 W rated; ~50 W expected nominal draw.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+<tr><td>+ wiring, terminal blocks, heat shrink, switches, fuses (V11)</td><td>Cable management + interconnect.</td><td><span class="badge badge-ordered">KEEP</span></td></tr>
+</table>
+
+<p class="note">For the full V11 inventory (consumables, tools, materials), see <a href="../BOM_V11/CSM_V3_BOM_V11.html">BOM V11 HTML</a>.</p>
+
+<!-- =============================================================== -->
+<h2 class="returns">SECTION 2: V11 Returns Outstanding</h2>
+<p>These items from V11 should still be returned (no change in V12):</p>
+<table>
+<tr><th>Item</th><th>Reason</th><th>Refund</th></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DSD9YF72" target="_blank">NEMA 23 5A Standalone Motor</a> (B0DSD9YF72)</td><td>Exceeds TB6600 4 A rating. Replaced by NEMA 23 + 5:1 gearbox from StepperOnline.</td><td class="price return">$45.00</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0DRRTY96V" target="_blank">8mm Linear Rods</a> (B0DRRTY96V)</td><td>Wrong diameter. Project uses 12 mm shaft.</td><td class="price return">$13.99</td></tr>
+<tr><td><a href="https://www.amazon.com/dp/B0GXCLXVBR" target="_blank">Pi 4 Metal Case</a></td><td>CanaKit starter already includes case (optional return).</td><td class="price return">$13.91</td></tr>
+<tr><td>Duplicate Hall Sensors / Rocker Switch</td><td>Duplicates.</td><td class="price return">$17.98</td></tr>
+<tr class="total-row"><td colspan="2"><strong>Total Potential Refund</strong></td><td class="price"><strong>$90.88</strong></td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 class="needed">SECTION 3: V2.5 Drive-System Hardware (carryover from V11, ~$30–50)</h2>
+
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td><strong>Smalley CM25-L1 Wave Spring</strong> (Crest-to-Crest, 17-7 SS)</td><td>Optional light preload for bearing stack (ICD R5 Interface 12 — "preload: light"). 2× recommended.</td><td><span class="badge badge-need">NEEDED</span></td></tr>
+<tr><td><strong>Spacer Washer (steel)</strong> ~19 mm ID × 28 mm OD × 1.6 mm</td><td>Stack-up shim for bearing housing pair.</td><td><span class="badge badge-need">NEEDED</span></td></tr>
+<tr><td>Aluminum Tube 18 OD × 12 ID × 30 mm length (optional)</td><td>Spacer; PETG printed version available.</td><td><span class="badge badge-need">OPTIONAL</span></td></tr>
+</table>
+
+<p>Combined V11 Section 3 + V12 Section A → <strong>~$95–145 in remaining purchases</strong> to finish Phase 1.</p>
+
+<!-- =============================================================== -->
+<h2 class="summary">SECTION 4: Phase-2 Expansion (deferred, ~$40–60)</h2>
+<table>
+<tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
+<tr><td>4× additional yarn cones (different colors)</td><td>Phase 2 = 6 active feeders (vs 2 in Phase 1).</td><td><span class="badge">FUTURE</span></td></tr>
+<tr><td>Yarn mast hardware (2020 extrusion 600 mm + holders)</td><td>Optional remote cone stand if local cone mounting becomes inconvenient.</td><td><span class="badge">FUTURE</span></td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 class="summary">SECTION 5: Architecture Cross-Reference</h2>
+
+<p>This BOM is now structurally aligned with the locked architecture. Every purchased component maps to an interface in ICD R5 + a constant in MACHINE_DATUMS R4.</p>
+
+<table>
+<tr><th>Document</th><th>Revision</th><th>Purpose</th></tr>
+<tr><td><code>MACHINE_COORDINATE_SYSTEM.md</code></td><td>R1</td><td>Axes, origin, world↔local transform (CYL_BOTTOM_WORLD_Z = 181)</td></tr>
+<tr><td><code>MACHINE_DATUMS.md</code></td><td>R4</td><td>All dimensions; bought-parts dimensions section</td></tr>
+<tr><td><code>INTERFACE_CONTROL.md</code></td><td>R5</td><td>11 + 1 interfaces; DO-NOT-BREAK invariants A1–A8</td></tr>
+<tr><td><code>SERVICE_ENVELOPES.md</code></td><td>R1</td><td>SE1–SE5 reserved volumes</td></tr>
+<tr><td><code>ANGULAR_REFERENCE_STANDARD.md</code></td><td>R1</td><td>θ=0° = +X, F1–F6 feeder numbering</td></tr>
+<tr><td><code>CSM_V3_CANONICAL_POSTER_V2.png</code></td><td>2026-05-24</td><td>Visual canonical reference</td></tr>
+</table>
+
+<!-- =============================================================== -->
+<h2 class="summary">Final Cost Calculation (V12)</h2>
+<table>
+<tr><td>V11 Final Project Cost</td><td class="price">$1,467.96</td></tr>
+<tr><td>Plus: V12 Section A (6 new items)</td><td class="price">+$66–97</td></tr>
+<tr><td>Plus: V11 Section 3 (V2.5 hardware) if not yet ordered</td><td class="price">+$25–50</td></tr>
+<tr class="total-row"><td><strong>PHASE 1 FULLY READY TOTAL</strong></td><td class="price"><strong>~$1,559–1,615</strong></td></tr>
+<tr><td>Future: yarn mast + extra cones for 6-feeder Phase 2</td><td class="price">+$40-60</td></tr>
+<tr class="total-row"><td><strong>FULLY EXPANDED TOTAL (6-feeder Phase 2)</strong></td><td class="price"><strong>~$1,599–1,675</strong></td></tr>
+</table>
+
+<p><em>Original budget: $1,230–1,500. Final Phase-1 cost ~$1,559 (3.9% over upper budget). The overrun is justified by: metal-gear servos (vs plastic), gearbox-driven drive (vs direct), and the architectural rigor that came out of MD R1→R4 / ICD R1→R5. The machine is now genuinely production-targetable rather than hobby-grade.</em></p>
+
+<hr>
+<p style="font-size: 11px; color: #666;">BOM V12 — generated 2026-05-24 | Aligned with MACHINE_DATUMS R4 + INTERFACE_CONTROL R5 + CSM_V3_CANONICAL_POSTER_V2 | Phase 1 (2 active feeders, F1+F4) ready after Section A purchases.</p>
+
+</body>
+</html>

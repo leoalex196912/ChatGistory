@@ -43,13 +43,13 @@
   <h2 style="background: none; padding: 0; margin-top: 0; border: none;">V12 Change Summary</h2>
   <p><strong>What changed since V11:</strong> Architecture work between V11 (2026-05) and now (2026-05-24) locked the full Phase-1 spec (MACHINE_DATUMS R4 + ICD R5 + ANGULAR_REFERENCE_STANDARD + SERVICE_ENVELOPES + the canonical poster V2). This BOM V12 reconciles the locked spec against the V11 order list and identifies the small set of items still needed.</p>
 
-  <p><strong>Bottom line: ~$65–95 of new spend.</strong></p>
+  <p><strong>Bottom line: ~$56–82 of new spend.</strong> (revised down from $65–95 after 2026-05-24 audit removed redundant yarn-guides line — ceramic pigtails + springs are already in V11)</p>
 
   <table>
     <tr><td><strong>V11 Final Project Cost (carryover)</strong></td><td>~62 items net</td><td class="price"><strong>$1,467.96</strong></td></tr>
-    <tr class="new-v12"><td><strong>V12 NEW additions (this revision)</strong></td><td>6 items</td><td class="price"><strong>+$65–95</strong></td></tr>
+    <tr class="new-v12"><td><strong>V12 NEW additions (this revision, after audit)</strong></td><td>5 items</td><td class="price"><strong>+$56–82</strong></td></tr>
     <tr><td>Plus: yarn mast for 6-feeder (deferred, Phase 2)</td><td>~3-4 items</td><td class="price">+$40-60</td></tr>
-    <tr class="total-row"><td><strong>NEW TOTAL (Phase 1 fully ready)</strong></td><td>~68 items net</td><td class="price"><strong>~$1,533–1,563</strong></td></tr>
+    <tr class="total-row"><td><strong>NEW TOTAL (Phase 1 fully ready)</strong></td><td>~67 items net</td><td class="price"><strong>~$1,524–1,550</strong></td></tr>
   </table>
 </div>
 
@@ -97,13 +97,16 @@
     <td><span class="badge badge-new12">V12 NEW</span></td>
   </tr>
 
-  <tr class="new-v12">
-    <td><strong>Yarn guide eyes / tensioner springs</strong> (small assortment)</td>
-    <td>FeederModule V1.1 has a yarn nozzle/guide feature. Functional yarn guidance needs: ceramic eyelets (low-friction), small compression springs for tensioner, and possibly a yarn drag pad. Generic small parts; can buy hardware-store items.</td>
-    <td><a href="https://www.amazon.com/s?k=ceramic+yarn+guide+eyelet" target="_blank">Amazon: ceramic yarn eyelet</a></td>
-    <td>assortment</td>
-    <td class="price">$10–15</td>
-    <td><span class="badge badge-new12">V12 NEW</span></td>
+  <tr>
+    <td><strong style="text-decoration: line-through;">Yarn guide eyes / tensioner springs</strong> — <span style="color:#059669; font-weight:600;">REDUNDANT — already in V11</span></td>
+    <td>Originally listed as a V12 NEW item. Audit on 2026-05-24 confirmed both components are already owned:<br>
+        • Ceramic yarn guides → <code>B0FLJK48BB</code> Ceramic Pigtail Ring Φ3 (10 pcs with M3 screws) — V11 Electronics-Sensors section<br>
+        • Tensioner compression springs → <code>B0D1N3DKYJ</code> Springs Set assortment — V11 Electronics-Sensors section<br>
+        <em>FeederModule V1.2 (future) should be revised to use the ceramic pigtail at the yarn exit boss instead of a printed PETG hole — industrial-grade low-friction yarn path with snap on/off replacement.</em></td>
+    <td>—</td>
+    <td>—</td>
+    <td class="price">$0 (own)</td>
+    <td><span class="badge" style="background:#059669; color:white;">OWNED</span></td>
   </tr>
 
   <tr class="new-v12">
@@ -115,7 +118,7 @@
     <td><span class="badge badge-new12">V12 NEW</span></td>
   </tr>
 
-  <tr class="total-row"><td colspan="4"><strong>V12 New Items Total</strong></td><td class="price total-row"><strong>$66–97</strong></td><td></td></tr>
+  <tr class="total-row"><td colspan="4"><strong>V12 New Items Total</strong> <span style="font-weight:normal; color:#059669;">(after 2026-05-24 audit: −$10–15 yarn guides redundancy removed)</span></td><td class="price total-row"><strong>$56–82</strong></td><td></td></tr>
 </table>
 
 <!-- =============================================================== -->

@@ -89,12 +89,12 @@
   </tr>
 
   <tr class="new-v12">
-    <td><strong>Take-down weight</strong> (CSM standard hooked weight, 8–12 oz)</td>
-    <td>ICD R5 Interface 11 reserves the take-down column (Ø100 wood base hole). Phase 1 take-down method is "hanging weight (manual)". Standard Erlbacher / AutoKnitter style weight hooks into the knitted sock fabric.</td>
-    <td><a href="https://www.flydesigns.com/products/sock-machine-accessories-take-down-weights" target="_blank">flydesigns.com take-down weights</a><br>or any vintage CSM supplier</td>
-    <td>1</td>
+    <td><strong>Take-down weights — PHASE 1 BRING-UP ONLY</strong> (stackable/adjustable hooked weights, 8–12 oz nominal)</td>
+    <td><strong>NOT the production solution.</strong> This is a Phase-1 bring-up + calibration tool. Per ICD R6 Interface 11, the production automated take-down (Phase 2) is a dual-roller servo-controlled nip system — see Section 4 below. The hanging weight exists for: (1) isolating cassette/cam variables during first knit tests, (2) instant tension sweeps without rewriting motor-control logic (+50 g / −50 g / oscillating / delayed release), (3) debug/calibration tool that remains useful even after automation lands, (4) emergency fallback.<br><br><strong>What matters during bring-up:</strong> repeatability, adjustability, low snag risk. Stackable/adjustable mass preferred. Swivel hook helpful. Smooth rounded hook MANDATORY (sharp edges snag fabric).<br><br><strong>Acceptable improvised alternatives:</strong> fishing sinkers, small gym weights, steel plates, water bottle with measured mass, vintage CSM hooked weight. Cheap consumable.</td>
+    <td><a href="https://www.flydesigns.com/products/sock-machine-accessories-take-down-weights" target="_blank">flydesigns.com</a> or improv (fishing supply, sporting goods)</td>
+    <td>1 set</td>
     <td class="price">$15–25</td>
-    <td><span class="badge badge-new12">V12 NEW</span></td>
+    <td><span class="badge badge-new12">V12 NEW (Phase 1)</span></td>
   </tr>
 
   <tr>
@@ -230,11 +230,19 @@
 <p>Combined V11 Section 3 + V12 Section A → <strong>~$95–145 in remaining purchases</strong> to finish Phase 1.</p>
 
 <!-- =============================================================== -->
-<h2 class="summary">SECTION 4: Phase-2 Expansion (deferred, ~$40–60)</h2>
+<h2 class="summary">SECTION 4: Phase-2 Expansion (deferred, ~$100–170)</h2>
 <table>
 <tr><th>Item</th><th>Architecture role</th><th>Status</th></tr>
 <tr><td>4× additional yarn cones (different colors)</td><td>Phase 2 = 6 active feeders (vs 2 in Phase 1).</td><td><span class="badge">FUTURE</span></td></tr>
 <tr><td>Yarn mast hardware (2020 extrusion 600 mm + holders)</td><td>Optional remote cone stand if local cone mounting becomes inconvenient.</td><td><span class="badge">FUTURE</span></td></tr>
+<tr><td><strong>Phase-2 automated take-down subsystem</strong> (dual-roller nip)</td><td>Replaces Phase-1 hanging weight with motorized fabric extraction. Architecture (per ICD R6 Interface 11):<br>
+  • rubber drive roller (~25 mm OD × 80 mm long)<br>
+  • spring-loaded idler roller (provides nip pressure)<br>
+  • stepper or DC gearmotor (separate driver channel)<br>
+  • optical encoder OR rotary encoder on driven roller (for closed-loop pull-rate control synced to cylinder rotation)<br>
+  • bracket/frame mount inside Interface 11 column (below wood base)<br>
+  • controller: 2nd TB6600 channel OR L298N DC motor driver<br>
+<em>Engineering reason for dual-roller (not vacuum, not conveyor): compact under-base packaging, aligns with Interface 11 vertical column, low inertia, easy speed sync, scalable.</em></td><td><span class="badge">FUTURE Phase 2</span><br>~$60–110</td></tr>
 </table>
 
 <!-- =============================================================== -->

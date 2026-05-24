@@ -1,15 +1,18 @@
 # INTERFACE_CONTROL.md — CSM V3 Interface Control Document (ICD)
 
 ```
-Revision:  R5
-Date:      2026-05-22
+Revision:  R6
+Date:      2026-05-24
 Status:    Active — locked interfaces, change requires version bump on
            BOTH mating parts AND an ICD revision bump.
-           R5 adds Interface 12 (Shaft/Bearing Stack) -- formal control
-           of axial constraint and bearing arrangement on the drive
-           shaft. Also adds a feeder-control design rule (servo-driven
-           feeders are guided yarn presentation, NOT precision
-           synchronized textile actuation).
+           R6 elevates Interface 11 (Take-Down Column) to "stitch-
+           formation parameter" status -- Phase 1.5 D-4b proved
+           take-down tension is coupled to capture stability, not
+           independent of it. Also formalizes the Phase-2 automated
+           take-down architecture (dual-roller servo nip system) and
+           explicitly classifies the Phase-1 hanging weight as a
+           bring-up / debug / calibration tool, not a production
+           solution.
 ```
 
 This is the **interface control document** for the CSM V3 modular
@@ -448,9 +451,9 @@ This interface is now part of the DO-NOT-BREAK invariant set (added below as A8)
 | Lower boundary | Through D100 hole in wood base (world Z = 0 → ‑∞) | R3 |
 | Wood base hole diameter | 100.0 mm | R3 |
 | Hole clearance | radius 50 mm clear of any structure | R3 invariant |
-| Phase 1 take-down method | Hanging weight (manual) | architecture |
-| Phase 2 take-down method | Weighted claw / roller system | future |
-| Phase 3 take-down method | Vacuum assist + optical length sensing | future |
+| Phase 1 take-down method | **Hanging weight (manual)** — BRING-UP TOOL ONLY | R6 |
+| Phase 2 take-down method | **Dual-roller servo-controlled nip system** | R6 (specified) |
+| Phase 3 take-down method | Closed-loop tension with optical length sensing (or vacuum) | future |
 | Obstruction rule | NO motors, electronics, cables, or structural members may occupy this column | invariant C2 |
 
 Forgetting this column is the single most common architecture mistake
@@ -458,6 +461,61 @@ in DIY circular sock machines. Without it, knit fabric climbs, stitch
 tension destabilizes, and dropped stitches multiply. The column is
 **reserved space** even in Phase 1 where only a hanging weight uses
 it.
+
+**R6 Design Rule — Take-down tension is a stitch-formation parameter,
+not a fabric-handling parameter.**
+
+Phase 1.5 D-4b simulator results proved this: scenario B1 (slack)
+shows that ±2 mm of yarn slack changes capture margin sign. Since
+slack is governed by take-down tension, take-down tension is
+*coupled* to stitch formation — not downstream of it.
+
+Implications:
+
+- ✅ Phase 1 hanging weight = isolation tool: lets us tune the
+  cassette / cam / yarn-capture mechanics WITHOUT a second
+  coupled control system (powered take-down dynamics).
+- ✅ Adjustable / stackable weights during bring-up are valuable:
+  they let us sweep take-down tension experimentally without
+  changing firmware or motor controllers.
+- ❌ Hanging weight is NOT the production solution. Sock fabric mass
+  grows during knitting (1 g/round to 50+ g for a full sock), so a
+  fixed-mass weight gives varying tension. Production needs
+  active control.
+- 🔄 Phase 2 architecture: **dual-roller servo-controlled nip**.
+
+**Phase 2 take-down architecture (R6 specified):**
+
+```
+   fabric tube exits cylinder bore
+       ↓
+   ┌─────────────────────────────────┐
+   │  driven roller (rubber-coated)  │ ← stepper or DC gearmotor
+   │  ~25 mm OD × 80 mm long          │   pulls fabric at controlled rate
+   │  ───[sock fabric]───             │   synced to cylinder rotation
+   │  spring-loaded idler roller      │ ← nip pressure
+   │  ~25 mm OD × 80 mm long          │
+   └─────────────────────────────────┘
+       ↓
+   encoder or tension sensor (closed-loop)
+       ↓
+   sock exits to collection bin
+```
+
+Properties:
+- Compact under-base packaging (fits within Interface 11 column)
+- Low inertia (responds quickly to commanded rate changes)
+- Easy speed synchronization (target: ~5–10 mm fabric per cylinder revolution)
+- Scalable: can add tension-feedback loop in Phase 3
+- Acceptable in Phase 2 without full closed-loop (open-loop rate
+  control is usually adequate once tuned)
+
+NOT chosen alternatives and why:
+- Vacuum extraction: requires blower + ducting + cleaning of lint;
+  larger packaging; harder to test/iterate.
+- Conveyor: doesn't fit the Ø100 column; fabric doesn't ride flat.
+- Constant-force spring: works in theory but harder to design than
+  servo nip in a one-off prototype.
 
 ---
 
@@ -537,6 +595,7 @@ coordinate system. This is enabled by the invariants section above.
 | R3 | 2026-05-20 | Major architectural revision. (a) NEW DO-NOT-BREAK invariants block (machine constitution); (b) NEW §0 three-layer architecture; (c) NEW §1 datum chain; (d) NEW §2 service envelopes SE1–SE5 (summary; full doc in `SERVICE_ENVELOPES.md`); (e) Interface 5 updated (NEMA 11 feeder motors, FEEDER_REFERENCE_Z 78→90 provisional); (f) Interface 6 major rewrite (frame architecture: wood base 500×400 w/ D100 hole + 4× 2020 uprights at ±150 ±120 × 188 mm + wood upper deck 320×260×18 + aluminum plate 250×250×6 master datum). The R2 "wood mid-shelf 500×400" is DELETED; (g) Interface 9 elevated (θ=0° = master phase reference); (h) NEW Interface 10 (Touchscreen Mast — dual 2020, isolated from precision frame); (i) NEW Interface 11 (Sock Take-Down Column — D100 through wood base, reserved space invariant); (j) NEW §4 Phase 1/1.5/2/3 upgrade path with kinematic-validation gate at 1.5; (k) §5 locked-versions refreshed with layer assignment + new components flagged NEEDS V1.1 or NOT YET. |
 | R4 | 2026-05-22 | **BOM ALIGNMENT.** Reconciled Interface 5 + Interface 6 with the actual physical inventory in `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. (a) **Interface 5 feeder actuator**: NEMA 11 stepper → **MG90S metal-gear servo** (8 purchased: 6 active + 2 spare). PWM not step/dir. Feeder Module V1.0 cavity needs V1.1 redesign for 23×13 servo footprint. (b) **Interface 6 drive motor**: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)** ($95 StepperOnline). Body 57×57×56 + 50 mm gearbox = 106 mm total. Motor Mount V1.3 OBSOLETE → V1.4 needed (M5 PCD 47.14 vs old M3 PCD 31). (c) **Interface 6 pulleys**: HTD 5M 60T+16T → actual **60T+20T+405mm belt** (kit B0C6Y1462P). New belt ratio 3:1; total reduction = 5×3 = **15:1**. Big pulley bore 12→14 mm (gearbox shaft). (d) §5 locked-versions table refreshed: NEMA 17 STL flagged OBSOLETE; NEMA 23+gearbox STL needs build; 20T pulley needs build; Feeder Module V1.1 needed. All invariants in DO-NOT-BREAK section unchanged. |
 | R5 | 2026-05-22 | **Shaft-stack formalization + feeder control philosophy.** (a) NEW **Interface 12** (Shaft / Bearing Stack) — formalizes the floating-top / fixed-bottom bearing architecture on the 12 mm drive shaft. Lower 6001 + 51101 thrust + shaft collar resolves axial load; upper 6001 floats radially to allow thermal growth. Pulley sits BELOW lower bearing (not between). DO / DON'T design rules added. (b) NEW **invariant A8**: shaft bearing stack architecture is now part of the DO-NOT-BREAK invariant set. (c) NEW **R5 Design Rule** under Interface 5: MG90S feeders are "guided yarn presentation," NOT precision synchronized actuation. Defines which feeder operations are acceptable in Phase 1 vs. require a Phase 2 stepper upgrade. (d) Updated revision banner to reflect R5 scope. |
+| R6 | 2026-05-24 | **Take-down as stitch-formation parameter (Interface 11 elevation).** Phase 1.5 D-4b results showed scenario B1 (slack) reaches catastrophic capture failure at only ±2 mm slack — proving take-down tension is *coupled to* stitch formation, not downstream of it. (a) NEW **R6 Design Rule** under Interface 11: "Take-down tension is a stitch-formation parameter, not a fabric-handling parameter." Explains why hanging weight (Phase 1) is a bring-up / isolation tool, not the production solution. (b) **Phase 2 take-down architecture formally specified**: dual-roller servo-controlled nip system (rubber drive roller + spring-loaded idler + stepper/DC gearmotor + encoder closed-loop). Replaces vague R3 "weighted claw / roller system" placeholder. (c) Documented why alternatives (vacuum, conveyor, constant-force spring) were not chosen for Phase 2. (d) Phase 3 take-down now specified as closed-loop tension with optical length sensing (or vacuum-assist as alternative). |
 
 ---
 

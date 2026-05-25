@@ -538,7 +538,7 @@ coordinate system. This is enabled by the invariants section above.
 
 | Component | Version | Layer | Macro file |
 |---|---|---|---|
-| Cylinder | V3.0 | 1 | `02_CASSETTE_HEAD/cylinder/freecad_macros/CSM_V3_Cylinder_V3_0.FCMacro` |
+| Cylinder | **V3.1** (locked 2026-05-24 from WEDGE_B V2 physical test, slot 7) | 1 | `02_CASSETTE_HEAD/cylinder/freecad_macros/CSM_V3_Cylinder_V3_0.FCMacro` (file unchanged, internal version V3.1) |
 | Cam Ring | V6.5 (FINAL) | 1 | `02_CASSETTE_HEAD/cam_ring/freecad_macros/CSM_V3_CamRing_V6_5.FCMacro` |
 | Sinker Ring | V1.2.1 (LOCKED) | 1 | `02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
 | Cassette Base | V1.1 | 1 | `02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |

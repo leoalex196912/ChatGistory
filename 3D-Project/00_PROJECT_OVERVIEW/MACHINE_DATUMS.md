@@ -1,14 +1,12 @@
 # MACHINE_DATUMS.md — CSM V3 Dimensional Reference
 
 ```
-Revision:  R4
+Revision:  R5
 Date:      2026-05-24
 Status:    Active — all macros must reference these constants.
-           R4 fixes the belt-geometry bug (R3 had wrong motor placement
-           giving an impossible 134.5 mm center distance for the
-           purchased 405 mm HTD 5M belt). Also separates the three
-           drivetrain ratios (gearbox 5:1, belt 3:1, total 15:1)
-           and flags belt width as TO-VERIFY.
+           R5 locks SLOT_DEPTH and SPRING_GROOVE_DEPTH to production
+           values derived from physical Phase-1 testing. Cylinder
+           bumped V3.0 → V3.1.
 ```
 
 This is the **single source of truth for all dimensional constants**
@@ -494,6 +492,7 @@ MATERIAL = "PETG"    # or "PA12" or "AL6061" / "STEEL"
 | R2 final | 2026-05-20 | leoalex196912 | Pre-lock refinements per architectural review: (1) Disambiguated CAM_DATUM_Z (local) vs ALU_PLATE_TOP_Z (world master datum) — they are coincident but not the same datum; (2) Clarified retainer top derivation from macro geometry (world Z 272) and added RETAINER_ASSEMBLY_OFFSET_Z placeholder for future shimming; (3) Explicit `FRAME_ORIGIN_XY = (0, 0)` statement in frame section; (4) Added `BELT_CENTER_DISTANCE = 134.5` mm + `BELT_TENSION_TRAVEL = 30` mm for service envelope SE5; (5) NEW "Derived Values" section separating primary constants from computed ones; (6) Elevated θ=0° angular phase reference to its own dedicated section. R2 now formally locked. |
 | R3 | 2026-05-22 | leoalex196912 | **BOM ALIGNMENT.** Discovered R2 specified wrong actuators vs. the actual BOM V11 physical inventory. Corrections: (a) Drive motor: NEMA 17 → **NEMA 23 + 5:1 planetary gearbox (23HS22-2804S-HG5)**. Body 57×57×56 mm, M5 mount PCD 47.14, output shaft 14 mm via HG5 gearbox. (b) Feeder actuators: NEMA 11 steppers → **MG90S metal-gear servos** (8 purchased: 6 active + 2 spare). 9 g 180° PWM. (c) Pulley kit: HTD 5M 60T+16T → actual purchase is **60T+20T+405mm belt** (B0C6Y1462P). New belt reduction 3:1; total motor→cylinder reduction = 5×3 = **15:1**. (d) Big pulley bore: 12 mm → 14 mm (gearbox output). (e) PSU: LRS-50 → **Mean Well S-250-24** (199×98×38 mm). (f) Added Raspberry Pi 4 4GB constants (Pi handles UI, Mega handles steppers). (g) Added secondary bearings (51101 thrust, 608-2RS), shaft collars. (h) Added LM2596 buck converter constants (24V→6V for servos). (i) Added cylinder spring constants (FlyDesigns 0.110" wire, 3 purchased). Source of truth declared: `04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html`. |
 | R4 | 2026-05-24 | leoalex196912 | **BELT GEOMETRY CORRECTION.** R3 had MOTOR_X=90, MOTOR_Y=-100 → distance √(8100+10000) = 134.54 mm from drive shaft axis. This is **impossible** for the purchased 405 mm pitch HTD 5M belt with 60T + 20T pulleys. Correct center distance derived from belt-length equation `Lp = 2C + π(D1+D2)/2 + (D1−D2)²/(4C)` with D1=95.493, D2=31.831, Lp=405 → **C = 97.29 mm**. Motor repositioned to (X=+85, Y=−47) giving distance 97.13 mm ≈ 97.29 mm. (b) Added `BELT_CENTER_DISTANCE = 97.29` constant. (c) Separated three drivetrain ratios as named constants: `GEAR_RATIO_GEARBOX = 5`, `GEAR_RATIO_BELT = 3`, `GEAR_RATIO_TOTAL = 15`. (d) Flagged `BELT_WIDTH = 15.00` as TO-VERIFY (BOM kit B0C6Y1462P ships 9 mm or 15 mm variants — verify on physical receipt). Canonical poster v2 (`CSM_V3_CANONICAL_POSTER_V2`) adopted concurrently. |
+| R5 | 2026-05-24 | leoalex196912 | **SLOT_DEPTH + SPRING_GROOVE_DEPTH LOCKED TO PHYSICAL TEST RESULT.** Phase-1 WEDGE_B V2 (10-slot fine sweep 3.50–5.30 mm at 0.20 mm steps) printed + tested with 12g FlyDesigns needles. Result: **slot 7 (4.70 mm depth, 3.10 mm groove) = BEST retention**, slot 6 (4.50 mm) = acceptable tie, slot 8 (4.90 mm) = loose. Lock: `SLOT_DEPTH = 4.70` (was 3.00), `SPRING_GROOVE_DEPTH = 3.10` (was 1.30). Both preserve +0.20 mm spring preload on needle stem. Mechanical consequences: (a) spring is now RECESSED 0.31 mm below cylinder OD (was protruding 1.49 mm in V3.0) → no risk of cam ring interference (cam ID 115, cylinder OD 114.3, 0.35 mm/side clearance preserved); (b) wall remaining at slot bottom = 8.45 mm (plenty of structural material). Cylinder version bumped **V3.0 → V3.1**. V3.0 STLs archived in `01_MECHANICAL/02_CASSETTE_HEAD/cylinder/_archive/v3_0_locked_2026-05-19/`. ICD R6 locked-versions table updated inline (no ICD revision bump — architecture unchanged, only implementation version). |
 
 ---
 

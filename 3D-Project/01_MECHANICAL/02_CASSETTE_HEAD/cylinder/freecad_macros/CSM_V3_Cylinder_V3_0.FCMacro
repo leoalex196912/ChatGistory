@@ -1,13 +1,29 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# CSM V3 -- CYLINDER V3.0  (Erlbacher-pattern, full-height slots)
+# CSM V3 -- CYLINDER V3.1  (Erlbacher-pattern, optimized slot depth)
 # =============================================================================
-# File:    CSM_V3_Cylinder_V3_0.FCMacro
-# Date:    May 2026
+# File:    CSM_V3_Cylinder_V3_0.FCMacro  (filename unchanged, version bumped internally)
+# Date:    2026-05-24
 # Output:  C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\
 #
-# WHAT CHANGED FROM V2.0
-# ----------------------
+# WHAT CHANGED FROM V3.0 (V3.1, 2026-05-24)
+# -----------------------------------------
+# Phase-1 physical test of WEDGE_B V2 (10-slot fine sweep 3.50..5.30 mm)
+# proved that:
+#   slot 7 (4.70 mm, groove 3.10) = BEST needle retention
+#   slot 6 (4.50 mm, groove 2.90) = TIE / acceptable fallback
+#   slot 8 (4.90 mm, groove 3.30) = LOOSE (over-depth)
+# Locked production values:
+#   SLOT_DEPTH         = 4.70 mm  (was 3.00 mm in V3.0)
+#   SPRING_GROOVE_DEPTH = 3.10 mm (was 1.30 mm in V3.0)
+# Both maintain +0.20 mm spring preload on needle stem.
+# Spring is now RECESSED 0.31 mm below OD (was protruding 1.49 mm in V3.0)
+# -- no cam ring interference risk.
+# Wall material remaining at slot bottom: 8.45 mm (plenty).
+# V3.0 STLs archived in _archive/v3_0_locked_2026-05-19/
+#
+# WHAT CHANGED FROM V2.0 (V3.0, May 2026)
+# ----------------------------------------
 # V2.0 had a stepped slot: narrow 1.22mm slot from Z=23-75 + wider 8.5mm
 # "butt cavity" from Z=19-23. That step physically prevented the needle butt
 # from completing the cam ring's 8mm lift cycle -- the butt would slam into
@@ -33,9 +49,9 @@ import FreeCAD, Part, math, os
 # OUTPUT PATHS
 # =============================================================================
 BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
-PATH_STL = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_FULL.stl")
-PATH_STL_WEDGE_A = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_WEDGE_A_WIDTH.stl")
-PATH_STL_WEDGE_B = os.path.join(BASE, "CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl")
+PATH_STL = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_FULL.stl")
+PATH_STL_WEDGE_A = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_WEDGE_A_WIDTH.stl")
+PATH_STL_WEDGE_B = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_WEDGE_B_DEPTH.stl")
 PATH_PNG_ISO = os.path.join(BASE, "images", "Cylinder_V3_0_ISO.png")
 PATH_PNG_TOP = os.path.join(BASE, "images", "Cylinder_V3_0_TOP.png")
 PATH_PNG_FRONT = os.path.join(BASE, "images", "Cylinder_V3_0_FRONT.png")
@@ -74,11 +90,14 @@ TAKEDOWN_OPEN_D = 50.0    # central opening D through the bottom ring
 # wider at top for yarn/hook/latch clearance.
 SLOT_COUNT   = 72
 SLOT_WIDTH   = 1.22    # circumferential  (1.15mm needle + 0.07mm clearance)
-SLOT_DEPTH   = 3.00    # radial inward.  Calibrated against the reference
-                       # "Cylinder 72 Slots" STL (verified slot depth 2.55mm).
-                       # 3.00mm gives 0.45mm margin over the reference while
-                       # still being conservative enough for PETG. The wedge
-                       # depth sweep (2.5-3.6mm) will give empirical data.
+SLOT_DEPTH   = 4.70    # radial inward.  PHASE-1 PHYSICAL TEST RESULT
+                       # (V3.1, 2026-05-24): WEDGE_B V2 print + needle test
+                       # showed slot 7 (4.70 mm) = BEST retention,
+                       # slot 6 (4.50) = tie, slot 8 (4.90) = loose.
+                       # Older V3.0 value was 3.00 mm — see _archive folder.
+                       # Spring is recessed 0.31 mm below OD with this depth
+                       # (no protrusion past cam ring ID 115). Wall material
+                       # remaining = 8.45 mm at slot bottom — stiff.
 SLOT_ROOT_FILLET = 0.5 # mm  fillet radius at slot-bottom internal corners.
                        # CRITICAL for PETG fatigue life: sharp 90 deg internal
                        # corners along layer lines are classic crack starters
@@ -126,14 +145,17 @@ BORE_TOP_CHAMFER  = 1.0   # mm  bore inner top edge chamfer (loop transfer)
 # Depth 2.2mm leaves spring protruding ~0.59mm past OD -- enough to engage
 # needle stems firmly but not enough to snag yarn carriers.
 SPRING_GROOVE_W     = 4.0    # axial width   (2.79mm wire + 1.21mm install slack)
-SPRING_GROOVE_DEPTH = 1.3    # radial depth -- COUPLED to SLOT_DEPTH=3.0mm.
-                              # Geometric constraint: groove >= slot - 1.80
-                              # With slot=3.0mm:
-                              #   needle outer face at radius 55.95mm
-                              #   spring inner face at radius 55.85mm
-                              #   geometric preload = 0.10mm (creep margin)
-                              # Spring protrudes 2.79-1.30 = 1.49mm past OD
-                              # (clearly visible coil, like Erlbacher).
+SPRING_GROOVE_DEPTH = 3.10   # radial depth -- V3.1 LOCKED.
+                              # Coupled to SLOT_DEPTH=4.70 mm:
+                              #   groove_depth = slot_depth - 1.6  (for +0.20 mm preload)
+                              # With slot=4.70 mm:
+                              #   needle outer face at radius 54.25 mm
+                              #   spring inner face at radius 54.05 mm
+                              #   geometric preload = 0.20 mm  (positive, retains needle)
+                              # Spring is RECESSED 0.31 mm below cylinder OD
+                              # (2.79 mm wire - 3.10 mm groove = -0.31).
+                              # NO interference with cam ring ID 115.
+                              # Old V3.0 was 1.30 mm (spring protruded 1.49 mm past OD).
 SPRING_GROOVE_Z_CTR = 55.0   # mm from bottom -- matches visible band in photo
 SPRING_GROOVE_Z_BOT = SPRING_GROOVE_Z_CTR - SPRING_GROOVE_W / 2.0   # 53.0
 SPRING_GROOVE_Z_TOP = SPRING_GROOVE_Z_CTR + SPRING_GROOVE_W / 2.0   # 57.0

@@ -292,8 +292,11 @@ CYL_HEIGHT             = 75.0
 SLOT_COUNT             = 72
 SLOT_PITCH_DEG         = 360.0 / SLOT_COUNT   # 5.0
 SLOT_WIDTH             =  1.22
-SLOT_DEPTH             =  3.00
-SPRING_GROOVE_DEPTH    =  1.30
+SLOT_DEPTH             =  4.70   # V3.1 LOCKED 2026-05-24 (was 3.00 in V3.0)
+                                  # Physical WEDGE_B V2 test result: slot 7 = best
+SPRING_GROOVE_DEPTH    =  3.10   # V3.1 LOCKED (was 1.30 in V3.0)
+                                  # Coupled to SLOT_DEPTH for +0.20 mm preload
+                                  # Spring recessed 0.31 mm below OD (no cam ring interference)
 SPRING_GROOVE_W        =  4.00
 SPRING_GROOVE_Z_CTR    = 55.0
 

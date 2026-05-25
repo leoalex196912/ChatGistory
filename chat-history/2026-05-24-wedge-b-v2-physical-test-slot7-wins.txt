@@ -1,0 +1,93 @@
+# CSM V3 -- WEDGE_B V2 PHYSICAL TEST RESULT
+Date:   2026-05-24
+Status: Cylinder V3.0 -> V3.1 locked from physical evidence
+
+================================================================
+TEST METHOD
+================================================================
+
+Print: CSM_V3_Cylinder_V3_0_WEDGE_B_DEPTH.stl (V2, 10-slot fine sweep)
+Material: PETG (Phase 1 prototype filament)
+Needles: 12g FlyDesigns latch needles
+Procedure: insert needle into each slot, evaluate retention by:
+   - axial slide smoothness
+   - radial wobble under lateral force
+   - spring engagement feel
+
+================================================================
+RESULT (slot index left -> right)
+================================================================
+
+   slot 6 (4.50 mm depth, 2.90 mm groove)  --  TIE / acceptable fallback
+   slot 7 (4.70 mm depth, 3.10 mm groove)  --  BEST -- winner
+   slot 8 (4.90 mm depth, 3.30 mm groove)  --  LOOSE -- past the edge
+
+Production lock: slot 7 (4.70 / 3.10).
+
+================================================================
+CHANGES PROPAGATED THIS COMMIT
+================================================================
+
+(a) CSM_V3_Cylinder_V3_0.FCMacro
+    SLOT_DEPTH         3.00  ->  4.70
+    SPRING_GROOVE_DEPTH 1.30  ->  3.10
+    Output filenames bumped V3_0 -> V3_1
+    Header banner V3.0 -> V3.1
+
+(b) machine_datums.py
+    SLOT_DEPTH = 4.70  (was 3.00)
+    SPRING_GROOVE_DEPTH = 3.10  (was 1.30)
+
+(c) MACHINE_DATUMS.md
+    R4 -> R5 with full rationale + physical test evidence
+
+(d) INTERFACE_CONTROL.md
+    Locked-versions table: Cylinder V3.0 -> V3.1
+    (no ICD revision bump -- architecture unchanged, implementation only)
+
+(e) V3.0 STLs archived to:
+    01_MECHANICAL/02_CASSETTE_HEAD/cylinder/_archive/v3_0_locked_2026-05-19/
+    Contains: V3_0_FULL, V3_0_WEDGE_A_WIDTH, V3_0_WEDGE_B_DEPTH
+
+(f) V3.1 STLs generated:
+    CSM_V3_Cylinder_V3_1_FULL.stl       14.5 MB
+    CSM_V3_Cylinder_V3_1_WEDGE_A_WIDTH.stl  2.3 MB
+    CSM_V3_Cylinder_V3_1_WEDGE_B_DEPTH.stl  2.4 MB
+
+================================================================
+MECHANICAL IMPLICATIONS OF DEEPER SLOT + GROOVE
+================================================================
+
+V3.0 (old)                          V3.1 (new)
+---------                           ----------
+SLOT_DEPTH      = 3.00 mm           SLOT_DEPTH      = 4.70 mm
+GROOVE_DEPTH    = 1.30 mm           GROOVE_DEPTH    = 3.10 mm
+Slot bottom radius = 54.15 mm       Slot bottom radius = 52.45 mm
+Wall remaining   = 10.15 mm         Wall remaining   = 8.45 mm
+Spring inner     = 55.85 mm         Spring inner     = 54.05 mm
+Needle outer     = 55.95 mm         Needle outer     = 54.25 mm
+Spring preload   = +0.10 mm         Spring preload   = +0.20 mm
+Spring protrusion = +1.49 mm (past OD)  Spring protrusion = -0.31 mm (RECESSED)
+
+Key wins of V3.1:
+ 1. Better needle retention (deeper slot grip + 2x preload margin)
+ 2. Spring no longer protrudes past OD -- no cam ring interference risk
+ 3. Still 8.45 mm of wall material -- plenty of structural margin
+
+The recessed spring is mechanically SUPERIOR to the V3.0 protruding
+spring because:
+ - Won't snag on yarn carriers or feeders during rotation
+ - Won't foul cam ring inner surface (cam ID 115 - cylinder OD 114.3
+   = 0.35 mm/side clearance; V3.0 spring ate ~1.5 mm of that budget)
+ - Hidden inside the cylinder profile -- cleaner geometry
+
+================================================================
+NEXT STEPS
+================================================================
+
+ - Print full Cylinder V3.1 (CSM_V3_Cylinder_V3_1_FULL.stl, ~120 g PETG)
+ - This becomes the production cylinder for Phase 1 bring-up
+ - All other cassette parts (cam ring, sinker, retainer, cassette base)
+   remain unchanged -- the slot/groove change is internal to cylinder only
+
+================================================================

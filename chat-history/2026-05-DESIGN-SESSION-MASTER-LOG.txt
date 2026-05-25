@@ -1,0 +1,517 @@
+================================================================
+CSM V3 -- MASTER DESIGN-SESSION LOG  (2026-04-21 .. 2026-05-24)
+================================================================
+
+This document is the consolidated narrative of the most intensive
+design-development phase of the CSM V3 project. It ties together
+the five session-specific chat-history files (2026-05-19 through
+2026-05-24) into one readable record, captures the back-and-forth
+that the session files skipped, and serves as the canonical project
+"design diary" for future-you (or anyone who picks this up cold).
+
+If you want short answers, jump to the END (current status + open
+items). If you want to understand HOW the project reached its
+current architectural state, read top to bottom.
+
+================================================================
+TABLE OF CONTENTS
+================================================================
+
+1. Starting state (April 2026)
+2. The architecture-document explosion (R1 -> R6)
+3. The BOM reckoning (V11 -> V12)
+4. The behavioral simulator (Phase 1.5)
+5. The visual deliverables (renders + posters)
+6. Cylinder V3.0 -> V3.1 from physical test
+7. Repeated patterns and lessons
+8. Status at end of session (2026-05-24)
+9. Open items / next steps
+
+================================================================
+1. STARTING STATE (April 2026)
+================================================================
+
+The project entered May 2026 with:
+- Locked Cylinder V3.0 (slot 1.22 wide x 3.0 deep, spring groove 1.3)
+- Locked Cam Ring V6.5
+- Locked Sinker Ring V1.2.1
+- Locked Cassette Base V1.1
+- Locked Retainer Ring V1.0
+- Locked Drive Hub V2.4.2, Motor Mount V1.3, Bearing Housings V2.5
+- BOM V11 (~$1,260 ordered, ~$1,468 final estimate)
+- A confused "two-shelf table" frame architecture that the early
+  Blender hero render exposed as visually wrong.
+
+Architecture documents that existed:
+- MACHINE_DATUMS.md R1 (basic constants)
+- INTERFACE_CONTROL.md R1->R2 (9 interfaces locked)
+
+What was missing:
+- World coordinate system (only cylinder-local Z was defined)
+- Three-layer architecture vocabulary
+- Service envelope discipline
+- Angular convention nailed down (theta=0 was implicit)
+- Behavioral / kinematic model
+- The drive-motor / feeder-motor identification was WRONG
+  (docs assumed NEMA 17 + NEMA 11 -- BOM had NEMA 23 + MG90S)
+- Frame architecture had floating ambiguity
+
+================================================================
+2. THE ARCHITECTURE-DOCUMENT EXPLOSION (R1 -> R6)
+================================================================
+
+Trigger: a comment that the early Blender hero render didn't match
+the ChatGPT-generated machine poster. Investigation revealed that
+the docs and the poster were both partially right and partially
+wrong, and neither matched the actual BOM purchases.
+
+Resolution: rewrite the architecture from the ground up.
+
+Documents created or revised:
+
+  (a) MACHINE_COORDINATE_SYSTEM.md  R1  (NEW)
+      World frame (Z up, X motor side, Y operator).
+      Cylinder-local frame (Z=0 at cylinder bottom).
+      Locked transform: CYL_BOTTOM_WORLD_Z = 181 mm.
+      Right-handed.
+
+  (b) MACHINE_DATUMS.md             R1 -> R5
+      R1 (2026-05-17): initial datums
+      R2 (2026-05-20): added world-Z mapping, frame geometry, bought-parts
+      R3 (2026-05-22): BOM ALIGNMENT -- discovered V11 had NEMA 23+gearbox
+                       (not NEMA 17), MG90S servos (not NEMA 11 steppers),
+                       S-250 PSU (not LRS-50), 60T+20T pulleys (not 60T+16T)
+      R4 (2026-05-24): BELT GEOMETRY FIX -- motor moved from (90,-100) to
+                       (85,-47) so center distance = 97.29 mm matches the
+                       actual 405 mm belt geometry.  Separated 3 ratios:
+                       gearbox 5:1, belt 3:1, total 15:1.
+      R5 (2026-05-24): SLOT_DEPTH = 4.70, SPRING_GROOVE_DEPTH = 3.10
+                       (locked from WEDGE_B V2 physical test).
+
+  (c) INTERFACE_CONTROL.md          R1 -> R6
+      R1-R2 (carryover): 9 interfaces locked from prior work
+      R3 (2026-05-20): MAJOR REWRITE
+          - NEW DO-NOT-BREAK invariants block (machine constitution)
+          - NEW Sec 0: Three-Layer Architecture
+                Layer 1 = Precision Knitting Core (cassette)
+                Layer 2 = Structural Frame (wood + aluminum)
+                Layer 3 = Automation (motors, electronics, mast)
+          - NEW Sec 1: Datum Chain (master = aluminum plate top face)
+          - NEW Sec 2: 5 Service Envelopes summary
+          - Frame architecture totally re-spec'd
+          - NEW Interface 10 (Touchscreen Mast - dual 2020, isolated)
+          - NEW Interface 11 (Sock Take-Down Column - D100 reserved)
+          - NEW Sec 4: Phase 1 / 1.5 / 2 / 3 upgrade path
+      R4 (2026-05-22): BOM ALIGNMENT corrections to Interfaces 5 + 6
+          - Interface 5: MG90S servos (NOT NEMA 11 steppers)
+          - Interface 6: NEMA 23 + gearbox, 60T+20T+405mm belt
+          - Motor Mount V1.3 flagged OBSOLETE -> V1.4 needed
+      R5 (2026-05-22): Interface 12 (Shaft / Bearing Stack) added
+          - Floating-top / fixed-bottom architecture formalized
+          - Pulley sits BELOW lower bearing (not between)
+          - DO / DON'T design rules
+          - New invariant A8 (bearing stack)
+          - R5 Design Rule: MG90S = "guided yarn presentation,"
+            NOT precision synchronized actuation
+      R6 (2026-05-24): Interface 11 ELEVATED
+          - R6 Design Rule: "Take-down tension is a stitch-formation
+            parameter, not a fabric-handling parameter."
+            (Justified by Phase 1.5 B1 slack sensitivity = ±2 mm.)
+          - Phase 2 architecture FORMALLY specified:
+            dual-roller servo-controlled nip system
+          - Phase 1 hanging weight reclassified as bring-up tool
+          - Reason vacuum / conveyor / spring NOT chosen documented
+
+  (d) SERVICE_ENVELOPES.md          R1  (NEW, 2026-05-20)
+      SE1 = Cylinder removal (vertical lift)
+      SE2 = Cam ring extraction (annular access from below)
+      SE3 = Feeder swing-out (6 wedges at PCD 190)
+      SE4 = Yarn threading (operator hand path)
+      SE5 = Belt replacement (30 mm motor X-travel)
+      Each envelope has 6 fields: purpose, protected volume,
+        entry direction, tool access, prohibited geometry,
+        future-risk notes.
+
+  (e) ANGULAR_REFERENCE_STANDARD.md R1  (NEW, 2026-05-20)
+      Locks the "theta=0 is NOT front" rule.
+      theta=0 = +X = motor side = Hall index = Slot #0
+      theta=90 = +Y = operator front
+      Feeder positions F1-F6 numbered at 0/60/120/180/240/300 deg.
+      Phase 1 ACTIVE = F1 (theta=0) + F4 (theta=180).
+      F2/F3/F5/F6 = retainer-ring mount bolts (NOT empty).
+
+  (f) machine_datums.py             (Python mirror)
+      Self-checking module that mirrors MACHINE_DATUMS.md.
+      Imports into every macro: NO hardcoded coords anywhere.
+      Asserts derived CYL_BOTTOM_WORLD_Z matches the constant.
+
+THE SIX DOCUMENTS NOW FORM A COHERENT GOVERNANCE STACK:
+   MCS R1   - WHERE things are       (coordinates)
+   MD R5    - WHAT things measure    (dimensions)
+   ICD R6   - HOW things connect     (interfaces)
+   SE R1    - HOW things are served  (maintenance envelopes)
+   ARS R1   - HOW angles are named   (angular convention)
+   machine_datums.py - machine-readable mirror of MD R5
+
+================================================================
+3. THE BOM RECKONING (V11 -> V12)
+================================================================
+
+The single most embarrassing moment in this session: the user had
+to explicitly point me at the BOM file
+("Why don't you read 04_PURCHASING/BOM_V11/CSM_V3_BOM_V11.html?")
+because I had been making architectural decisions (motor = NEMA 17,
+feeders = NEMA 11) based on conventional DIY-CSM assumptions rather
+than the actual purchases.
+
+What the BOM actually contained:
+- NEMA 23 + 5:1 Planetary Gearbox (23HS22-2804S-HG5, $95
+  StepperOnline)  -- NOT NEMA 17
+- 60T + 20T + 405mm HTD belt kit (B0C6Y1462P)  -- NOT 60T + 16T
+- 8x MG90S metal-gear servos for feeders  -- NOT NEMA 11 steppers
+- S-250-24 PSU (199x98x38)  -- NOT LRS-50
+- Raspberry Pi 4 4GB (NOT in my docs at all)
+- All the small parts (heat-set inserts, T-nuts, magnets,
+  hall sensors, springs, etc.)
+
+After alignment:
+- ICD R3 -> R4 incorporated correct motor/feeder/PSU
+- machine_datums.py rewrote bought-parts section completely
+- BOM V12 published (2026-05-24)
+
+BOM V12 NEW items revealed by architecture lock:
+  1. Wood Upper Deck 320x260x18 hardwood (~$15-25)
+  2. M4 + M2 heat-set inserts (combined with existing 400-pc kit
+     B0CLKDPN65, ~$18-25) -- includes M2/M2.5/M3/M4/M5/M6
+  3. Take-down weight (CSM stem weight bag, Etsy, ~$15-25)
+     -- Phase 1 BRING-UP TOOL ONLY (not production solution)
+  4. Servo extension cables 10-pack (Cecicebb B0FXMDCP1H, $7.32)
+
+BOM V12 ITEMS AUDITED-OUT (already owned, V11 covered them):
+  - Yarn guide eyes: B0FLJK48BB ceramic pigtails (already in V11)
+  - Tensioner springs: B0D1N3DKYJ springs set (already in V11)
+
+Total V12 new spend: ~$56-82 (down from initial $65-95 estimate).
+Final Phase 1 cost: ~$1,524-1,550.
+
+VERIFY-ON-RECEIPT items:
+  - Aluminum plate B0D9S2KH4V: confirm size = 250x250x6
+  - HTD belt B0C6Y1462P: confirm width = 15 mm (vs 9 mm variant)
+
+================================================================
+4. THE BEHAVIORAL SIMULATOR (Phase 1.5)
+================================================================
+
+Conceptual evolution:
+
+  Initial: "Phase 1.5 = animate the cylinder rotating in Blender"
+  Refined: "Phase 1.5 = build the first BEHAVIORAL SIMULATOR"
+
+Three tracks per simulation frame:
+  (a) MECHANICAL STATE -- cylinder angle, needle Z, hook position
+  (b) YARN STATE       -- endpoint, ownership, capture state
+  (c) ERROR STATE      -- capture margin, phase, in-window flag
+
+Deliverables built:
+
+  D-1: Phase snapshots (nominal baseline)
+       6 frames at theta = 0, 60, 120, 180, 240, 300 deg.
+       Confirmed: hook peak at F1 and F4, smooth cosine bump.
+
+  D-2: Failure mode taxonomy (8 scenarios, 4 classes)
+       A. TIMING:    A1 feeder lag, A2 hook outrun, A3 belt jitter
+       B. TENSION:   B1 slack loop, B2 over-tension
+       C. GEOMETRIC: C1 retainer interference, C2 feeder intrusion
+       D. CAPTURE:   D1 missed, D2 double-feed
+
+  D-4 / D-4b: Parameter sweeps (21 runs, pure Python no Blender)
+       A1 lag:    0, 2, 4, 6, 8, 10, 12, 15 deg
+       B1 slack:  0, 2, 4, 6, 8, 12 mm
+       D1 miss:   0, 2, 4, 6, 8, 12, 20 mm
+
+  Output plots:
+       capture_margin_plot.png     -- 3-panel overlay
+       operating_envelope_plot.png -- worst-case vs parameter
+       delta_from_nominal_plot.png -- Delta m(theta) by scenario
+
+OPERATING ENVELOPES DERIVED FROM BEHAVIOR (acceptable at +-2 mm Z):
+
+       A1  feeder lag           <= 10 deg     PHASE-sensitive
+       B1  yarn slack           <=  2 mm      AMPLITUDE-sensitive
+       D1  yarn miss / overlift =   0 mm      AMPLITUDE-sensitive (at edge!)
+
+HIERARCHY OF FRAGILITY: D1 miss > B1 slack > A1 lag
+
+KEY INSIGHTS THE SIMULATOR PROVED:
+
+(a) Failure classification: phase-sensitive vs amplitude-sensitive
+    Phase-asymmetric failures = timing problem (feeder lag,
+       gearbox backlash, belt windup)
+    Uniform offset failures = tension or geometry problem
+       (take-down setup, retainer position)
+
+(b) Take-down tension is a STITCH-FORMATION PARAMETER
+    B1 slack at +-2 mm changes capture margin sign.
+    Therefore take-down is coupled to capture stability,
+    not downstream of it.
+    -> ICD R6 elevated Interface 11 from "fabric handling"
+       to "stitch formation subsystem"
+
+(c) The cam stroke (8 mm) IS the safety budget for D1 miss
+    Any yarn-presentation Z error eats directly into the
+    HOOK_PEAK_Z (264) -> CYLINDER_TOP_Z (256) lift window.
+
+================================================================
+5. THE VISUAL DELIVERABLES (renders + posters)
+================================================================
+
+Progression through 3 distinct families:
+
+  Family 1: Engineering renders (D1-D5)
+       D1 = full isometric
+       D2 = side elevation
+       D3 = triad close-up
+       D4 = top architecture plan
+       D5 = layer separation exploded
+
+  Family 2: Kinematic renders (K_triad_*, Y1-Y3)
+       K_triad views = feeder/retainer/hook geometry
+       Y1-Y3 yarn-path views = cone -> nozzle -> hook -> take-down
+
+  Family 3: Phase 1.5 motion frames (36 nominal + 8 failure)
+       36 frames covering one cylinder revolution
+       8 failure-mode stills (one per scenario in taxonomy)
+
+  Family 4: 6-poster engineering set (matplotlib composition)
+       P1-P6 covering Architecture / Drivetrain / Yarn / Triad /
+       Service / Failure-analysis
+
+  Family 5: CANONICAL POSTER V2 (single ChatGPT-generated plate)
+       Adopted as project visual reference 2026-05-24.
+       2.2 MB. Lives at:
+         CSM_V3_ASSEMBLY/full_assembly/renders/posters/
+           CSM_V3_CANONICAL_POSTER_V2.png
+
+Key visual-design lessons:
+
+(a) First Blender render was BAD because half the scene used
+    real STLs (cassette, drive train) and half used primitive
+    boxes/cylinders (motor, frame, electronics). Mismatched
+    fidelity hurts more than low fidelity uniformly applied.
+
+(b) The "doesn't look good" was caused by:
+    - Wrong frame proportions (table-on-table instead of single base)
+    - Mast competing with cassette for visual attention
+    - Cones loose on table (not on feeder modules)
+    - Electronics hidden far below drive train
+    All fixed in ICD R3 architecture rewrite.
+
+(c) ChatGPT-generated marketing-style posters CAN match
+    engineering CAD honesty IF the source data is locked
+    architecture (which only became true after MD R4 + ICD R6).
+    Before architecture lock, AI illustration = "concept art".
+    After architecture lock, AI illustration = "engineering plate".
+
+(d) Failure visualization is more informative than nominal-
+    operation visualization. The 8 failure stills + the delta
+    plot expose tolerance margins; the nominal renders only
+    confirm geometry.
+
+================================================================
+6. CYLINDER V3.0 -> V3.1 FROM PHYSICAL TEST
+================================================================
+
+Test setup:
+  - Printed WEDGE_B V2 (10-slot fine sweep 3.50..5.30 mm)
+  - 12g FlyDesigns latch needles
+  - Manual insertion + retention evaluation
+
+Result:
+  Slot 6 (4.50 mm depth, 2.90 mm groove)  -- tie / acceptable
+  Slot 7 (4.70 mm depth, 3.10 mm groove)  -- BEST -- winner
+  Slot 8 (4.90 mm depth, 3.30 mm groove)  -- loose -- past the edge
+
+Lock (machine_datums.py + MACHINE_DATUMS R5):
+  SLOT_DEPTH        = 4.70 mm  (was 3.00 in V3.0)
+  SPRING_GROOVE_DEPTH = 3.10 mm  (was 1.30 in V3.0)
+  Cylinder version V3.0 -> V3.1
+
+Mechanical bonus discovered:
+  V3.0 spring protruded 1.49 mm past cylinder OD --
+    was eating into the 0.7 mm/side cam ring clearance.
+  V3.1 spring is RECESSED 0.31 mm below OD --
+    zero risk of cam ring interference.
+  Better retention AND cleaner cam interaction.
+
+This is the most important engineering result of the entire
+session: the FINAL production cylinder geometry was derived
+from PHYSICAL test data, not from intuition or first-principles
+math. That is the correct engineering progression.
+
+================================================================
+7. REPEATED PATTERNS AND LESSONS
+================================================================
+
+(a) Architecture before geometry.
+    Every time we tried to build geometry before locking the
+    architecture (early Blender renders, V11 BOM motor decisions),
+    rework followed. Every time we locked architecture first and
+    let geometry follow (V3.1 cylinder, V12 BOM, Phase 1.5 sim),
+    work compounded cleanly.
+
+(b) BOM is the canonical reality.
+    Architectural decisions made WITHOUT reading the BOM consistently
+    diverged from physical reality. The discovery moment
+    ("read the BOM!") was 2026-05-22; everything after that aligned.
+
+(c) Behavior beats appearance.
+    The 6-view canonical poster only earned its place after
+    Phase 1.5 simulation results gave it real numerical grounding.
+    Before that, posters were aesthetic interpretation.
+
+(d) Documentation discipline scales.
+    With 5 governance docs (MCS / MD / ICD / SE / ARS), changes
+    can be made confidently because invariants are protected
+    and revision history is auditable.
+
+(e) Test-driven geometry.
+    WEDGE_B physical test gave the cylinder its final lock.
+    No amount of CAD precision substitutes for "push a needle
+    into a printed slot and see what holds."
+
+(f) Honesty about scope.
+    Every "we'll add this in Phase 2/3" was logged explicitly.
+    Includes: dual-roller take-down, ribber, vacuum assist,
+    closed-loop tension, automatic heel/toe, multi-feed color
+    changes, FeederModule V1.2 ceramic pigtail.
+
+(g) Service envelopes are first-class objects.
+    Most DIY machines fail not at assembly but at first service.
+    SE1-SE5 prevent that by making maintenance access part of
+    the geometry from day 1, not an afterthought.
+
+================================================================
+8. STATUS AT END OF SESSION (2026-05-24)
+================================================================
+
+ARCHITECTURE (locked):
+  MACHINE_COORDINATE_SYSTEM.md  R1
+  MACHINE_DATUMS.md             R5
+  INTERFACE_CONTROL.md          R6
+  SERVICE_ENVELOPES.md          R1
+  ANGULAR_REFERENCE_STANDARD.md R1
+  machine_datums.py             (R5-synced)
+  CSM_V3_CANONICAL_POSTER_V2.png
+
+LOCKED VERSIONS:
+  Cylinder         V3.1  (slot 4.70 / groove 3.10) [2026-05-24]
+  Cam Ring         V6.5
+  Sinker Ring      V1.2.1
+  Cassette Base    V1.1
+  Retainer Ring    V1.0
+  Drive Hub        V2.4.2
+  Bearing Housings V2.5
+  Motor Mount      V1.4  (NEMA 23 + HG5 bracket)
+  Wood Base        V1.1  (D100 take-down hole)
+  Wood Upper Deck  V1.0  (320 x 260 x 18)
+  Mount Plate      V1.1  (250 x 250 x 6 master datum)
+  Upright 2020     V1.1  (188 mm at corners of upper deck)
+  Touchscreen Mast V1.0  (dual 2020 + crossbar)
+  Feeder Module    V1.1  (MG90S cavity)
+  NEMA17 STL       OBSOLETE -- replaced by NEMA23+HG5
+
+BOM V12:
+  - 4 items to order  (~$56-82 total)
+  - Servo extension cables SKU locked: B0FXMDCP1H ($7.32)
+  - Heat-set kit candidate: B0CLKDPN65 (Ktehloy 400-pc M2-M6)
+  - Take-down weight candidate: Etsy CSM stem weight bag
+  - Wood upper deck: Home Depot or local stock
+
+PHASE 1.5 SIMULATOR:
+  - 21 parameter sweep CSVs committed
+  - 3 plots: capture margin, operating envelope, delta-from-nominal
+  - Pure Python (no Blender) -- runs in seconds
+
+VISUAL DELIVERABLES:
+  - 6-poster engineering set (matplotlib)
+  - Canonical poster V2 (ChatGPT-generated, adopted)
+  - 36-frame nominal animation + metrics.csv
+  - 8 failure scenario stills
+  - Y1-Y3 yarn path renders
+  - K_triad views
+  - D1-D5 architectural views
+
+================================================================
+9. OPEN ITEMS / NEXT STEPS
+================================================================
+
+PHYSICAL (waiting on user):
+  - Print Cylinder V3.1 FULL STL (~120g PETG, ~4-6 hr)
+  - Order remaining 4 BOM V12 items
+  - Verify aluminum plate size on receipt (250x250x6)
+  - Verify HTD belt width on receipt (15 mm vs 9 mm)
+  - Phase 1 bring-up assembly + first knit test with hanging weight
+
+DOCUMENTATION (deferred, can be written any time):
+  - F: DYNAMIC_BEHAVIOR_AND_COMPLIANCE.md
+        Sections expected:
+          - "Take-down tension is stitch-formation parameter"
+          - Phase 1.5 D-4b tolerance results (A1<=10, B1<=2, D1=0)
+          - Compliant-coupling Phase 2/3 investigation note
+          - PETG creep / thermal / wear expectations
+          - Service interval estimates
+          - The "compliance > nominal dimensions" framing
+
+DESIGN WORK (queued):
+  - Phase 2 dual-roller take-down subsystem (~$60-110 hardware
+    + FreeCAD design effort)
+  - FeederModule V1.2 (replace printed yarn-exit hole with
+    M3-threaded boss for ceramic pigtail from B0FLJK48BB)
+  - 7-poster expansion adding Side Elevation + Top Plan
+    (if v2 poster ever needs supplementing)
+
+FUTURE PHASES (Phase 2/3 deferred):
+  - 6-feeder active configuration (F2/F3/F5/F6 populated)
+  - Ribber disk (Interface 8 provision exists)
+  - Vacuum take-down (alternative to dual-roller)
+  - Closed-loop tension control
+  - Optical sock-length sensing
+  - Automatic heel/toe shaping
+  - Multi-feed color changes
+  - Yarn mast for remote cone stand
+
+KNOWN RISKS:
+  - Slots 9-10 of WEDGE_B V2 (5.10/5.30 mm) were not tested due
+    to print quality issues -- if user wants to push deeper, a
+    V3 wedge would be needed
+  - WEDGE_B V2 print didn't show 9/10 results, so the upper depth
+    limit is established empirically at 4.90 mm (slot 8 loose)
+  - PETG long-term creep under cam load not yet measured
+    (will surface in Phase 1 bring-up)
+  - HTD belt width 9 vs 15 mm could change motor mount slot
+    specification (V1.4 -> V1.5 if 9 mm)
+
+================================================================
+END OF MASTER DESIGN-SESSION LOG
+================================================================
+
+This document captures the design evolution from
+  early-May "concept render with wrong frame"
+to
+  end-May "production-locked architecture with simulator-derived
+           tolerances and physical-test-locked cylinder geometry."
+
+It is intended to be readable cold by a future-self or new
+contributor. Cross-reference any specific decision against:
+  - the per-session chat-history files
+  - the document revision histories (each doc has its own log)
+  - the git commit history (every change is traceable)
+
+For the most recent canonical state, the source of truth is:
+  3D-Project/00_PROJECT_OVERVIEW/
+    MACHINE_COORDINATE_SYSTEM.md  R1
+    MACHINE_DATUMS.md             R5
+    INTERFACE_CONTROL.md          R6
+    SERVICE_ENVELOPES.md          R1
+    ANGULAR_REFERENCE_STANDARD.md R1
+    machine_datums.py             (R5 mirror)

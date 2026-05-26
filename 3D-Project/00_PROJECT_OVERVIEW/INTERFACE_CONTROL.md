@@ -543,6 +543,7 @@ coordinate system. This is enabled by the invariants section above.
 | Sinker Ring | V1.2.1 (LOCKED) | 1 | `02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
 | Cassette Base | V1.1 | 1 | `02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |
 | Retainer Ring | V1.0 (LOCKED) | 1 | `02_CASSETTE_HEAD/retainer_ring/freecad_macros/CSM_V3_RetainerRing_V1_0.FCMacro` |
+| Cassette Spacer (×6) | V1.0 (LOCKED 2026-05-24) | 1 | `02_CASSETTE_HEAD/cassette_spacers/freecad_macros/CSM_V3_CassetteSpacer_V1_0.FCMacro` |
 | Drive Hub | V2.4.2 (Done) | 2 | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_DriveHub_V2_4_2.FCMacro` |
 | Motor Mount | V1.3 (**OBSOLETE for drive** — V1.4 needed for NEMA 23 + gearbox) | 2 | `06_DRIVE_SYSTEM/freecad_macros/CSM_V3_MotorMount_V1_3.FCMacro` |
 | Bearing Housings | V2.5 (Done) | 2 | `05_BEARINGS_SHAFT/freecad_macros/CSM_V3_BearingHousings_V2_5.FCMacro` |

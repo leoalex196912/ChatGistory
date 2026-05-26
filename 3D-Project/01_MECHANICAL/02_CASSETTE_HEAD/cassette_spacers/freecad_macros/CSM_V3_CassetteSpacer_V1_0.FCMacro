@@ -1,0 +1,99 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- CASSETTE STACK SPACER V1.0
+# =============================================================================
+# Printed spacer that lifts the Retainer Ring above the Cassette Base outer
+# disc.  6× identical spacers are stacked at the 6 PCD-190 bolt positions
+# (3 positions occupied by Phase-1 feeder modules + 4 positions used by
+# retainer-only mounting).
+#
+# Per ICD R6 Interface 7:
+#   - Closes the gap between cassette outer-disc top (cyl-local Z = 63
+#     = world Z = 244) and retainer-ring bottom (cyl-local Z = 83 =
+#     world Z = 264).
+#   - Gap = 20 mm exactly.
+#   - M4 through-bore for stack-mount bolts that go from cassette top,
+#     up through the spacer, into the retainer-ring inserts.
+#
+# Material:
+#   PETG (Phase 1 prototype, OK for this load case -- spacers are in
+#   pure axial compression, no wear surfaces).
+#   PA12 (Phase 2+ production -- not strictly necessary but easy upgrade).
+#
+# Print:
+#   Stand spacers upright (Z axis vertical) for clean walls and
+#   straight bore.  6 copies on the bed in one print = ~10 g PETG,
+#   ~30 min total.
+#
+# Reference: ICD R6 Interface 7 (Cassette Base + Sinker -> Retainer Ring)
+#            MACHINE_DATUMS.md R5 (HOOK_PEAK_Z, CASSETTE_TOP_Z)
+# =============================================================================
+
+import FreeCAD, Part, os, sys
+
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# -- spec --
+SPACER_OD       = 8.0          # outer diameter (D8 per ICD R6 I7)
+SPACER_LEN      = 20.0         # axial length = gap to bridge
+                                 #   = HOOK_PEAK_Z (83) - CASSETTE_TOP_Z (63) = 20
+M4_CLEARANCE_D  = 4.5          # M4 bolt clearance through-bore
+                                 #   (M4 nominal 4.0 + 0.5 print/fit margin)
+SPACER_QTY      = 6            # one per PCD-190 bolt position
+
+# -- sanity check vs MD --
+expected_gap = MD.HOOK_PEAK_Z - MD.CASSETTE_TOP_Z
+assert abs(SPACER_LEN - expected_gap) < 0.01, (
+    f"Spacer length {SPACER_LEN} doesn't match MD-derived gap "
+    f"{expected_gap} (HOOK_PEAK_Z - CASSETTE_TOP_Z)"
+)
+
+MATERIAL = "PETG (Phase 1) / PA12 (Phase 2 production)"
+
+print("=" * 70)
+print("CSM V3 -- Cassette Stack Spacer V1.0")
+print("=" * 70)
+print(f"  OD x ID x L:       {SPACER_OD} x {M4_CLEARANCE_D} x {SPACER_LEN} mm")
+print(f"  Wall thickness:    {(SPACER_OD - M4_CLEARANCE_D)/2:.2f} mm")
+print(f"  Material:          {MATERIAL}")
+print(f"  Quantity needed:   {SPACER_QTY}x at PCD 190 bolt positions")
+print(f"  Total print mass:  ~{(3.14159 * ((SPACER_OD/2)**2 - (M4_CLEARANCE_D/2)**2) * SPACER_LEN * SPACER_QTY * 1.27 / 1000):.1f}g PETG")
+print(f"  Gap bridged:       {expected_gap} mm (cassette top Z={MD.CASSETTE_TOP_Z} -> retainer bottom Z={MD.HOOK_PEAK_Z})")
+print()
+
+# -- build --
+doc = FreeCAD.newDocument("CassetteSpacer_V1_0")
+
+# Outer cylinder
+outer = Part.makeCylinder(SPACER_OD / 2.0, SPACER_LEN,
+                          FreeCAD.Vector(0, 0, 0))
+# Inner bore (M4 clearance)
+inner = Part.makeCylinder(M4_CLEARANCE_D / 2.0, SPACER_LEN + 2.0,
+                          FreeCAD.Vector(0, 0, -1.0))
+spacer = outer.cut(inner)
+
+obj = doc.addObject("Part::Feature", "CassetteSpacer_V1_0")
+obj.Shape = spacer
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.85, 0.45, 0.25)   # warm orange like cassette
+doc.recompute()
+
+# -- export --
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "CSM_V3_CassetteSpacer_V1_0.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}")
+print(f"     ({sz} bytes / {sz/1024:.1f} KB)")
+print(f"     volume per spacer: {spacer.Volume:.0f} mm^3  "
+      f"(~{spacer.Volume * 1.27 / 1000:.2f} g PETG)")
+print()
+print("PRINT NOTES:")
+print(f"  - Stand UPRIGHT (Z vertical) for clean bore wall")
+print(f"  - Duplicate {SPACER_QTY}x on the bed for one print run")
+print(f"  - Walls 3, infill 50% gyroid is plenty (compression-only load)")
+print(f"  - No supports needed")
+print(f"  - Approx print time per spacer: 5 min")
+print(f"  - Total for {SPACER_QTY}: ~30 min")
+print("=" * 70)

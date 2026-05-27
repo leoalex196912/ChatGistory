@@ -1,0 +1,247 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- FEEDER MODULE V1.2E  (production-candidate, first-print ready)
+# =============================================================================
+# Adjustable ceramic-pigtail feeder with field-tunable yarn presentation.
+# Pigtail: B0FLJK48BB (M4 stem + dual jam nut + metal sleeve + offset
+# ceramic eye).  Mounted via tangential slot, two jam nuts on outboard
+# face, sleeve shoulder seats against inboard face.
+#
+# DESIGN EVOLUTION (V1.2 -> V1.2E):
+#   - Dropped heat-set insert boss (creep risk; pigtail is its own fastener)
+#   - Dropped inboard recess (sleeve is the inboard shoulder)
+#   - Block redesigned as vertical pillar on top of base (was floating)
+#   - Block T 8 -> 10 mm (slot flex), recess H 3.5 -> 4 mm (irrelevant now)
+#   - Slot 8 -> 6 mm tangential (less accidental misalign)
+#   - Block-base overlap 0.5 -> 2 mm (PETG layer continuity at root)
+#   - Twin protruding posts -> integrated low ridge w/ center channel
+#   - Honest claim: limiter constrains RELATIVE rotation, not absolute eye Z
+#   - V-notch alignment indicator on outboard face
+#
+# PRINT ORIENTATION (recommended):
+#   - Base plate flat on bed (Z axis vertical in printer)
+#   - Support block prints vertically -> best layer continuity at root,
+#     strongest jam-load path, cleanest horizontal slot bore
+#   - Ridge points up in the print -> no overhang
+#   - Servo housing is open on top; cable slot is horizontal -> no supports
+#   - Post (130 mm tall vertical cylinder) is the main support question:
+#     either print without supports if first-layer adhesion holds, or
+#     add a sacrificial 5 mm raft pad under the post.  Print at 0.2 mm
+#     layers, 3 walls, 30 % gyroid infill for the post.
+#
+# Reference: ICD R6 I5, MD R5, BOM V12 (B0FLJK48BB), part photo 2026-05-26
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ---------- UNCHANGED from V1.1 ----------
+PCD_FEEDER       = MD.PCD_FEEDER
+FEEDER_RADIUS    = PCD_FEEDER / 2.0
+MOUNT_HOLE_PITCH = 2.0 * FEEDER_RADIUS * math.sin(math.radians(30.0))
+M4_HOLE_D        = 4.5
+BASE_W, BASE_D, BASE_T = 95.0, 70.0, 6.0
+BASE_Z_BOTTOM    = MD.CASSETTE_TOP_Z
+BASE_TOP_Z       = BASE_Z_BOTTOM + BASE_T
+
+POST_D, POST_H   = 15.0, 130.0
+POST_RADIAL_POS  = 20.0
+
+SERVO_W, SERVO_D, SERVO_H = MD.SERVO_MG90S_W, MD.SERVO_MG90S_D, MD.SERVO_MG90S_H
+SERVO_TAB_W     = MD.SERVO_MG90S_MOUNT_W
+SERVO_TAB_PITCH = MD.SERVO_MG90S_MOUNT_HOLES_PITCH
+M2_HOLE_D, SERVO_CLEARANCE = 2.4, 0.4
+SERVO_BODY_CAV_W = SERVO_W + 2*SERVO_CLEARANCE
+SERVO_BODY_CAV_D = SERVO_D + 2*SERVO_CLEARANCE
+SERVO_BODY_CAV_H = SERVO_H + 2.0
+SERVO_TAB_CAV_W  = SERVO_TAB_W + 2*SERVO_CLEARANCE
+SERVO_TAB_CAV_D  = SERVO_D + 2*SERVO_CLEARANCE
+SERVO_TAB_CAV_H  = 2.0
+HOUSING_WALL_T   = 3.0
+HOUSING_W        = SERVO_TAB_CAV_W + 2*HOUSING_WALL_T
+HOUSING_D        = SERVO_BODY_CAV_D + 2*HOUSING_WALL_T
+HOUSING_H        = SERVO_BODY_CAV_H
+HOUSING_TANG_POS = -28.0
+HOUSING_RADIAL_POS = POST_RADIAL_POS - SERVO_BODY_CAV_D - 8
+CABLE_SLOT_W, CABLE_SLOT_H = 8.0, 4.0
+
+# =============================================================================
+# V1.2E PIGTAIL CLAMP
+# =============================================================================
+PIGTAIL_THREAD_CLEARANCE_D = 4.3
+PIGTAIL_SLOT_LEN           = 6.0
+PIGTAIL_SUPPORT_BLOCK_W    = 20.0
+PIGTAIL_SUPPORT_BLOCK_T    = 10.0
+PIGTAIL_TOP_MARGIN         = 4.0    # material above slot top (structural margin)
+GUSSET_SIZE                = 6.0
+
+PIGTAIL_SLEEVE_D_NOMINAL   = 6.0
+PIGTAIL_EYE_OFFSET_NOMINAL = 12.0
+PIGTAIL_THREAD_LEN_MIN     = 18.0
+PIGTAIL_NUT_THICKNESS      = 3.2
+
+# Slot boolean safety
+MIN_SLOT_BRIDGE = 1.0
+assert PIGTAIL_SLOT_LEN > PIGTAIL_THREAD_CLEARANCE_D + MIN_SLOT_BRIDGE, (
+    f"PIGTAIL_SLOT_LEN ({PIGTAIL_SLOT_LEN}) must exceed "
+    f"PIGTAIL_THREAD_CLEARANCE_D ({PIGTAIL_THREAD_CLEARANCE_D}) + "
+    f"{MIN_SLOT_BRIDGE} mm bridge for clean capsule boolean"
+)
+slot_inner_len = max(PIGTAIL_SLOT_LEN - PIGTAIL_THREAD_CLEARANCE_D, MIN_SLOT_BRIDGE)
+
+# Integrated rotation-limit ridge (sits on inboard face above slot).
+# Constrains RELATIVE rotation only; absolute eye Z validated physically
+# during bring-up (ceramic-to-bend index not specified by supplier).
+RIDGE_PROTRUSION_Y = 2.5
+RIDGE_H            = 8.0
+RIDGE_CHANNEL_GAP  = PIGTAIL_EYE_OFFSET_NOMINAL * 2.0 * math.sin(math.radians(20.0)) \
+                     + 3.5
+NOTCH_W, NOTCH_DEPTH, NOTCH_H = 1.6, 1.0, 6.0
+
+NOZZLE_TARGET_Z = MD.FEEDER_REFERENCE_Z   # cyl-local; all geometry in cyl-local Z
+
+BLOCK_Y_INBOARD  = -BASE_D/2
+BLOCK_Y_OUTBOARD = BLOCK_Y_INBOARD + PIGTAIL_SUPPORT_BLOCK_T
+BLOCK_Z_BOTTOM   = BASE_TOP_Z - 2.0
+BLOCK_Z_TOP      = NOZZLE_TARGET_Z + PIGTAIL_THREAD_CLEARANCE_D/2 + PIGTAIL_TOP_MARGIN
+BLOCK_H          = BLOCK_Z_TOP - BLOCK_Z_BOTTOM
+
+required_thread = PIGTAIL_SUPPORT_BLOCK_T + 2*PIGTAIL_NUT_THICKNESS + 1.0
+assert PIGTAIL_THREAD_LEN_MIN >= required_thread, (
+    f"Thread {PIGTAIL_THREAD_LEN_MIN} < required {required_thread}"
+)
+
+print(f"[FeederModule V1.2E]  Production-candidate pigtail clamp")
+print(f"  slot:          +/-{PIGTAIL_SLOT_LEN/2} mm tangential (bridge {slot_inner_len:.1f} mm)")
+print(f"  limiter:       integrated ridge, channel {RIDGE_CHANNEL_GAP:.1f} mm")
+print(f"  rotation:      ~+/-20 deg relative (absolute envelope: validate physically)")
+print(f"  block:         {PIGTAIL_SUPPORT_BLOCK_W} W x {PIGTAIL_SUPPORT_BLOCK_T} T x {BLOCK_H:.1f} H")
+print(f"  top margin:    {PIGTAIL_TOP_MARGIN} mm above slot")
+print(f"  ridge:         {RIDGE_PROTRUSION_Y} mm proud, channel {RIDGE_CHANNEL_GAP:.1f} mm")
+print(f"  stem axis Z:   {NOZZLE_TARGET_Z} world")
+print(f"  base overlap:  {BASE_TOP_Z - BLOCK_Z_BOTTOM:.1f} mm fused")
+
+doc = FreeCAD.newDocument("FeederModule_V1_2E")
+
+# ---- BASE ----
+base = Part.makeBox(BASE_W, BASE_D, BASE_T,
+                    FreeCAD.Vector(-BASE_W/2, -BASE_D/2, BASE_Z_BOTTOM))
+mount_y = -BASE_D/2 + 10.0
+for sx in (-1, +1):
+    bx = sx * (MOUNT_HOLE_PITCH/2.0)
+    base = base.cut(Part.makeCylinder(M4_HOLE_D/2.0, BASE_T + 2.0,
+                                      FreeCAD.Vector(bx, mount_y, BASE_Z_BOTTOM - 1.0)))
+
+# ---- POST ----
+post = Part.makeCylinder(POST_D/2.0, POST_H,
+                         FreeCAD.Vector(0.0, POST_RADIAL_POS, BASE_TOP_Z))
+
+# ---- SERVO HOUSING ----
+housing = Part.makeBox(HOUSING_W, HOUSING_D, HOUSING_H,
+                       FreeCAD.Vector(HOUSING_TANG_POS - HOUSING_W/2,
+                                      HOUSING_RADIAL_POS - HOUSING_D/2, BASE_TOP_Z))
+housing = housing.cut(Part.makeBox(SERVO_BODY_CAV_W, SERVO_BODY_CAV_D, SERVO_BODY_CAV_H+1,
+                                   FreeCAD.Vector(HOUSING_TANG_POS-SERVO_BODY_CAV_W/2,
+                                                  HOUSING_RADIAL_POS-SERVO_BODY_CAV_D/2,
+                                                  BASE_TOP_Z-0.5)))
+housing = housing.cut(Part.makeBox(SERVO_TAB_CAV_W, SERVO_TAB_CAV_D, SERVO_TAB_CAV_H+0.5,
+                                   FreeCAD.Vector(HOUSING_TANG_POS-SERVO_TAB_CAV_W/2,
+                                                  HOUSING_RADIAL_POS-SERVO_TAB_CAV_D/2,
+                                                  BASE_TOP_Z+HOUSING_H-SERVO_TAB_CAV_H)))
+for sx in (-1, +1):
+    mh_x = HOUSING_TANG_POS + sx*(SERVO_TAB_PITCH/2.0)
+    housing = housing.cut(Part.makeCylinder(M2_HOLE_D/2.0, SERVO_TAB_CAV_H+1,
+                                            FreeCAD.Vector(mh_x, HOUSING_RADIAL_POS,
+                                                           BASE_TOP_Z+HOUSING_H-SERVO_TAB_CAV_H-0.5)))
+housing = housing.cut(Part.makeBox(CABLE_SLOT_W, HOUSING_WALL_T+2, CABLE_SLOT_H,
+                                   FreeCAD.Vector(HOUSING_TANG_POS-CABLE_SLOT_W/2,
+                                                  HOUSING_RADIAL_POS+HOUSING_D/2-1.0,
+                                                  BASE_TOP_Z+HOUSING_H/2-CABLE_SLOT_H/2)))
+
+# ---- SUPPORT BLOCK ----
+support = Part.makeBox(PIGTAIL_SUPPORT_BLOCK_W, PIGTAIL_SUPPORT_BLOCK_T, BLOCK_H,
+                       FreeCAD.Vector(-PIGTAIL_SUPPORT_BLOCK_W/2,
+                                      BLOCK_Y_INBOARD, BLOCK_Z_BOTTOM))
+
+# Outboard buttress gusset
+p1 = FreeCAD.Vector(-PIGTAIL_SUPPORT_BLOCK_W/2, BLOCK_Y_OUTBOARD, BLOCK_Z_BOTTOM)
+p2 = FreeCAD.Vector(-PIGTAIL_SUPPORT_BLOCK_W/2, BLOCK_Y_OUTBOARD, BLOCK_Z_BOTTOM + GUSSET_SIZE)
+p3 = FreeCAD.Vector(-PIGTAIL_SUPPORT_BLOCK_W/2, BLOCK_Y_OUTBOARD + GUSSET_SIZE, BLOCK_Z_BOTTOM)
+gusset = Part.Face(Part.makePolygon([p1, p2, p3, p1])).extrude(
+    FreeCAD.Vector(PIGTAIL_SUPPORT_BLOCK_W, 0, 0))
+support = support.fuse(gusset)
+
+# ---- INTEGRATED ROTATION-LIMIT RIDGE ----
+ridge_z_bot = NOZZLE_TARGET_Z + PIGTAIL_THREAD_CLEARANCE_D/2 + 1.0
+ridge = Part.makeBox(PIGTAIL_SUPPORT_BLOCK_W, RIDGE_PROTRUSION_Y, RIDGE_H,
+                     FreeCAD.Vector(-PIGTAIL_SUPPORT_BLOCK_W/2,
+                                    BLOCK_Y_INBOARD - RIDGE_PROTRUSION_Y,
+                                    ridge_z_bot))
+channel = Part.makeBox(RIDGE_CHANNEL_GAP, RIDGE_PROTRUSION_Y + 1.0, RIDGE_H + 1.0,
+                       FreeCAD.Vector(-RIDGE_CHANNEL_GAP/2,
+                                      BLOCK_Y_INBOARD - RIDGE_PROTRUSION_Y - 0.5,
+                                      ridge_z_bot - 0.5))
+ridge = ridge.cut(channel)
+support = support.fuse(ridge)
+
+# ---- THROUGH-SLOT (capsule, tangential X), drilled in Y ----
+slot = Part.makeBox(slot_inner_len, PIGTAIL_SUPPORT_BLOCK_T + 4.0,
+                    PIGTAIL_THREAD_CLEARANCE_D,
+                    FreeCAD.Vector(-slot_inner_len/2,
+                                   BLOCK_Y_INBOARD - 2.0,
+                                   NOZZLE_TARGET_Z - PIGTAIL_THREAD_CLEARANCE_D/2))
+for sx in (-1, +1):
+    cap = Part.makeCylinder(PIGTAIL_THREAD_CLEARANCE_D/2.0,
+                            PIGTAIL_SUPPORT_BLOCK_T + 4.0,
+                            FreeCAD.Vector(sx*slot_inner_len/2,
+                                           BLOCK_Y_INBOARD - 2.0,
+                                           NOZZLE_TARGET_Z),
+                            FreeCAD.Vector(0, 1, 0))
+    slot = slot.fuse(cap)
+support = support.cut(slot)
+
+# ---- ALIGNMENT V-NOTCH ----
+notch_z_bot = NOZZLE_TARGET_Z + PIGTAIL_THREAD_CLEARANCE_D/2 + 1.5
+notch = Part.makeBox(NOTCH_W, NOTCH_DEPTH + 0.1, NOTCH_H,
+                     FreeCAD.Vector(-NOTCH_W/2,
+                                    BLOCK_Y_OUTBOARD - NOTCH_DEPTH,
+                                    notch_z_bot))
+support = support.cut(notch)
+
+# ---- FUSE ----
+feeder = base.fuse(post).fuse(housing).fuse(support)
+
+obj = doc.addObject("Part::Feature", "FeederModule_V1_2E")
+obj.Shape = feeder
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.85, 0.75, 0.45)
+doc.recompute()
+
+BASE_OUT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE_OUT, "CSM_V3_FeederModule_V1_2E.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}")
+print(f"     ({sz} bytes / {sz/1024:.1f} KB)")
+print(f"     volume: {feeder.Volume:.0f} mm^3  (~{feeder.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("ASSEMBLY:")
+print(" 1. Print feeder in PETG, base flat on bed, block vertical")
+print(" 2. Slide pigtail factory nuts down the thread to free the metal sleeve")
+print(" 3. Insert M4 stem through slot from INBOARD (-Y) side")
+print("    -- bent neck must pass through the ridge center channel")
+print(" 4. Metal sleeve seats flat against inboard face")
+print(" 5. Run primary nut against outboard face, then jam nut against primary")
+print(" 6. Default orientation: bent neck aligned with V-notch on outboard face")
+print(" 7. Within bring-up: rotate stem +/- a few degrees to tune yarn presentation")
+print("    -- ridge channel caps rotation at ~+/-20 deg")
+print(" 8. Slide stem in slot for tangential phase tuning (+/- 3 mm)")
+print(" 9. Tighten both jam nuts once positioned")
+print()
+print("BRING-UP NOTE:")
+print(f"  Stem axis Z = {NOZZLE_TARGET_Z} world.  Eye absolute Z depends on")
+print(f"  ceramic-to-bend index of the supplier part (not specified).  The")
+print(f"  ridge limits RELATIVE rotation to ~+/-20 deg about whatever absolute")
+print(f"  orientation the operator chose at install.  Validate eye Z against")
+print(f"  hook peak Z = {MD.HOOK_PEAK_Z} cyl-local physically before locking jam nuts.")

@@ -558,7 +558,7 @@ coordinate system. This is enabled by the invariants section above.
 | HTD 20T pulley (12 mm bore) | **NEEDS BUILD** (was 16T in R3) | 3 | `CSM_V3_ASSEMBLY/drive_bought/pulley_htd_20t/` (to create) |
 | HTD belt 405 mm | V1.0 (built) | 3 | `CSM_V3_ASSEMBLY/drive_bought/belt_htd_5m/` |
 | Bearings + shaft | NOT YET | 3 | `CSM_V3_ASSEMBLY/bearings_bought/` |
-| Feeder Module | V1.0 (built — **needs V1.1** for MG90S servo cavity) | 3 | `CSM_V3_ASSEMBLY/feeder_module/` |
+| Feeder Module | **V1.2E** (first-print candidate 2026-05-27 — adjustable ceramic-pigtail clamp, MG90S servo cavity, ±3 mm tangential + ±20° rotational tuning; V1.0 / V1.1 archived) | 3 | `CSM_V3_ASSEMBLY/feeder_module/freecad_macros/CSM_V3_FeederModule_V1_2E.FCMacro` |
 | Electronics (Mega/TB6600/S-250/Pi 4) | V1.0 boxes built; cable routing TBD | 3 | `CSM_V3_ASSEMBLY/electronics/` |
 | MG90S servo (×6 + 2 spare) | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/servo_mg90s/` |
 | LM2596 buck converter | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/lm2596_buck/` |

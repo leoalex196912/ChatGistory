@@ -1,0 +1,178 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- NEEDLE HEIGHT-SET & INDEX COLLAR V1.0A  (Phase 1 assembly aid)
+# =============================================================================
+# Assembly jig for populating the V3.1 cylinder with 72 latch needles.
+#
+# WORKFLOW:
+#   1. Drop all 72 needles into their slots, hooks up, sitting slightly HIGH
+#   2. Use the 72 index notches to confirm every slot is filled (none skipped)
+#   3. Seat this collar down over the cylinder OD (lead-in chamfer guides it)
+#   4. Inner DATUM HUB bottoms on the cylinder top-face annulus (Z reference)
+#   5. 72 SEGMENTED PUSH PADS press each needle SHANK down to uniform height
+#   6. Lift collar off by the two finger tabs (open center gives finger access)
+#
+# V1.0A CHANGES (from V1.0):
+#   - Continuous push-shelf -> 72 SEGMENTED PADS, one per slot, pressing the
+#     needle shank/back only (tolerant of latch-tongue rotation variance)
+#   - Skirt depth 14 -> 8 mm (anti-tilt only; easier removal, faster print)
+#   - Clearance 0.5 -> 0.8 mm (FDM-friendly drop-on fit, no sticking)
+#   - Lead-in chamfer 1x45 on inner skirt bottom (blind-install friendly)
+#   - Reference notch 3 -> 5 mm (instantly visible)
+#   - Open Ø92 center retained (finger access + bore visibility, no "lid")
+#
+# DATUM STRATEGY (avoids needle collision):
+#   - Datum hub rests on top-face annulus INSIDE the slot circle (r 46-54)
+#   - Open center (r < 46) leaves the cylinder bore fully visible/accessible
+#   - Pads reach the needle line (r ~57.15) only at height NEEDLE_SET_H
+#
+# PRINT NOTES:
+#   - PETG or PLA (jig, not load-bearing; PLA dimensional stability fine)
+#   - Print datum-hub-down (collar axis vertical), no supports
+#   - 0.2 mm layers, 3 walls, 20% infill
+#
+# Reference: MD R5 (CYL_OD, CYL_ID, CYLINDER_TOP_Z, SLOT_COUNT, SLOT_PITCH_DEG)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# -- cylinder reference --
+CYL_R          = MD.CYL_OD / 2.0          # 57.15
+CYL_BORE_R     = MD.CYL_ID / 2.0          # 44.0
+SLOT_COUNT     = MD.SLOT_COUNT            # 72
+SLOT_PITCH_DEG = MD.SLOT_PITCH_DEG        # 5.0
+
+# -- collar fit --
+COLLAR_CLEAR   = 0.80                      # FDM-friendly slip fit (dia)
+SKIRT_IR       = CYL_R + COLLAR_CLEAR/2.0  # 57.55
+SKIRT_OR       = SKIRT_IR + 5.0            # 62.55
+SKIRT_DEPTH    = 8.0                        # anti-tilt grip (was 14)
+CHAMFER        = 1.0                        # lead-in chamfer 1x45 at skirt bottom
+
+# -- datum hub --
+DATUM_IR       = 46.0
+DATUM_OR       = 54.0
+HUB_T          = 5.0
+
+# ---- CRITICAL FIRST-FIT PARAMETER ----
+NEEDLE_SET_H   = 9.0    # *** PROVISIONAL *** hook-tip rest height above
+                        #     cylinder top face.  WILL be adjusted after the
+                        #     first physical needle test.  Measure a seated
+                        #     needle, set this, re-run.
+
+# -- segmented push pads --
+PAD_W          = 3.0                        # tangential width (< 4.97 pitch @ r57)
+PAD_R_IN       = 52.0                       # fuses into connector wall
+PAD_R_OUT      = 58.5                       # reaches needle line (r57.15) with
+                                            #   margin; reduced from 60 to cut
+                                            #   leading-edge collision risk on
+                                            #   proud/rotated needles during seat
+PAD_T          = 4.0                        # vertical thickness
+
+# -- connector wall (datum hub -> pads spine) --
+WALL_R_INNER   = 52.0
+WALL_R_OUTER   = 54.0
+
+# -- index notches --
+NOTCH_W        = 1.2
+NOTCH_DEPTH    = 1.5
+NOTCH_H        = 8.0
+REF_NOTCH_W    = 5.0                        # wide ref notch at slot 0 / theta=0
+
+# -- finger tabs --
+TAB_W, TAB_L, TAB_T = 16.0, 10.0, 5.0
+
+# -- sanity --
+assert DATUM_OR < CYL_R,        f"datum OR {DATUM_OR} must stay inside slot circle {CYL_R}"
+assert DATUM_IR > CYL_BORE_R,   f"datum IR {DATUM_IR} must clear bore {CYL_BORE_R}"
+assert SKIRT_IR > CYL_R,        f"skirt bore r{SKIRT_IR} must clear cyl OD r{CYL_R}"
+assert PAD_R_OUT > CYL_R,       f"pad must reach needle line r{CYL_R}"
+assert PAD_W < 2*math.pi*CYL_R/SLOT_COUNT, "pad wider than slot pitch -> pads would merge"
+assert NEEDLE_SET_H > HUB_T - 1, "push pads must sit above the datum hub"
+
+MATERIAL = "PETG or PLA (Phase 1 assembly aid)"
+
+print("=" * 70)
+print("CSM V3 -- Needle Height-Set & Index Collar V1.0A")
+print("=" * 70)
+print(f"  fits cylinder:  OD {MD.CYL_OD} (skirt bore {SKIRT_IR*2:.2f}, clear {COLLAR_CLEAR})")
+print(f"  datum hub:      r {DATUM_IR}-{DATUM_OR}, rests on top-face annulus")
+print(f"  push pads:      {SLOT_COUNT}x seg, w{PAD_W} r{PAD_R_IN}-{PAD_R_OUT} @ H={NEEDLE_SET_H} (PROVISIONAL)")
+print(f"  skirt:          r {SKIRT_IR}-{SKIRT_OR}, depth {SKIRT_DEPTH}, chamfer {CHAMFER}")
+print(f"  index notches:  {SLOT_COUNT} @ {SLOT_PITCH_DEG} deg (wide ref {REF_NOTCH_W} at 0)")
+print(f"  open center:    D{DATUM_IR*2:.0f} (finger access + bore visibility)")
+print(f"  material:       {MATERIAL}")
+
+doc = FreeCAD.newDocument("NeedleSetCollar_V1_0A")
+# Local frame: Z=0 = cylinder top face.
+
+# ---- DATUM HUB ----
+hub = Part.makeCylinder(DATUM_OR, HUB_T, FreeCAD.Vector(0, 0, 0))
+hub = hub.cut(Part.makeCylinder(DATUM_IR, HUB_T + 2.0, FreeCAD.Vector(0, 0, -1.0)))
+
+# ---- CONNECTOR WALL ----
+wall_h = NEEDLE_SET_H + PAD_T
+wall = Part.makeCylinder(WALL_R_OUTER, wall_h, FreeCAD.Vector(0, 0, 0))
+wall = wall.cut(Part.makeCylinder(WALL_R_INNER, wall_h + 2.0, FreeCAD.Vector(0, 0, -1.0)))
+
+# ---- OUTER SKIRT ----
+skirt_h = NEEDLE_SET_H + PAD_T + SKIRT_DEPTH
+skirt = Part.makeCylinder(SKIRT_OR, skirt_h, FreeCAD.Vector(0, 0, -SKIRT_DEPTH))
+skirt = skirt.cut(Part.makeCylinder(SKIRT_IR, skirt_h + 2.0, FreeCAD.Vector(0, 0, -SKIRT_DEPTH - 1.0)))
+# lead-in chamfer (cone cut at inner bottom edge)
+cone = Part.makeCone(SKIRT_IR + CHAMFER, SKIRT_IR, CHAMFER,
+                     FreeCAD.Vector(0, 0, -SKIRT_DEPTH), FreeCAD.Vector(0, 0, 1))
+skirt = skirt.cut(cone)
+
+collar = hub.fuse(wall).fuse(skirt)
+
+# ---- 72 SEGMENTED PUSH PADS (one per slot, press shank, bridge wall->skirt) ----
+for i in range(SLOT_COUNT):
+    ang = i * SLOT_PITCH_DEG
+    pad = Part.makeBox(PAD_R_OUT - PAD_R_IN, PAD_W, PAD_T,
+                       FreeCAD.Vector(PAD_R_IN, -PAD_W/2.0, NEEDLE_SET_H))
+    pad.Placement = FreeCAD.Placement(FreeCAD.Vector(0, 0, 0),
+                                      FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), ang))
+    collar = collar.fuse(pad)
+
+# ---- INDEX NOTCHES (on skirt OD, aligned to slots) ----
+for i in range(SLOT_COUNT):
+    ang = i * SLOT_PITCH_DEG
+    w = REF_NOTCH_W if i == 0 else NOTCH_W
+    notch = Part.makeBox(NOTCH_DEPTH + 1.0, w, NOTCH_H,
+                         FreeCAD.Vector(SKIRT_OR - NOTCH_DEPTH, -w/2.0,
+                                        NEEDLE_SET_H + PAD_T - NOTCH_H))
+    notch.Placement = FreeCAD.Placement(FreeCAD.Vector(0, 0, 0),
+                                        FreeCAD.Rotation(FreeCAD.Vector(0, 0, 1), ang))
+    collar = collar.cut(notch)
+
+# ---- FINGER TABS ----
+for sx in (-1, +1):
+    x0 = (SKIRT_OR - 1.0) if sx > 0 else (-SKIRT_OR - TAB_L + 1.0)
+    tab = Part.makeBox(TAB_L, TAB_W, TAB_T,
+                       FreeCAD.Vector(x0, -TAB_W/2.0, NEEDLE_SET_H + PAD_T - TAB_T))
+    collar = collar.fuse(tab)
+
+# ---- EXPORT ----
+obj = doc.addObject("Part::Feature", "NeedleSetCollar_V1_0A")
+obj.Shape = collar
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.70, 0.55)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "CSM_V3_NeedleSetCollar_V1_0A.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz/1024:.1f} KB)")
+print(f"     volume: {collar.Volume:.0f} mm^3  (~{collar.Volume*1.24/1000:.1f}g PLA)")
+print()
+print("FIRST-FIT VALIDATION:")
+print(f"  - NEEDLE_SET_H={NEEDLE_SET_H} is PROVISIONAL. Seat one needle, measure")
+print(f"    hook-tip height above cyl top, set param, re-run.")
+print(f"  - Check skirt slip-fit over cyl OD {MD.CYL_OD} (clear {COLLAR_CLEAR} dia).")
+print(f"  - Confirm wide notch (slot 0) aligns with your theta=0 reference.")
+print(f"  - Verify pads land on needle SHANK, not hook throat or latch tongue.")
+print("=" * 70)

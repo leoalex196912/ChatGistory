@@ -563,6 +563,7 @@ coordinate system. This is enabled by the invariants section above.
 | MG90S servo (×6 + 2 spare) | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/servo_mg90s/` |
 | LM2596 buck converter | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/lm2596_buck/` |
 | Touchscreen 7" | NOT YET | 3 | `CSM_V3_ASSEMBLY/electronics/touchscreen_7in/` |
+| Take-Down Hook Adapter | **V1.0F** (Phase 1 bring-up consumable, 2026-05-27 — 4-hook ring + spider cord eye, drops through D100 take-down column; obsoleted by Phase 2 dual-roller nip) | 1 | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
 | Ribber (Phase 2) | provisioned only | 1 | future |
 
 ---

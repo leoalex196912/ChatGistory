@@ -1,0 +1,187 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- TAKE-DOWN HOOK ADAPTER V1.0F  (Phase 1 bring-up consumable)
+# =============================================================================
+# Multi-point hook ring that sits inside the freshly knit fabric tube,
+# engages the bottom course of stitches via 4 downward hooks, and
+# transmits weight load through a central cord eye on a 2-arm spider.
+#
+# THIS IS A PHASE-1 BRING-UP CONSUMABLE, NOT A POLISHED SUBSYSTEM.
+#   Priorities, in order: easy print, easy insertion, easy removal,
+#   low snag risk, low inertia.  NOT durability or aesthetics.
+#   Expect to redesign after the first few knit sessions once tube
+#   collapse, yarn memory, oscillation and engagement patterns are seen.
+#
+# WHY THIS DESIGN (D-4b derived):
+#   B1 slack tolerance is ~±2 mm before capture failure.  Distributed
+#   hooks pull evenly around the circumference; the central cord eye
+#   self-centers the weight via the cord acting as a virtual gimbal.
+#
+# V1.0F CHANGES (from first concept):
+#   - Hook count 6 -> 4 (less snag, easier insert/remove, easier debug)
+#   - Ring thickness 5 -> 6.5 mm (torsional stiffness, hooks stay coplanar)
+#   - Hooks: box extrusions -> cylindrical stems + spherical rounded tips
+#            (textile-safe contact, won't ladder stitches on removal)
+#   - Barb offset 3.0 -> 1.8 mm (gentle for lightweight sock yarn)
+#   - Central eye: full-diameter bridge -> 2-arm spider (open center,
+#            lower mass, lower inertia, less fabric interference)
+#
+# PRINT NOTES:
+#   - PETG (Phase 1 prototype, Phase 2 dual-roller nip obsoletes this)
+#   - Print FLAT on bed; hooks point UP in printer = DOWN in use
+#   - 3 walls, 30% gyroid, 0.2 mm layers
+#   - Small inward barbs are short overhangs (1.8 mm) -> print fine,
+#     no supports needed
+#
+# Reference: ICD R6 Interface 11 (Sock Take-Down Column)
+#            MD R5 (CYL_BOTTOM_WORLD_Z); D-4b B1 slack findings
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# -- ring --
+RING_OD             = 75.0
+RING_ID             = 57.0
+RING_T              = 6.5            # axial thickness (vertical in use)
+
+# -- hooks --
+HOOK_COUNT          = 4
+HOOK_DEPTH          = 10.0          # how far hook reaches below ring (down in use)
+HOOK_THICKNESS      = 2.2           # cylindrical stem diameter
+HOOK_BARB_OFFSET    = 1.8           # inward curl of tip from stem axis
+
+# -- central cord eye (2-arm spider) --
+ARM_W               = 6.0           # spider arm width
+ARM_T               = 5.0           # spider arm thickness (Z)
+EYE_BORE_D          = 6.0           # cord clearance (paracord/braided line)
+EYE_BORE_WALL       = 3.5
+EYE_TOTAL_OD        = EYE_BORE_D + 2*EYE_BORE_WALL   # 13 mm
+EYE_RISE            = 8.0           # eye height above ring top plane
+
+# -- sanity --
+fabric_tube_id_min = 95.0
+assert RING_OD < fabric_tube_id_min, (
+    f"RING_OD {RING_OD} too large for fabric tube ID ~{fabric_tube_id_min}"
+)
+wood_base_id = 100.0
+assert RING_OD < wood_base_id - 5, (
+    f"RING_OD {RING_OD} doesn't clear wood-base D{wood_base_id} take-down column"
+)
+assert RING_ID > EYE_TOTAL_OD + 4, (
+    f"RING_ID {RING_ID} too small for central eye OD {EYE_TOTAL_OD}"
+)
+
+MATERIAL = "PETG (Phase 1 consumable; Phase 2 dual-roller nip replaces it)"
+hook_r = (RING_ID + RING_OD) / 4.0   # radial position of hook stem axis (mid-wall)
+
+print("=" * 70)
+print("CSM V3 -- Take-Down Hook Adapter V1.0F  (Phase 1 consumable)")
+print("=" * 70)
+print(f"  ring:        OD {RING_OD} x ID {RING_ID} x {RING_T} mm")
+print(f"  hooks:       {HOOK_COUNT}x cylindrical D{HOOK_THICKNESS}, depth {HOOK_DEPTH}, "
+      f"barb {HOOK_BARB_OFFSET} inward, rounded tips")
+print(f"  hook radius: {hook_r:.1f} mm (mid-wall)")
+print(f"  eye:         2-arm spider, bore D{EYE_BORE_D}, OD {EYE_TOTAL_OD}, rise {EYE_RISE}")
+print(f"  fabric ID:   ~{fabric_tube_id_min} mm (clearance ~{fabric_tube_id_min - RING_OD} mm)")
+print(f"  D100 col:    {wood_base_id - RING_OD} mm clearance through wood base")
+print(f"  material:    {MATERIAL}")
+
+doc = FreeCAD.newDocument("TakeDownHookAdapter_V1_0F")
+
+# ---- RING (printed flat; hooks UP in print = DOWN in use) ----
+ring_outer = Part.makeCylinder(RING_OD/2.0, RING_T, FreeCAD.Vector(0, 0, 0))
+ring_inner = Part.makeCylinder(RING_ID/2.0, RING_T + 2.0, FreeCAD.Vector(0, 0, -1.0))
+ring = ring_outer.cut(ring_inner)
+
+# ---- HOOKS (cylindrical stem + radial barb + rounded sphere tip) ----
+hooks = None
+r_stem = HOOK_THICKNESS / 2.0
+for i in range(HOOK_COUNT):
+    theta = 2.0 * math.pi * i / HOOK_COUNT
+    cx = hook_r * math.cos(theta)
+    cy = hook_r * math.sin(theta)
+    inward = FreeCAD.Vector(-math.cos(theta), -math.sin(theta), 0)  # radial inward
+
+    # Stem: vertical cylinder up from ring top
+    stem = Part.makeCylinder(r_stem, HOOK_DEPTH, FreeCAD.Vector(cx, cy, RING_T))
+
+    # Barb: horizontal cylinder at top of stem, pointing radially inward
+    barb_origin = FreeCAD.Vector(cx, cy, RING_T + HOOK_DEPTH - r_stem)
+    barb = Part.makeCylinder(r_stem, HOOK_BARB_OFFSET + r_stem, barb_origin, inward)
+
+    # Rounded tip sphere at the barb end
+    tip_pt = barb_origin + inward.multiply(HOOK_BARB_OFFSET + r_stem)
+    tip = Part.makeSphere(r_stem, tip_pt)
+
+    # Small fillet-substitute sphere at stem base (smooth transition into ring)
+    base_blend = Part.makeSphere(r_stem, FreeCAD.Vector(cx, cy, RING_T))
+
+    one_hook = stem.fuse(barb).fuse(tip).fuse(base_blend)
+    hooks = one_hook if hooks is None else hooks.fuse(one_hook)
+
+ring = ring.fuse(hooks)
+
+# ---- CENTRAL CORD EYE on 2-ARM SPIDER ----
+# Two radial arms along the X axis from ring inner edge to central eye boss.
+arms = None
+for sx in (-1, +1):
+    arm_len = RING_ID/2.0 + 1.0      # reach from center to just into ring wall
+    arm = Part.makeBox(arm_len, ARM_W, ARM_T,
+                       FreeCAD.Vector(0 if sx > 0 else -arm_len,
+                                      -ARM_W/2, RING_T))
+    arms = arm if arms is None else arms.fuse(arm)
+
+# Eye boss: vertical cylinder at center, above the arms
+eye_post = Part.makeCylinder(EYE_TOTAL_OD/2.0, EYE_RISE + ARM_T,
+                             FreeCAD.Vector(0, 0, RING_T))
+# Cord-clearance bore through eye in Y direction (cord exits both sides)
+cord_bore = Part.makeCylinder(EYE_BORE_D/2.0, EYE_TOTAL_OD + 4.0,
+                              FreeCAD.Vector(0, -EYE_TOTAL_OD/2 - 2,
+                                             RING_T + ARM_T + EYE_RISE/2),
+                              FreeCAD.Vector(0, 1, 0))
+eye_post = eye_post.cut(cord_bore)
+
+spider = arms.fuse(eye_post)
+ring = ring.fuse(spider)
+
+# ---- EXPORT ----
+obj = doc.addObject("Part::Feature", "TakeDownHookAdapter_V1_0F")
+obj.Shape = ring
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.6, 0.55, 0.85)   # lavender = Phase 1 tooling
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "CSM_V3_TakeDownHookAdapter_V1_0F.stl")
+
+# Future mesh optimization hook
+# Part.export uses default tessellation (the spheres inflate triangle count;
+# this file lands ~16 MB).  If STL size becomes problematic, replace with
+# Mesh.export() and explicit deviation/angle controls, e.g.:
+#   import Mesh, MeshPart
+#   m = MeshPart.meshFromShape(obj.Shape, LinearDeflection=0.1, AngularDeflection=0.5)
+#   m.write(OUT)
+# Geometry is unchanged either way -- this only affects mesh density.
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}")
+print(f"     ({sz} bytes / {sz/1024:.1f} KB)")
+print(f"     volume: {ring.Volume:.0f} mm^3  (~{ring.Volume * 1.27 / 1000:.1f}g PETG)")
+print()
+print("OPERATION:")
+print(" 1. Print PETG flat on bed (hooks UP in printer = DOWN in use)")
+print(" 2. Tie paracord/braided line through the central eye")
+print(" 3. After cast-on, thread the ring UP through cylinder bore from below")
+print(" 4. Engage the 4 hooks into the bottom course of stitches")
+print(" 5. Attach weight (start ~250 g) to lower end of cord")
+print(" 6. Weight hangs through the D100 wood-base take-down column")
+print()
+print("BRING-UP WEIGHT TUNING:")
+print(" - Start light (~250 g), observe capture quality")
+print(" - Increase in 50 g steps until stitch formation is consistent")
+print(" - Missed captures (B1 slack symptom per D-4b) => too light")
+print(" - Needle bending / yarn breaks (D1 stress) => too heavy")
+print(" - Typical Phase 1 window: 300-500 g for sock-weight yarn")
+print("=" * 70)

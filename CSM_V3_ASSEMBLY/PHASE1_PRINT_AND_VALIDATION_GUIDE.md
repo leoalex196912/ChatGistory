@@ -32,12 +32,30 @@ measurements are recorded and a final form factor is chosen.
 
 ## 1. Print Queue Summary
 
+### Recommended print order (risk-stratified)
+
+| # | Part | Why this order |
+|---|---|---|
+| 1 | **D** Take-Down Hook | Fast, cheap, easy to verify, no assembly dependency — printer calibration check |
+| 2 | **A** Cassette Spacers | Tiny print, confirms dimensional calibration, blocks no other work |
+| 3 | **I** Needle Collar | Highest-value measurements come out of this (real needle envelope → locks `NEEDLE_SET_H`) |
+| 4 | **B** Feeder Module | Longest + most material; print **after** pigtail dims verified (§2) — may go straight to print OR receive a V1.2F update first |
+
+> Rationale: D and A confirm the printer is dimensionally well-behaved on
+> small parts before committing 75 g (I) or 103 g (B) of filament. Part I
+> unlocks the needle measurements that may also inform feeder yarn-path
+> tuning. Part B is intentionally last so that any pigtail surprise from
+> bench measurement can be folded into V1.2F before printing 4–6 hours of
+> filament.
+
+### Print settings
+
 | Part | Material | Orientation | Supports | Est. mass | Est. time | Layers / walls / infill |
 |---|---|---|---|---|---|---|
-| **A** Cassette Spacers ×6 | PETG (PA12 prod) | Upright, bore vertical, 6 on bed | None | ~5 g total | ~30 min | 0.2 / 3 / 50% gyroid |
-| **B** Feeder Module | PETG (PA12 prod) | Base flat on bed, block vertical, post tall | None* | ~103 g | ~4–6 h | 0.2 / 3 / 30% |
 | **D** Take-Down Hook | PETG | Ring flat, hooks UP in printer (= DOWN in use) | None | ~19 g | ~45 min | 0.2 / 3 / 30% gyroid |
+| **A** Cassette Spacers ×6 | PETG (PA12 prod) | Upright, bore vertical, 6 on bed | None | ~5 g total | ~30 min | 0.2 / 3 / 50% gyroid |
 | **I** Needle Collar | PLA or PETG | Datum-hub-down, collar axis vertical | None | ~75 g | ~3–4 h | 0.2 / 3 / 20% |
+| **B** Feeder Module | PETG (PA12 prod) | Base flat on bed, block vertical, post tall | None* | ~103 g | ~4–6 h | 0.2 / 3 / 30% |
 
 \* **Feeder post note:** the D15 × 130 mm cone post is the tall, slender feature.
 If first-layer adhesion is marginal, add a 5 mm sacrificial raft pad under the
@@ -128,13 +146,51 @@ assembly datum that future revisions and the kinematic model depend on.
 | `NEEDLE_SET_H` to set in V1.0B | 9.0 (guess) | **____ mm** | = the measured rest height |
 | Latch clearance (latch swings free) | — | ____ | ☐ free ☐ binds |
 
-### Pad contact verification (☐ pass / ✗ fail → revision)
+### Full needle vertical envelope (capture once, save many revisions)
+
+While a needle is installed for the measurement above, also capture the
+complete vertical envelope. This data feeds future sinker / cam-profile /
+needle-guard / installation-tooling work. Takes one extra minute now —
+saves a reinstall later.
+
+| Feature | Z above cyl top (mm) | Notes |
+|---|---|---|
+| Needle **butt** top | ____ | seats in slot bottom; sets max retract Z |
+| Hook **tip** | ____ | same as `NEEDLE_SET_H` measurement above |
+| Latch **pivot** (rivet) | ____ | latch swing reference |
+| Latch **tip when fully closed** | ____ | upper bound when latch over hook |
+| Latch **tip when fully open** | ____ | lower bound when latch out of yarn path |
+| Needle butt depth into slot | ____ | (= cyl top Z − butt top Z, signed) |
+
+### SINGLE-NEEDLE PRE-FLIGHT (required before seating all 72)
+
+> Do this **before** dropping all 72 needles. A failure mode discovered with
+> one needle costs one needle; with 72 it can damage many. This is the
+> single highest-value check in the whole guide.
+
+1. ☐ Insert **one** needle into a slot (preferably the slot 0 reference)
+2. ☐ Drop the collar over the cylinder OD and seat it on the datum
+3. ☐ Look straight down through the open Ø92 center
+4. ☐ Verify the push pad lands on the needle **shank**, NOT on:
+   - ☐ hook throat
+   - ☐ latch tongue
+   - ☐ latch rivet/pivot
+   - ☐ needle butt (wrong axial position)
+5. ☐ Lift collar off, inspect needle for marks or bend
+6. ☐ Try a second slot (180° opposite) to rule out one-off slot variance
+
+**Pre-flight result:** ☐ PASS → proceed to 72-needle population
+                       ☐ FAIL → STOP, record what the pad hit:
+                       ____________________ → revision required (V1.0B+)
+
+### Full-population pad contact verification (☐ pass / ✗ fail → revision)
 
 - ☐ Push pads contact needle **shank/back**, NOT hook throat
 - ☐ Push pads do NOT touch latch tongues
 - ☐ All 72 pads engage; none miss a needle
 - ☐ Collar does not rock or bind when seated with needles present
 - ☐ Needles end at uniform height after seating
+- ☐ Pre-flight (single-needle) test above PASSED before this step
 
 ### Outcome
 - `NEEDLE_SET_H` locked value: **____ mm** → release **V1.0B "validated"**

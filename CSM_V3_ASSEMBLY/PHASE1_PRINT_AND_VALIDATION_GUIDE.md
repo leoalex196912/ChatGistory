@@ -22,6 +22,7 @@ and become the project's foundational assembly datums.
 | B | Feeder Module | V1.2E | `5e23e06` | `CSM_V3_ASSEMBLY/feeder_module/freecad_macros/CSM_V3_FeederModule_V1_2E.FCMacro` |
 | D | Take-Down Hook Adapter | V1.0F | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
 | I | Needle Set & Index Collar | V1.0A | `0850699` | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
+| SR | Sinker Ring | V1.2.1 (LOCKED, ready to print) | `76fe6f4` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
 | F | PSU Terminal Guard | **Measurement Required — Not Yet Released** | — | (to be created at `CSM_V3_ASSEMBLY/electronics/psu_guard/`) |
 
 Parts A / B / D / I are **first-print candidates**, NOT production-final.
@@ -39,7 +40,8 @@ measurements are recorded and a final form factor is chosen.
 | 1 | **D** Take-Down Hook | **Verify printer behavior** | Fast, cheap, no assembly dependency |
 | 2 | **A** Cassette Spacers | **Verify dimensional accuracy** | Tiny print, blocks no other work |
 | 3 | **I** Needle Collar | **Establish machine datums** | Locks real needle envelope → `NEEDLE_SET_H` |
-| 4 | **B** Feeder Module | **Verify purchased-component integration** | Print after pigtail dims verified (§2); may go straight to print OR receive a V1.2F update first |
+| 4 | **SR** Sinker Ring (test slices first) | **Verify cassette-ID fit** | Print BOTH dual-clearance test slices (ID115.1 + ID115.3) before the full ring; pick the slice that drops cleanly over the cylinder, then print FULL |
+| 5 | **B** Feeder Module | **Verify purchased-component integration** | Print after pigtail dims verified (§2); may go straight to print OR receive a V1.2F update first |
 
 > This sequence mirrors how machine builders normally de-risk a new platform:
 > calibrate the printer first, then verify dimensional repeatability, then
@@ -61,6 +63,8 @@ measurements are recorded and a final form factor is chosen.
 | **A** Cassette Spacers ×6 | PETG (PA12 prod) | Upright, bore vertical, 6 on bed | None | ~5 g total | ~30 min | 0.2 / 3 / 50% gyroid |
 | **I** Needle Collar | PLA or PETG | Datum-hub-down, collar axis vertical | None | ~75 g | ~3–4 h | 0.2 / 3 / 20% |
 | **B** Feeder Module | PETG (PA12 prod) | Base flat on bed, block vertical, post tall | None* | ~103 g | ~4–6 h | 0.2 / 3 / 30% |
+| **SR** Sinker Ring (test slice) | PETG | Ring flat on bed | None | ~3 g | ~10 min | 0.2 / 3 / 30% |
+| **SR** Sinker Ring (full) | PETG (PA12 prod for Phase 2) | Ring flat on bed | None | ~50 g (est) | ~2–3 h | 0.2 / 3 / 30% gyroid |
 
 \* **Feeder post note:** the D15 × 130 mm cone post is the tall, slender feature.
 If first-layer adhesion is marginal, add a 5 mm sacrificial raft pad under the
@@ -83,6 +87,13 @@ post only. Print times are estimates — confirm in your slicer.
 | I | Skirt bore (slip over cyl OD) | 115.10 mm | ____ | ☐ |
 | I | Open center | Ø92 mm | ____ | ☐ |
 | I | Push-pad height (NEEDLE_SET_H) | 9.0 mm (PROV) | ____ | ☐ |
+| SR | Test slice ID — choose fit | 115.3 / 115.1 | _____ wins | ☐ |
+| SR | Ring OD | 135.0 mm | ____ | ☐ |
+| SR | Ring ID (chosen) | 115.3 mm (nominal) | ____ | ☐ |
+| SR | Sinker tip-to-tip span (sample) | ~107.3 mm (2× tip radius) | ____ | ☐ |
+| SR | Sample sinker pitch (3 adjacent) | 15.0° / ~14.04 mm arc | ____ | ☐ |
+| SR | Drop fit over cylinder (free + smooth?) | yes | ☐ yes ☐ tight ☐ loose | ☐ |
+| SR | Sinker base — visible cracks after 24h? | none | ☐ none ☐ hairlines ☐ cracks | ☐ |
 
 ---
 
@@ -284,6 +295,17 @@ prevent unnecessary CAD churn.
 - Pigtail thread spec / block T (Feeder) — from §2
 - Take-down weight target (operational, not geometry) — from §4
 
+### Post-bring-up cleanup backlog (non-blocking, do when convenient)
+
+These are known maintainability/refactor items that should NOT be tackled
+during bring-up but are tracked here so they don't get lost.
+
+| Item | Trigger | Suggested rev |
+|---|---|---|
+| Sinker Ring: switch from hardcoded constants to `import machine_datums as MD` | When CYL_OD / SLOT_COUNT next change, OR during any other sinker geometry edit | V1.2.2 |
+| Sinker Ring: explicit 0.3 mm base fillets for stress relief | Only if V1.2.1 print shows hairline cracks at sinker root after 24 h (see §1 SR inspection row) | V1.3 |
+| Feeder V1.2E: cosmetic "world" vs "cyl-local" label fix in print output | Next feeder revision (functional, not blocking) | V1.2F or later |
+
 ---
 
 ## 6. Print Orientation Notes
@@ -321,6 +343,20 @@ prevent unnecessary CAD churn.
   orientation — verify it didn't need bridging (it's a 45° so should be fine)
 - **Index notches:** vertical on skirt OD, no support
 - **Seam:** away from the wide θ=0 reference notch so it stays legible
+
+### SR — Sinker Ring
+- **Bed face:** ring flat (axial direction Z = perpendicular to bed)
+- **Why:** sinker projections print as in-plane horizontal cantilevers in a
+  single layer — strongest in tension (catch-and-release loads are radial,
+  not axial); ring ID + sinker tips on the same layer for best concentricity
+- **Test slices first:** print **both** `_TESTSLICE_ID115_1.stl` and
+  `_TESTSLICE_ID115_3.stl` (small ~10 min prints). The slice that drops
+  cleanly over the cylinder OD = your real-world clearance lock. Then print
+  the matching FULL STL.
+- **Supports:** none expected (all sinker overhangs are short in-plane)
+- **Seam:** outer ring OD, between two adjacent feeder windows
+- **Material note:** PETG for Phase 1; if cyclic-load hairlines appear after
+  24 h dwell test, jump to V1.3 with base fillets and/or PA12-CF
 
 ---
 
@@ -454,6 +490,7 @@ Part F V1.0 may not be released until **all of the following** are true:
 | B Feeder Module | ☐ | ☐ | ☐ | ☐ V1.2F? |
 | D Take-Down Hook | ☐ | ☐ | ☐ | ☐ |
 | I Needle Collar | ☐ | ☐ | ☐ | ☐ V1.0B |
+| SR Sinker Ring | ☐ test slice ☐ full | ☐ | ☐ | ☐ (already V1.2.1 LOCKED) |
 | F PSU Terminal Guard | ☐ | ☐ | ☐ | ☐ Measurement Required |
 
 **First-knit readiness gate:** all four mechanical parts (A/B/D/I) fit-validated

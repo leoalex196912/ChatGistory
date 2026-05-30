@@ -34,12 +34,17 @@ measurements are recorded and a final form factor is chosen.
 
 ### Recommended print order (risk-stratified)
 
-| # | Part | Why this order |
-|---|---|---|
-| 1 | **D** Take-Down Hook | Fast, cheap, easy to verify, no assembly dependency — printer calibration check |
-| 2 | **A** Cassette Spacers | Tiny print, confirms dimensional calibration, blocks no other work |
-| 3 | **I** Needle Collar | Highest-value measurements come out of this (real needle envelope → locks `NEEDLE_SET_H`) |
-| 4 | **B** Feeder Module | Longest + most material; print **after** pigtail dims verified (§2) — may go straight to print OR receive a V1.2F update first |
+| # | Part | Practical objective | Why this order |
+|---|---|---|---|
+| 1 | **D** Take-Down Hook | **Verify printer behavior** | Fast, cheap, no assembly dependency |
+| 2 | **A** Cassette Spacers | **Verify dimensional accuracy** | Tiny print, blocks no other work |
+| 3 | **I** Needle Collar | **Establish machine datums** | Locks real needle envelope → `NEEDLE_SET_H` |
+| 4 | **B** Feeder Module | **Verify purchased-component integration** | Print after pigtail dims verified (§2); may go straight to print OR receive a V1.2F update first |
+
+> This sequence mirrors how machine builders normally de-risk a new platform:
+> calibrate the printer first, then verify dimensional repeatability, then
+> establish the real machine datums, then integrate purchased components
+> against those datums.
 
 > Rationale: D and A confirm the printer is dimensionally well-behaved on
 > small parts before committing 75 g (I) or 103 g (B) of filament. Part I
@@ -138,6 +143,21 @@ assembly datum that future revisions and the kinematic model depend on.
 - ☐ Open Ø92 center gives finger access + bore visibility
 - ☐ Wide index notch (slot 0) aligns with θ=0 reference
 
+### Collar fit — measured play (locks future revisions)
+
+The current design gives **0.8 mm diametral clearance**
+(cyl OD 114.30, collar bore 115.10). Measure what that actually produces
+after PETG/PLA print shrinkage. The result could fix the collar fit
+spec for every future revision.
+
+| Measurement | Value | Action if extreme |
+|---|---|---|
+| Collar rotational free-play on cylinder | ____ ° | <2° = good; >10° = tighten bore |
+| Collar radial play at skirt OD (lateral wobble) | ____ mm | <0.3 mm = good; >0.8 mm = tighten |
+| Vertical seating drop (held above, dropped, settled at) | ____ mm | should equal datum-hub seat exactly |
+
+**Fit verdict:** ☐ ideal → lock 0.8 mm clear  ☐ tighten → next rev  ☐ loosen → next rev
+
 ### THE key measurement
 
 | Measurement | Provisional | **Actual** | Notes |
@@ -179,9 +199,26 @@ saves a reinstall later.
 5. ☐ Lift collar off, inspect needle for marks or bend
 6. ☐ Try a second slot (180° opposite) to rule out one-off slot variance
 
-**Pre-flight result:** ☐ PASS → proceed to 72-needle population
+**Pre-flight result:** ☐ PASS → proceed to needle freedom test below
                        ☐ FAIL → STOP, record what the pad hit:
                        ____________________ → revision required (V1.0B+)
+
+### Needle freedom test (catches invisible friction damage)
+
+A pad can miss the hook and still lightly scrape the shank. The damage
+may be invisible to the eye but will show up as needle friction —
+which for a knitting machine is often a more important indicator than
+visible marks.
+
+After removing the collar from the single-needle pre-flight above:
+
+- ☐ Needle slides freely through full travel by fingertip
+- ☐ No scratch marks visible on needle shank
+- ☐ Latch still swings freely after the test
+- ☐ Needle returns under gravity when cylinder is held vertical
+- ☐ Friction feel matches a fresh (untested) needle from the same batch
+
+If any check fails → STOP, do not populate 72 needles. Revision required.
 
 ### Full-population pad contact verification (☐ pass / ✗ fail → revision)
 

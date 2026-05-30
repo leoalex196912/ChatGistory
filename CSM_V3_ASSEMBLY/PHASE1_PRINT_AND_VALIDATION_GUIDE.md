@@ -22,8 +22,11 @@ and become the project's foundational assembly datums.
 | B | Feeder Module | V1.2E | `5e23e06` | `CSM_V3_ASSEMBLY/feeder_module/freecad_macros/CSM_V3_FeederModule_V1_2E.FCMacro` |
 | D | Take-Down Hook Adapter | V1.0F | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
 | I | Needle Set & Index Collar | V1.0A | `0850699` | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
+| F | PSU Terminal Guard | **Measurement Required — Not Yet Released** | — | (to be created at `CSM_V3_ASSEMBLY/electronics/psu_guard/`) |
 
-All four are **first-print candidates**, NOT production-final.
+Parts A / B / D / I are **first-print candidates**, NOT production-final.
+Part F is **not released** — see §7. Do not print until installed-wiring
+measurements are recorded and a final form factor is chosen.
 
 ---
 
@@ -228,6 +231,128 @@ prevent unnecessary CAD churn.
 
 ---
 
+## 7. Part F — PSU Terminal Guard — Pre-Design Measurement Sheet
+
+**Status:** Measurement Required / Not Yet Released. No STL generated.
+No macro committed. Do **not** print until all sections below are filled in
+and a final form factor is chosen.
+
+> **Why this part is different:** Parts A / B / D / I could be printed,
+> tested, and iterated safely. Part F covers **mains-voltage terminals** —
+> the entire purpose is to prevent contact with energized conductors, so it
+> must fit correctly on the first print. The installed wiring envelope is
+> more important than the bare PSU dimensions.
+
+### Bring-up sequence (DO NOT skip steps)
+
+1. ☐ Mount the PSU in its final location on the deck/frame
+2. ☐ Wire it exactly as it will be used (mains in, DC out, earth, all terminals)
+3. ☐ Take photos (see below) of the **wired** terminal area
+4. ☐ Take measurements (see below) with wires installed
+5. ☐ Choose form factor (see hierarchy below)
+6. ☐ Generate V1.0 macro using the actual numbers; review; print; install
+7. ☐ Re-verify safety checklist with guard in place before first power-on
+
+### PSU identification
+
+- PSU model number (exact variant): ____________________
+  *(e.g. S-250-24, S-250-12 — verify the label, do not assume from BOM line)*
+
+### Bare-PSU dimensions (calipers)
+
+| Measurement | Value | Notes |
+|---|---|---|
+| Body L × W × H | ____ × ____ × ____ mm | overall metal enclosure |
+| Terminal-end face W × H | ____ × ____ mm | the short end where terminals live |
+| Terminal strip width (end-to-end) | ____ mm | first screw to last screw |
+| Distance from chassis edge to first terminal | ____ mm | important — clearance for guard wall |
+| Terminal height above PSU base | ____ mm | strip-bottom Z reference |
+| Terminal protrusion (screw heads / wires past end face) | ____ mm | sets minimum guard depth |
+| Existing PSU-side fastener type & position | ____________________ | only relevant if PSU-mounted (not preferred) |
+
+### Installed envelope (with wiring connected)
+
+| Measurement | Value | Notes |
+|---|---|---|
+| Largest cable OD entering terminal area | ____ mm | mains cable usually dominates |
+| Wire bundle OD after dressing | ____ mm | sum of all wires bundled |
+| Minimum wire bend radius required | ____ mm | sets wire-exit slot geometry |
+| Wire exit direction (down / side / up) | ____________________ | drives slot face placement |
+| Clearance available around terminal end (mm in each direction): | | |
+| &nbsp;&nbsp;&nbsp;&nbsp; +X (right) | ____ mm | |
+| &nbsp;&nbsp;&nbsp;&nbsp; −X (left) | ____ mm | |
+| &nbsp;&nbsp;&nbsp;&nbsp; +Z (above) | ____ mm | |
+| &nbsp;&nbsp;&nbsp;&nbsp; −Y (outboard, away from PSU) | ____ mm | |
+
+### Terminal cover envelope (proximity to surrounding structure)
+
+| Measurement | Value |
+|---|---|
+| Distance from terminal screws to nearest frame member | ____ mm |
+| Distance from terminal screws to nearest wood panel | ____ mm |
+| Distance from terminal screws to nearest moving component | ____ mm |
+
+### Fastener information (for deck-mount preferred path)
+
+| Item | Value |
+|---|---|
+| Existing nearby deck mounting holes available | ____ mm pitch / ____ mm from PSU |
+| Preferred fastener size | ☐ M3 ☐ M4 ☐ wood screw ☐ other ____ |
+| Captive insert available in deck? | ☐ yes ☐ no — through-bolt with washer |
+
+### Photo requirements (attach in commit or paste below)
+
+- ☐ Terminal end, straight-on
+- ☐ Top-down
+- ☐ Side, showing wire exit path
+- ☐ Ruler or calipers visible in at least one image
+
+> Photos often reveal interference issues that numeric measurements miss —
+> these are not optional.
+
+### Safety checklist (verify ALL with guard installed, before first power-on)
+
+- ☐ No exposed mains terminals reachable by a fingertip (≥12 mm probe test)
+- ☐ Guard does not obstruct PSU ventilation slots
+- ☐ Guard removable for service **without** disconnecting wiring
+- ☐ Wire strain does not transfer to terminal screws (strain relief works)
+- ☐ AC and DC wiring remain visually distinguishable (color/route)
+- ☐ Terminal labels remain readable, or replicated on the guard exterior
+- ☐ Earth/PE conductor visibly bonded and not loosened by guard installation
+
+### Form-factor selection hierarchy
+
+In order of preference:
+
+1. **Deck-mounted protective tunnel over the terminal area** (PREFERRED)
+   - PSU can be replaced without redesigning the guard
+   - No dependency on PSU chassis-hole locations
+   - Less risk of blocking PSU ventilation
+   - Survives a future S-250 → other PSU swap
+2. Simple removable terminal shroud (snap or screw to nearby deck point)
+3. Hinged cover with latched access
+4. PSU-chassis-mounted guard (LAST RESORT — couples guard to PSU revision)
+
+### Service-access requirements (decide before V1.0 macro)
+
+- ☐ Insulated-screwdriver slot to tighten terminal screws without removing guard
+- ☐ Removable inspection panel for voltage verification with meter
+- ☐ Cable-tie anchor points or integral strain-relief bridge
+- ☐ Snap-off side panel for periodic re-torque checks
+
+### V1.0 release gate
+
+Part F V1.0 may not be released until **all of the following** are true:
+
+- ☐ Every measurement above is filled in (no blanks)
+- ☐ All four photos taken and committed
+- ☐ Form factor chosen and rationale recorded
+- ☐ Safety checklist reviewed for design intent (not just installation)
+- ☐ Final fastener / mount strategy locked
+- ☐ Reviewed by you, then macro drafted, reviewed inline, then printed
+
+---
+
 ## Sign-off
 
 | Part | Printed | Inspected | Fit-validated | Version locked |
@@ -236,6 +361,10 @@ prevent unnecessary CAD churn.
 | B Feeder Module | ☐ | ☐ | ☐ | ☐ V1.2F? |
 | D Take-Down Hook | ☐ | ☐ | ☐ | ☐ |
 | I Needle Collar | ☐ | ☐ | ☐ | ☐ V1.0B |
+| F PSU Terminal Guard | ☐ | ☐ | ☐ | ☐ Measurement Required |
 
-**First-knit readiness gate:** all four fit-validated + `NEEDLE_SET_H` locked
-+ take-down window found → proceed to first knit attempt.
+**First-knit readiness gate:** all four mechanical parts (A/B/D/I) fit-validated
++ `NEEDLE_SET_H` locked + take-down window found → proceed to first knit attempt.
+
+**First powered-session gate:** Part F released and installed + safety
+checklist (§7) verified → proceed to first powered session.

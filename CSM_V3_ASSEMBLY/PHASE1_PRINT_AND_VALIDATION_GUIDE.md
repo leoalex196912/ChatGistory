@@ -23,6 +23,8 @@ and become the project's foundational assembly datums.
 | D | Take-Down Hook Adapter | V1.0F | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
 | I | Needle Set & Index Collar | V1.0A | `0850699` | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
 | SR | Sinker Ring | V1.2.1 (LOCKED, ready to print) | `76fe6f4` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
+| CB | Cassette Base | V1.1 (LOCKED) — **OUTSOURCED, see §1.5** | `b758110` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |
+| RR | Retainer Ring | V1.0 (LOCKED) — **OUTSOURCED, see §1.5** | `b758110` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/retainer_ring/freecad_macros/CSM_V3_RetainerRing_V1_0.FCMacro` |
 | F | PSU Terminal Guard | **Measurement Required — Not Yet Released** | — | (to be created at `CSM_V3_ASSEMBLY/electronics/psu_guard/`) |
 
 Parts A / B / D / I are **first-print candidates**, NOT production-final.
@@ -65,6 +67,76 @@ measurements are recorded and a final form factor is chosen.
 | **B** Feeder Module | PETG (PA12 prod) | Base flat on bed, block vertical, post tall | None* | ~103 g | ~4–6 h | 0.2 / 3 / 30% |
 | **SR** Sinker Ring (test slice) | PETG | Ring flat on bed | None | ~3 g | ~10 min | 0.2 / 3 / 30% |
 | **SR** Sinker Ring (full) | PETG (PA12 prod for Phase 2) | Ring flat on bed | None | ~50 g (est) | ~2–3 h | 0.2 / 3 / 30% gyroid |
+
+> **Printer bed constraint:** 230 × 230 nominal, **220 × 220 reliable working area**.
+> Any part with footprint > 200 mm has ≤ 10 mm corner margin and is treated as
+> bed-marginal (first-layer adhesion risk). Both 200 mm cassette discs are
+> therefore **outsourced** — see §1.5 below.
+
+## 1.5 Outsourced Parts (bed-exceeding or bed-marginal)
+
+The two largest Phase 1 parts share **Ø 200 mm OD** (locked to match per ICD R2).
+With a 220 × 220 working area both fit, but at the very edge of reliable
+adhesion — and these are structural cassette rings where first-layer
+delamination would be catastrophic. **Both are sent to an SLS / MJF service
+as single pieces** rather than split-and-bond, because:
+
+- Splitting the cassette base cleanly is impractical (pedestal step, register
+  pocket, four overlapping bolt-circle patterns intersect at the split line)
+- SLS PA12 / MJF PA12 give isotropic strength (no layer-adhesion plane) and
+  better dimensional accuracy than FDM at this size class
+- Both rings define **datum surfaces** that mate with other locked parts —
+  splitting introduces a glued seam at exactly the wrong place
+
+### Parts and upload paths
+
+| Part | STL to upload | File size | Local relative path |
+|---|---|---|---|
+| **CB** Cassette Base V1.1 | `CSM_V3_CassetteBase_V1_1_FULL.stl` | 7.3 MB | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/cassette_base/CSM_V3_CassetteBase_V1_1_FULL.stl` |
+| **RR** Retainer Ring V1.0 | `CSM_V3_RetainerRing_V1_0_FULL.stl` | 2.4 MB | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/retainer_ring/CSM_V3_RetainerRing_V1_0_FULL.stl` |
+
+### Recommended specification
+
+| Spec | Recommendation | Why |
+|---|---|---|
+| Material | **PA12 nylon (SLS or MJF)** | Industry-standard structural; isotropic; no layer-adhesion plane; better dim accuracy than FDM at 200 mm scale |
+| Color | Natural / white / grey (any) | Cosmetic only; functional surface is internal |
+| Finish | Standard / unfinished | Don't pay for vapor smoothing — internal datum surfaces should stay as-printed |
+| Tolerance class | Standard (±0.3 mm or service default) | Verify bore + bolt-hole IDs after receipt |
+| Quantity | 1 each | No spares yet; revisit after first-fit |
+
+### Approximate cost & lead time (Craftcloud / JLC3DP / Sculpteo / Shapeways)
+
+| Part | PA12 SLS, qty 1 | Lead time inc. shipping |
+|---|---|---|
+| Retainer Ring V1.0 | $15–25 | 5–10 business days |
+| Cassette Base V1.1 | $30–50 | 5–10 business days |
+| **Order together** | **$45–75 total** | Save shipping by combining |
+
+Order **both in the same service order** — same shipping, matching production
+batch (more consistent tolerances), single receiving event.
+
+### Post-receipt inspection (treat like §1 critical-dimensions)
+
+| Part | Dimension | Nominal | Measured | Pass? |
+|---|---|---|---|---|
+| CB | Outer disc OD | 200.0 mm | ____ | ☐ |
+| CB | Cam-bolt PCD (M5 × 6 at 155 mm) | 155.0 mm | ____ | ☐ |
+| CB | Cam-pin PCD (D? × 6 at 145 mm) | 145.0 mm | ____ | ☐ |
+| CB | Feeder PCD (M4 × 6 at 190 mm) | 190.0 mm | ____ | ☐ |
+| CB | Frame-mount PCD (M5 × 4 at 180 mm) | 180.0 mm | ____ | ☐ |
+| CB | Sinker pedestal OD | 150.0 mm | ____ | ☐ |
+| CB | Cassette top Z (above frame mount face) | per macro | ____ | ☐ |
+| RR | Outer ring OD | 200.0 mm | ____ | ☐ |
+| RR | Inner ring ID | per macro | ____ | ☐ |
+| RR | Bolt holes align with CB feeder PCD (190) | yes | ☐ | ☐ |
+| BOTH | Surfaces flat (no warp from cooling) | < 0.3 mm deviation | ____ | ☐ |
+| BOTH | Threads / press-fits test cleanly | go/no-go | ____ | ☐ |
+
+If any dimension is out by more than the service tolerance (±0.3 mm typical),
+contact the service for reprint before continuing assembly. The cassette
+base + retainer ring fit determines the geometry of every other locked
+cassette part — they are the **datum-defining components**.
 
 \* **Feeder post note:** the D15 × 130 mm cone post is the tall, slender feature.
 If first-layer adhesion is marginal, add a 5 mm sacrificial raft pad under the
@@ -491,6 +563,8 @@ Part F V1.0 may not be released until **all of the following** are true:
 | D Take-Down Hook | ☐ | ☐ | ☐ | ☐ |
 | I Needle Collar | ☐ | ☐ | ☐ | ☐ V1.0B |
 | SR Sinker Ring | ☐ test slice ☐ full | ☐ | ☐ | ☐ (already V1.2.1 LOCKED) |
+| CB Cassette Base | ☐ outsourced ordered ☐ received | ☐ | ☐ | ☐ (already V1.1 LOCKED) |
+| RR Retainer Ring | ☐ outsourced ordered ☐ received | ☐ | ☐ | ☐ (already V1.0 LOCKED) |
 | F PSU Terminal Guard | ☐ | ☐ | ☐ | ☐ Measurement Required |
 
 **First-knit readiness gate:** all four mechanical parts (A/B/D/I) fit-validated

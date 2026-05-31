@@ -20,7 +20,7 @@ and become the project's foundational assembly datums.
 |---|---|---|---|---|
 | A | Cassette Spacers (×6) | V1.0 | `33e96e3` | `01_MECHANICAL/02_CASSETTE_HEAD/cassette_spacers/freecad_macros/CSM_V3_CassetteSpacer_V1_0.FCMacro` |
 | B | Feeder Module | V1.2E | `5e23e06` | `CSM_V3_ASSEMBLY/feeder_module/freecad_macros/CSM_V3_FeederModule_V1_2E.FCMacro` |
-| D | Take-Down Hook Adapter | V2.0 | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V2_0.FCMacro` |
+| D | Take-Down Hook Adapter | **V1.0H** (current candidate) + V2.0 (alt., wire hooks) | `dd93e76` … `fa674f6` | V1.0H: `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0H.FCMacro` • V2.0 alt: `…/CSM_V3_TakeDownHookAdapter_V2_0.FCMacro` |
 | I | Needle Set & Index Collar | V1.0A | `0850699` | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
 | SR | Sinker Ring | V1.2.1 (LOCKED, ready to print) | `76fe6f4` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
 | CB | Cassette Base | V1.1 (LOCKED) — **OUTSOURCED, see §1.5** | `b758110` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |
@@ -318,7 +318,92 @@ If any check fails → STOP, do not populate 72 needles. Revision required.
 
 ---
 
-## 4. Take-Down Weight Tuning Table — Hook Adapter V2.0
+## 3.5 Take-Down Hook — Failure Mode Diagnostic (REQUIRED before any redesign)
+
+**Context:** During Phase 1 handling, a printed hook stem broke under
+light touch. Before iterating on hook geometry (V1.0J / V2.0 / further),
+capture the failure data so the next revision targets the real root cause
+rather than guessed parameters.
+
+> A 3 mm PETG cantilever printed correctly should feel noticeably **flexible
+> before failure**, not snap. "Breaks by touch" most often indicates a
+> *print quality* issue, not a *design* issue. Diagnose first.
+
+### What part broke?
+
+- ☐ Take-Down Hook Adapter, version **V1.0F** / **V1.0G** / **V1.0H** ____ (circle one)
+- ☐ Other part, name: ____________________
+
+### Fracture location (most informative)
+
+- ☐ At the ring top surface (hook root) → root-fillet stress concentration
+- ☐ One layer above the ring → layer adhesion at the first stem layer
+- ☐ Midway up the stem → general bending failure
+- ☐ At the barb / sphere tip → tip stress riser
+- ☐ Multiple locations → systemic print problem
+
+**Photo of fracture (attach to commit, or paste path):** ____________________
+
+> The fracture face tells the story. Photograph at high resolution with
+> good light. Layer adhesion failure shows individual layer lines on the
+> break face; bulk failure shows a fibrous / matte texture.
+
+### Print parameters
+
+| Parameter | Value | Notes |
+|---|---|---|
+| PETG brand / batch | ____ | wet PETG = bad layer adhesion |
+| Nozzle temperature | ____ °C | PETG ideal ~240-250; below 235 = poor adhesion |
+| Bed temperature | ____ °C | typical 70-85 |
+| Layer height | ____ mm | 0.2 is standard; 0.28+ = weak |
+| Wall count | ____ | **3+ recommended**, 2 walls = too few for small features |
+| Infill % | ____ | 30+ |
+| Print speed at stem | ____ mm/s | small features need ≤30 mm/s for proper adhesion |
+| Part cooling fan at stem | ____ % | PETG **needs less cooling** than PLA; >60% causes layer issues |
+| Z-seam position | ____ | random / aligned / sharpest corner |
+| Filament dry? | ☐ y ☐ n ☐ unknown | wet PETG = 30-50% strength loss |
+
+### How was the part removed from the bed?
+
+- ☐ Lifted gently after cooling
+- ☐ Pried with spatula
+- ☐ Flexed off
+- ☐ Broke during removal ← important, indicates the break may be a removal artifact not a design failure
+
+### Diagnostic flow
+
+1. ☐ Photograph fracture surface
+2. ☐ Fill all print parameter fields above
+3. ☐ If wet filament / low temp / over-cooling / 2 walls is the cause →
+   **reprint V1.0H** with corrected settings before any geometry change
+4. ☐ If fracture at root after correct print → revision needed:
+   ☐ **V1.0J** = V1.0H + conical fillet (continuous root fillet, not sphere)
+   ☐ **V2.0** = wire-hook carrier (already designed, architectural alternative)
+5. ☐ If fracture at stem mid / tip → barb redesign or material change
+
+### V1.0J candidate (conical root fillet) — NOT YET WRITTEN
+
+If diagnostic shows the V1.0H sphere blend is still inadequate at the
+root, the next geometry candidate is:
+
+- Replace base-blend sphere (r 2.0) with a **conical frustum**
+  - D 6 at ring surface tapering to D 3 over 3 mm of stem height
+  - Smooth tangent transition (no curvature discontinuity)
+- All other V1.0H params unchanged
+- Will not write/run V1.0J until diagnostic data justifies it
+
+### V2.0 status
+
+The V2.0 wire-hook carrier macro and STL **exist in the repo** as an
+architectural alternative but are NOT the locked version. They are kept
+ready in case post-diagnostic analysis confirms that printed PETG hooks
+are fundamentally inadequate. Until then, V1.0H remains the candidate
+and Phase 1 plan calls for proving the printed-hook design first, then
+switching to wire hooks only if needed.
+
+---
+
+## 4. Take-Down Weight Tuning Table — Hook Adapter V1.0H
 
 Empirical machine-characterization data. Start light, step up 50 g at a time.
 

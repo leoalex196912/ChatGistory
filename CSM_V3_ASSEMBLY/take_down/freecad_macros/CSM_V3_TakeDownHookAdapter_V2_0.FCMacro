@@ -1,0 +1,142 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- TAKE-DOWN HOOK ADAPTER V2.0  (metal hooks in printed carrier)
+# =============================================================================
+# Reported failure: V1.0F/G/H printed PETG hook stems broke from light
+# touch.  Root cause: thin vertical PETG cantilevers (D <= 3 mm) with
+# horizontal layer lines fail at the worst layer-adhesion plane.
+# No realistic stem-thickening fix wins back the layer-adhesion gap.
+#
+# V2.0 SOLUTION (textile-machine standard practice):
+#   - Print only the ring + eye spider (no hooks)
+#   - Insert metal wire hooks into 4 through-holes
+#   - User bends the protruding ends into J-hooks
+#   - Optional CA glue in the hole to lock the wire
+#
+# Why this works:
+#   - Steel wire bending strength >> PETG, no layer-adhesion plane
+#   - Printed part has NO thin features = nothing fragile
+#   - Hooks are field-replaceable in seconds (cut, pull, re-insert new)
+#   - Real circular sock machines use metal hooks for take-down
+#
+# WIRE OPTIONS (any of these work):
+#   - Steel paperclip (~0.9 mm dia) -- universally available
+#   - 1.0 mm music wire / piano wire -- stronger, $5 for a lifetime supply
+#   - Fishing hook shank (size 4-6) -- pre-bent, just trim and insert
+#   - 22 AWG (0.6 mm) steel wire -- gentlest, for fine yarn
+#
+# Default hole D 1.2 mm fits 0.9-1.0 mm wire with light interference +
+# a drop of CA glue for permanence.  Drill out to 1.6 mm if you want
+# 1.3 mm music wire.
+#
+# Reference: ICD R6 I11; D-4b; V1.0H failure report (2026-05-27)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# -- ring (UNCHANGED from V1.0H) --
+RING_OD             = 75.0
+RING_ID             = 57.0
+RING_T              = 6.5
+
+# -- wire-hook through-holes (NEW in V2.0) --
+HOOK_COUNT          = 4
+HOOK_WIRE_HOLE_D    = 1.2      # close fit for ~0.9-1.0 mm steel wire
+HOOK_RADIAL_POS     = (RING_ID + RING_OD) / 4.0   # = 33.0, ring mid-wall
+
+# -- central cord eye (UNCHANGED from V1.0H) --
+ARM_W               = 6.0
+ARM_T               = 5.0
+EYE_BORE_D          = 6.0
+EYE_BORE_WALL       = 3.5
+EYE_TOTAL_OD        = EYE_BORE_D + 2*EYE_BORE_WALL   # 13 mm
+EYE_RISE            = 8.0
+EYE_TOTAL_H         = RING_T + ARM_T + EYE_RISE      # 19.5
+
+# -- sanity --
+fabric_tube_id_min = 95.0
+wood_base_id       = 100.0
+assert RING_OD < fabric_tube_id_min
+assert RING_OD < wood_base_id - 5
+assert RING_ID > EYE_TOTAL_OD + 4
+assert HOOK_WIRE_HOLE_D < (RING_OD - RING_ID)/2 - 2, \
+    "Wire hole too big -- would weaken ring wall"
+
+MATERIAL = "PETG ring + steel wire hooks (Phase 1 consumable)"
+hook_r = HOOK_RADIAL_POS
+
+print("=" * 70)
+print("CSM V3 -- Take-Down Hook Adapter V2.0  (metal-hook carrier)")
+print("=" * 70)
+print(f"  ring:        OD {RING_OD} x ID {RING_ID} x {RING_T} mm")
+print(f"  wire holes:  {HOOK_COUNT}x D{HOOK_WIRE_HOLE_D} at r={hook_r:.1f}")
+print(f"  eye:         2-arm spider + post to bed (V1.0H carry-over)")
+print(f"  print:       NO fragile features -- robust by design")
+print(f"  material:    {MATERIAL}")
+
+doc = FreeCAD.newDocument("TakeDownHookAdapter_V2_0")
+
+# ---- RING ----
+ring_outer = Part.makeCylinder(RING_OD/2.0, RING_T, FreeCAD.Vector(0, 0, 0))
+ring_inner = Part.makeCylinder(RING_ID/2.0, RING_T + 2.0, FreeCAD.Vector(0, 0, -1.0))
+ring = ring_outer.cut(ring_inner)
+
+# ---- WIRE THROUGH-HOLES (replaces all printed hooks) ----
+for i in range(HOOK_COUNT):
+    theta = 2.0 * math.pi * i / HOOK_COUNT
+    cx = hook_r * math.cos(theta)
+    cy = hook_r * math.sin(theta)
+    hole = Part.makeCylinder(HOOK_WIRE_HOLE_D/2.0, RING_T + 4.0,
+                             FreeCAD.Vector(cx, cy, -2.0))
+    ring = ring.cut(hole)
+
+# ---- CENTRAL CORD EYE (V1.0H unchanged) ----
+arms = None
+for sx in (-1, +1):
+    arm_len = RING_ID/2.0 + 1.0
+    arm = Part.makeBox(arm_len, ARM_W, ARM_T,
+                       FreeCAD.Vector(0 if sx > 0 else -arm_len, -ARM_W/2, RING_T))
+    arms = arm if arms is None else arms.fuse(arm)
+
+eye_post = Part.makeCylinder(EYE_TOTAL_OD/2.0, EYE_TOTAL_H,
+                             FreeCAD.Vector(0, 0, 0))
+cord_bore = Part.makeCylinder(EYE_BORE_D/2.0, EYE_TOTAL_OD + 4.0,
+                              FreeCAD.Vector(0, -EYE_TOTAL_OD/2 - 2,
+                                             RING_T + ARM_T + EYE_RISE/2),
+                              FreeCAD.Vector(0, 1, 0))
+eye_post = eye_post.cut(cord_bore)
+spider = arms.fuse(eye_post)
+ring = ring.fuse(spider)
+
+obj = doc.addObject("Part::Feature", "TakeDownHookAdapter_V2_0")
+obj.Shape = ring
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.6, 0.55, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT = os.path.join(BASE, "CSM_V3_TakeDownHookAdapter_V2_0.stl")
+Part.export([obj], OUT)
+sz = os.path.getsize(OUT)
+print(f"[OK] STL: {OUT}  ({sz/1024:.1f} KB)")
+print(f"     volume: {ring.Volume:.0f} mm^3  (~{ring.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("WIRE-HOOK ASSEMBLY (do this after print, ~5 min):")
+print(" 1. Cut 4 pieces of steel wire ~25 mm long")
+print("    (paperclip / 1 mm music wire / fishing hook shank)")
+print(" 2. Insert each through a hole from the EYE-POST side of the ring")
+print("    (eye post is the cord-attachment side; hooks point AWAY from eye)")
+print(" 3. Wire should protrude ~3 mm on the eye side, ~16 mm on the hook side")
+print(" 4. Bend the long side 90 deg outward, then 90 deg back toward ring")
+print("    to form a J-hook around the ring's outer edge")
+print(" 5. Add a small inward curl at the tip for stitch retention")
+print(" 6. Optional: drop of CA glue in the hole to lock wire orientation")
+print(" 7. To replace a damaged hook: cut wire flush, push remainder")
+print("    through with a punch, insert new wire. ~10 seconds.")
+print()
+print("WHY THIS DESIGN: PETG cantilever hooks (V1.0F-H) failed by touch.")
+print("Steel wire bends instead of breaking, has no layer-adhesion plane,")
+print("and is field-replaceable. Real CSMs use metal hooks for this reason.")
+print("=" * 70)

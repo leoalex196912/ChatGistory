@@ -20,7 +20,7 @@ and become the project's foundational assembly datums.
 |---|---|---|---|---|
 | A | Cassette Spacers (×6) | V1.0 | `33e96e3` | `01_MECHANICAL/02_CASSETTE_HEAD/cassette_spacers/freecad_macros/CSM_V3_CassetteSpacer_V1_0.FCMacro` |
 | B | Feeder Module | V1.2E | `5e23e06` | `CSM_V3_ASSEMBLY/feeder_module/freecad_macros/CSM_V3_FeederModule_V1_2E.FCMacro` |
-| D | Take-Down Hook Adapter | V1.0H | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0H.FCMacro` |
+| D | Take-Down Hook Adapter | V2.0 | `dd93e76` | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V2_0.FCMacro` |
 | I | Needle Set & Index Collar | V1.0A | `0850699` | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
 | SR | Sinker Ring | V1.2.1 (LOCKED, ready to print) | `76fe6f4` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/sinker_ring/freecad_macros/CSM_V3_SinkerRing_V1_2_1.FCMacro` |
 | CB | Cassette Base | V1.1 (LOCKED) — **OUTSOURCED, see §1.5** | `b758110` | `3D-Project/01_MECHANICAL/02_CASSETTE_HEAD/cassette_base/freecad_macros/CSM_V3_CassetteBase_V1_1.FCMacro` |
@@ -318,7 +318,7 @@ If any check fails → STOP, do not populate 72 needles. Revision required.
 
 ---
 
-## 4. Take-Down Weight Tuning Table — Hook Adapter V1.0H
+## 4. Take-Down Weight Tuning Table — Hook Adapter V2.0
 
 Empirical machine-characterization data. Start light, step up 50 g at a time.
 

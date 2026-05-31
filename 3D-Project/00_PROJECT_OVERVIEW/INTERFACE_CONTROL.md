@@ -563,7 +563,7 @@ coordinate system. This is enabled by the invariants section above.
 | MG90S servo (×6 + 2 spare) | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/servo_mg90s/` |
 | LM2596 buck converter | NOT YET as STL | 3 | to add at `CSM_V3_ASSEMBLY/electronics/lm2596_buck/` |
 | Touchscreen 7" | NOT YET | 3 | `CSM_V3_ASSEMBLY/electronics/touchscreen_7in/` |
-| Take-Down Hook Adapter | **V1.0H** (Phase 1 bring-up consumable, 2026-05-27 — 4-hook ring + spider cord eye, drops through D100 take-down column; obsoleted by Phase 2 dual-roller nip) | 1 | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
+| Take-Down Hook Adapter | **V2.0** (Phase 1 bring-up consumable, 2026-05-27 — 4-hook ring + spider cord eye, drops through D100 take-down column; obsoleted by Phase 2 dual-roller nip) | 1 | `CSM_V3_ASSEMBLY/take_down/freecad_macros/CSM_V3_TakeDownHookAdapter_V1_0F.FCMacro` |
 | Needle Set & Index Collar | **V1.0A** (Phase 1 assembly aid, 2026-05-27 — clips over cyl OD, datum hub on top face, 72 segmented push pads set uniform needle height, 72 index notches; `NEEDLE_SET_H=9.0` PROVISIONAL, lock to V1.0B after first physical needle measurement) | 1 (tooling) | `CSM_V3_ASSEMBLY/needle_jig/freecad_macros/CSM_V3_NeedleSetCollar_V1_0A.FCMacro` |
 | Ribber (Phase 2) | provisioned only | 1 | future |
 

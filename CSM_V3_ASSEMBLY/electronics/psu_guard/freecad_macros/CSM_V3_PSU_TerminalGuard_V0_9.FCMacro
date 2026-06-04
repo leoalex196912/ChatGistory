@@ -1,0 +1,248 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- PSU TERMINAL GUARD V0.9  (architectural framework / not yet built)
+# =============================================================================
+# Status:   FRAMEWORK ONLY.  Datasheet PSU dimensions LOCKED; installed-
+#           wiring envelope is TBD.  Will refuse to generate STL until
+#           all 5 measurement params at the top are filled in (assertion
+#           fires immediately on run).
+#
+# Target PSU:   Mean Well S-250-24 (B07Y7L664K)
+#               Body 199 x 110 x 50 mm, ~960 g
+#               10-pos M3.5 terminal strip on one short end
+#               Per BOM_V11/V12 line items
+#
+# Form factor:  Deck-mounted tunnel (PSU-independent).
+#               Tunnel sits on the deck, butts against the PSU's short
+#               end face.  PSU's own end face seals the inboard opening
+#               so no finger-access gap.  Mounting flanges bolt the
+#               tunnel to the deck on each side.
+#
+# Safety intent (Phase 1; not a certified guard):
+#   - All exposed mains terminals covered by PETG shroud
+#   - All openings finger-safe (<12 mm in any direction)
+#   - Ventilation slots prevent heat trapping at the terminal area
+#   - Service slot lets you tighten terminal screws WITHOUT removing guard
+#   - Removable by unscrewing flanges only -- no PSU dependency
+#
+# Reference:  BOM V12 (S-250-24); Phase 1 Print & Validation Guide section 7
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+
+# =============================================================================
+# === DATASHEET PSU DIMENSIONS (LOCKED -- Mean Well S-250-24) ================
+# =============================================================================
+PSU_L           = 199.0   # body length (long axis, deck plane)
+PSU_W           = 110.0   # body width (short axis, deck plane)
+PSU_H           =  50.0   # body height (above deck)
+# Terminal-strip Z position on the end face (typical S-series):
+TERM_STRIP_Z_LO =   8.0   # bottom of strip above PSU base
+TERM_STRIP_Z_HI =  42.0   # top of strip above PSU base
+TERM_STRIP_W    =  90.0   # strip width (end-to-end of screws)
+
+# =============================================================================
+# === INSTALLED MEASUREMENTS (FILL FROM PHASE 1 GUIDE SECTION 7) ============
+# === macro will REFUSE to build until all five are set =====================
+# =============================================================================
+TERM_PROTRUDE      = None   # mm. Screws + wires protrude past the end face.
+                            # Measure with wires INSTALLED.
+WIRE_BUNDLE_OD     = None   # mm. Bundle OD after the wires are dressed.
+WIRE_BEND_RADIUS   = None   # mm. Minimum bend radius required by your wires.
+WIRE_EXIT          = None   # str. One of: 'down', 'side_left', 'side_right',
+                            # 'top'.  Where the wire bundle leaves the tunnel.
+DECK_FASTENER      = None   # str. One of:
+                            #   'M3_insert'    (heat-set into wood deck)
+                            #   'M4_through'   (through-bolt with washer/nut)
+                            #   'wood_screw_4' (#8 / M4 wood screw direct)
+
+# =============================================================================
+# === DESIGN PARAMETERS (chosen now, change only with reason) ===============
+# =============================================================================
+WALL_T              = 2.5   # shroud wall thickness (non-load-bearing)
+INTERNAL_CLEAR_X    = 1.0   # side gap between PSU body and tunnel wall
+INTERNAL_CLEAR_TOP  = 8.0   # vertical clearance above PSU top inside tunnel
+FINGER_SAFE_MAX     = 11.0  # max single-dim of any opening (IP2X probe ~12)
+
+# Ventilation slots on top
+VENT_SLOT_W         = 4.0
+VENT_SLOT_L         = 30.0
+VENT_COUNT          = 4
+
+# Service-screwdriver slot on top above terminal screws
+SERVICE_SLOT_W      = 6.0   # fits #1/#2 screwdriver shaft; finger-safe
+SERVICE_SLOT_L_FRAC = 0.85  # fraction of terminal strip width
+
+# Mounting flanges on the bottom edges (two: +X and -X side)
+FLANGE_W            = 14.0  # outboard projection from tunnel wall
+FLANGE_T            = 4.0   # flange thickness
+FLANGE_HOLES_PER    = 2     # screw holes per flange
+
+# =============================================================================
+# === BUILD GUARD (refuses to run until TBD params are set) =================
+# =============================================================================
+
+def _check_required():
+    missing = []
+    for n in ('TERM_PROTRUDE', 'WIRE_BUNDLE_OD', 'WIRE_BEND_RADIUS',
+              'WIRE_EXIT', 'DECK_FASTENER'):
+        if globals().get(n) is None:
+            missing.append(n)
+    if missing:
+        raise RuntimeError(
+            "PSU Guard V0.9 cannot build yet. The following installed-"
+            f"envelope parameters are TBD: {missing}.  Capture them per "
+            "Phase 1 Print & Validation Guide section 7, fill them at the "
+            "top of this macro, then re-run.  This guard exists because "
+            "mains-voltage parts must fit on the first print -- "
+            "measurement-first discipline."
+        )
+
+_check_required()
+
+# =============================================================================
+# === FASTENER RESOLUTION ===================================================
+# =============================================================================
+FASTENER_HOLE_D = {'M3_insert': 3.4, 'M4_through': 4.5, 'wood_screw_4': 4.2}
+assert DECK_FASTENER in FASTENER_HOLE_D, f"Unknown DECK_FASTENER {DECK_FASTENER}"
+SCREW_HOLE_D = FASTENER_HOLE_D[DECK_FASTENER]
+
+assert WIRE_EXIT in ('down', 'side_left', 'side_right', 'top'), \
+    f"Unknown WIRE_EXIT {WIRE_EXIT}"
+
+# =============================================================================
+# === SAFETY ASSERTIONS =====================================================
+# =============================================================================
+WIRE_SLOT_W = max(WIRE_BUNDLE_OD + 1.0, FINGER_SAFE_MAX)
+assert WIRE_SLOT_W <= FINGER_SAFE_MAX or WIRE_EXIT == 'down', (
+    f"WIRE_BUNDLE_OD {WIRE_BUNDLE_OD} forces a slot >{FINGER_SAFE_MAX} mm. "
+    "For side/top exit this is finger-accessible. Route wires DOWN through "
+    "the deck instead, or use a smaller bundle / grommet."
+)
+assert VENT_SLOT_W <= FINGER_SAFE_MAX, "Vent slot too wide"
+assert SERVICE_SLOT_W <= FINGER_SAFE_MAX, "Service slot too wide"
+
+# =============================================================================
+# === DERIVED ENVELOPE ======================================================
+# =============================================================================
+CAV_W = PSU_W + 2*INTERNAL_CLEAR_X
+CAV_H = PSU_H + INTERNAL_CLEAR_TOP
+CAV_L = TERM_PROTRUDE + max(WIRE_BUNDLE_OD, WIRE_BEND_RADIUS) + 4.0
+
+EXT_W = CAV_W + 2*WALL_T
+EXT_H = CAV_H + WALL_T   # top wall only; deck is the bottom
+EXT_L = CAV_L + WALL_T   # closed at far end; open at PSU-facing end
+
+print("=" * 70)
+print("CSM V3 -- PSU Terminal Guard V0.9 (BUILD)")
+print("=" * 70)
+print(f"  PSU:             Mean Well S-250-24 ({PSU_L} x {PSU_W} x {PSU_H})")
+print(f"  Tunnel ext:      {EXT_W:.1f} W x {EXT_H:.1f} H x {EXT_L:.1f} L")
+print(f"  Tunnel cavity:   {CAV_W:.1f} W x {CAV_H:.1f} H x {CAV_L:.1f} L")
+print(f"  Wire exit:       {WIRE_EXIT}, slot {WIRE_SLOT_W:.1f} mm")
+print(f"  Vents:           {VENT_COUNT}x {VENT_SLOT_W}x{VENT_SLOT_L} on top")
+print(f"  Service slot:    {SERVICE_SLOT_W} mm wide on top above terminals")
+print(f"  Mounting:        {DECK_FASTENER}, hole D{SCREW_HOLE_D}, "
+      f"2 flanges x {FLANGE_HOLES_PER} holes each")
+
+# =============================================================================
+# === GEOMETRY ==============================================================
+# Local frame:
+#   PSU short end face is at Y = 0
+#   Tunnel cavity opens toward -Y (PSU side)
+#   Tunnel extends in +Y over the terminal area
+#   X = 0 is centered on PSU
+#   Z = 0 is the deck top surface
+# =============================================================================
+
+doc = FreeCAD.newDocument("PSU_TerminalGuard_V0_9")
+
+# Outer shell box
+shell = Part.makeBox(EXT_W, EXT_L, EXT_H,
+                     FreeCAD.Vector(-EXT_W/2, 0, 0))
+
+# Hollow cavity (extends slightly into -Y so the PSU-side face is open)
+cavity = Part.makeBox(CAV_W, CAV_L + 2.0, CAV_H,
+                      FreeCAD.Vector(-CAV_W/2, -1.0, 0))
+guard = shell.cut(cavity)
+
+# --- Wire exit slot ------------------------------------------------------
+# Slot Z center sits at the terminal strip Z midpoint
+term_z_ctr = (TERM_STRIP_Z_LO + TERM_STRIP_Z_HI) / 2.0
+if WIRE_EXIT == 'down':
+    # No slot cut needed -- the open bottom of the tunnel IS the exit.
+    # The deck should have a through-hole/slot for the wires to descend.
+    pass
+elif WIRE_EXIT == 'side_left':
+    slot = Part.makeBox(WALL_T + 2.0, WIRE_SLOT_W, WIRE_SLOT_W,
+                        FreeCAD.Vector(-EXT_W/2 - 1.0,
+                                       CAV_L - WIRE_SLOT_W - 2.0,
+                                       term_z_ctr - WIRE_SLOT_W/2))
+    guard = guard.cut(slot)
+elif WIRE_EXIT == 'side_right':
+    slot = Part.makeBox(WALL_T + 2.0, WIRE_SLOT_W, WIRE_SLOT_W,
+                        FreeCAD.Vector(EXT_W/2 - WALL_T - 1.0,
+                                       CAV_L - WIRE_SLOT_W - 2.0,
+                                       term_z_ctr - WIRE_SLOT_W/2))
+    guard = guard.cut(slot)
+elif WIRE_EXIT == 'top':
+    slot = Part.makeBox(WIRE_SLOT_W, WIRE_SLOT_W, WALL_T + 2.0,
+                        FreeCAD.Vector(-WIRE_SLOT_W/2,
+                                       CAV_L - WIRE_SLOT_W - 2.0,
+                                       EXT_H - WALL_T - 1.0))
+    guard = guard.cut(slot)
+
+# --- Ventilation slots (top, distributed along length) ------------------
+vent_y_first = 6.0
+vent_pitch = (CAV_L - 12.0 - VENT_SLOT_L) / max(VENT_COUNT - 1, 1)
+for i in range(VENT_COUNT):
+    vy = vent_y_first + i * vent_pitch
+    vent = Part.makeBox(VENT_SLOT_W, VENT_SLOT_L, WALL_T + 2.0,
+                        FreeCAD.Vector(-VENT_SLOT_W/2, vy,
+                                       EXT_H - WALL_T - 1.0))
+    guard = guard.cut(vent)
+
+# --- Service slot (top, above terminal screws) --------------------------
+svc_l = TERM_STRIP_W * SERVICE_SLOT_L_FRAC
+svc = Part.makeBox(SERVICE_SLOT_W, svc_l, WALL_T + 2.0,
+                   FreeCAD.Vector(-SERVICE_SLOT_W/2,
+                                  (TERM_PROTRUDE/2) - svc_l/2,
+                                  EXT_H - WALL_T - 1.0))
+guard = guard.cut(svc)
+
+# --- Mounting flanges (bottom edges, both X sides) ----------------------
+for sx in (-1, +1):
+    fx = (sx * EXT_W/2) if sx > 0 else (sx * EXT_W/2 - FLANGE_W)
+    flange = Part.makeBox(FLANGE_W, EXT_L, FLANGE_T,
+                          FreeCAD.Vector(fx, 0, 0))
+    guard = guard.fuse(flange)
+    # Holes
+    for j in range(FLANGE_HOLES_PER):
+        hy = (EXT_L * (j + 1)) / (FLANGE_HOLES_PER + 1)
+        hole = Part.makeCylinder(SCREW_HOLE_D/2.0, FLANGE_T + 2.0,
+                                 FreeCAD.Vector(fx + FLANGE_W/2,
+                                                hy, -1.0))
+        guard = guard.cut(hole)
+
+# =============================================================================
+# === EXPORT ================================================================
+# =============================================================================
+obj = doc.addObject("Part::Feature", "PSU_TerminalGuard_V0_9")
+obj.Shape = guard
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.85, 0.20, 0.20)   # red = safety part
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT  = os.path.join(BASE, "CSM_V3_PSU_TerminalGuard_V0_9.stl")
+Part.export([obj], OUT)
+print(f"[OK] STL: {OUT}  ({os.path.getsize(OUT)/1024:.1f} KB)")
+print(f"     volume: {guard.Volume:.0f} mm^3  (~{guard.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("INSTALL:")
+print(" 1. Verify the guard slides cleanly over the wired terminal area")
+print(" 2. Bolt the two flanges to the deck (do NOT bolt to the PSU)")
+print(" 3. Confirm fingertip cannot reach any terminal through any opening")
+print(" 4. Confirm a screwdriver reaches the terminal screws through the")
+print("    service slot WITHOUT removing the guard")
+print("=" * 70)

@@ -1,0 +1,406 @@
+# CSM V3 -- SESSION LOG  2026-06-04
+# Scope: Take-down robustness iteration, sinker audit, outsourcing decision,
+#        Phase 1 Guide expansion, PSU Part F framework, electrical wiring +
+#        physical layout + visualization
+# Files: 7 commits; 4 documents; 1 visualization macro; ICD updates
+
+================================================================
+HEADLINE OUTCOMES
+================================================================
+
+1. Take-Down Hook Adapter went through full design cycle:
+   V1.0F -> V1.0G (floating cantilever fix) -> V1.0H (hook robustness)
+   -> V2.0 wire-hook architecture (drafted) -> rolled back to V1.0H as
+   current candidate, V2.0 retained as architectural alternative pending
+   physical failure-mode diagnosis.
+
+2. Cassette Base V1.1 (D200) + Retainer Ring V1.0 (D200) confirmed as
+   OUTSOURCED parts (exceed 220x220 reliable bed area). User ordered
+   both online from SLS PA12 service; expected delivery 5-7 days.
+
+3. Phase 1 Print & Validation Guide expanded with:
+   - §1.5 Outsourced Parts section (cassette base + retainer ring spec)
+   - §3.5 Take-Down Hook Failure-Mode Diagnostic (required before
+     any redesign; captures fracture photo + print params + fracture
+     location to identify root cause)
+   - §7 PSU Terminal Guard Pre-Design Measurement Sheet
+   - Cleanup backlog (sinker V1.2.2 refactor + sinker V1.3 base fillets)
+   - Sinker Ring V1.2.1 fully integrated into print queue D -> A -> I
+     -> SR -> B
+   - Sign-off split into "first-knit readiness gate" (A/B/D/I/SR) and
+     "first-powered-session gate" (Part F)
+
+4. PSU confirmed as Mean Well S-250-24 (B07Y7L664K) from BOM_V11/V12.
+   Datasheet dims 199x110x50 locked. V0.9 framework macro committed
+   with 5 installed-envelope params TBD (refuses to build until set).
+
+5. Day 1 + Day 1.5 deliverables produced during 5-7 day wait window:
+   - CSM_V3_WIRING_V1_0.md     (410 lines, schematic + bench test)
+   - CSM_V3_ELECTRICAL_LAYOUT_V1_0.md (316 lines, physical mount plan)
+   - CSM_V3_ElectricalLayout_Viz_V1_0.FCMacro + .STL + .FCStd
+     (17 components placed on Wood Base V1.1 for visual fit check)
+
+================================================================
+TAKE-DOWN HOOK DESIGN HISTORY (TODAY)
+================================================================
+
+V1.0F (existing, generated 2026-05-27):
+   - Multi-hook ring with cylindrical PETG hook stems D2.2 x 10 mm
+   - 4-hook ring, 2-arm spider, central cord eye
+   - Bug discovered: eye_post (D13 cylinder) started at Z=RING_T (6.5 mm)
+     in print frame, floating over open ring ID with NO support below
+   - First-layer of post would be Ø13 disc in mid-air; arms too were
+     bridges with only one end anchored
+   - Slicer would need supports across the ring interior bore
+
+V1.0G (committed 70f7ea5):
+   - Eye post extended from Z=0 (bed) to Z=19.5 (full height)
+   - Post is now self-supporting column; arms bridge from ring inner
+     wall (one end) to fully-supported post (other end)
+   - 23 mm bridge span (well within PETG capability)
+   - Volume +863 mm^3 = 20.3 g PETG (was 19.2 g in V1.0F)
+   - V1.0F archived
+
+V1.0H (committed 37b59de):
+   User reported: V1.0F/G hook stems broke under light handling.
+   Root cause analysis:
+   - D2.2 x 10 mm vertical PETG cantilever
+   - Layer lines horizontal across stem (weakest direction for bend)
+   - Tiny "blend" sphere at root (r=1.1) -- no real fillet
+   - Sphere-on-cylinder transitions at tip = additional stress riser
+   - Theoretical clean break ~4 N (~400 g)
+   - Practical layer-adhesion derate ~0.5: ~2 N (~200 g)
+
+   V1.0H fixes:
+   - HOOK_THICKNESS  2.2 -> 3.0 mm    (d^3 scaling: 2.54x stronger)
+   - HOOK_DEPTH      10 -> 8 mm       (linear: 1.25x stronger)
+   - BASE_BLEND_R    r_stem -> 2.0    (proper fillet at the root)
+   - HOOK_BARB_OFFSET 1.8 unchanged
+   - Theoretical clean break: ~13 N (~1.3 kg)
+   - Practical: ~6.5 N (~650 g) -- 3.2x stronger overall
+   - Mass: 20.4 g PETG (negligible change)
+   - V1.0G archived
+
+V2.0 (committed fa674f6, then rolled back 7bf6977):
+   User pushed back: "Hook stems break by touch" suggests V1.0H still
+   inadequate -> proposed wire-hook carrier architecture (steel wire
+   inserts through ring; user bends J-hooks).
+
+   V2.0 designed:
+   - No printed hooks; only ring + spider + eye-post
+   - 4 vertical through-holes D1.2 mm for steel wire (paperclip /
+     music wire / fishing hook shank)
+   - User bends wire after insertion
+   - Field-replaceable in 10 seconds
+   - Print has NO thin features
+
+   THEN ENGINEERING PUSHBACK (correct):
+   - "A properly printed 3 mm PETG cantilever should feel noticeably
+     flexible BEFORE failure, not snap"
+   - Most "breaks by touch" failures = print quality, not design:
+     wet filament, low nozzle temp (<235), over-cooling, only 2 walls,
+     Z-seam through stem root, mechanical damage on bed removal
+   - Therefore V2.0 was premature architectural pivot
+
+   Rollback (commit 7bf6977):
+   - V1.0H restored from archive as current candidate
+   - V2.0 macro + STL kept in live folder as architectural alternative
+   - ICD R6: take-down row rewritten -- V1.0H "current candidate",
+     V2.0 "alternative pending failure-mode diagnosis"
+   - Phase 1 Guide V2.0 references reverted to V1.0H
+   - NEW: §3.5 Failure Mode Diagnostic section added to Phase 1 Guide:
+     * Required photo of fracture
+     * Print parameter capture (filament, temp, walls, cooling, Z-seam)
+     * Fracture location categorization (root / mid / tip)
+     * Bed-removal method check ("broke during removal" != design fail)
+     * Decision flow: print fix vs geometry fix (V1.0J conical fillet,
+       drafted in guide not written) vs architecture fix (V2.0 ready)
+
+User next step: print V1.0H with corrected settings (3+ walls, 240-250C
+nozzle, dry filament, <50% cooling, random Z-seam). NO model changes
+needed -- V1.0H STL already has D3.0 hooks. Then if it still breaks,
+photograph fracture face and we diagnose properly.
+
+================================================================
+OUTSOURCED PARTS DECISION
+================================================================
+
+User has 230x230 printer bed nominal / 220x220 reliable working area
+(typical first-layer adhesion margin issue at corners).
+
+Two largest parts in project:
+   Cassette Base V1.1 -- OD 200 mm, complex disc with multiple PCDs
+   Retainer Ring V1.0 -- OD 200 mm, thin annulus
+
+Both fit on bed but with only 10 mm corner margin. For structural
+datum-defining rings, that's bed-marginal. User chose to outsource
+both as single-piece SLS PA12 from online service (not split/glue).
+
+Phase 1 Guide §1.5 added:
+   - STL upload paths
+   - Spec: PA12 nylon SLS/MJF, standard finish
+   - Cost: $15-25 retainer, $30-50 cassette base, ~$45-75 combined
+   - Lead time 5-10 business days
+   - Post-receipt inspection table (OD, PCDs, flatness, threads)
+   - Rationale: these are datum-defining components, glued split-seam
+     would be at exactly the wrong place
+
+User confirmed ordered all parts online; expects 5-7 day delivery.
+
+================================================================
+FULL STL INVENTORY + FOLDER HYGIENE
+================================================================
+
+User reported disorganization (e.g. 03_DRIVE_SYSTEM empty vs
+06_DRIVE_SYSTEM populated). Comprehensive scan produced:
+
+Tier 1 (LOCAL PRINT, 220x220 bed):
+   1. Take-Down Hook V1.0H (current candidate)
+   2. Cassette Spacers V1.0 (x6)
+   3. Sinker Ring V1.2.1 test slices first, then FULL
+   4. Cam Ring V6.5 TESTSLICE then FULL
+   5. Cylinder V3.1 FULL (~14 MB, ~120 g PETG)
+   6. Needle Set Collar V1.0A
+   7. Feeder Module V1.2E (after pigtail M4 verification)
+
+Tier 2 (OUTSOURCE, D200):
+   8. Cassette Base V1.1 FULL
+   9. Retainer Ring V1.0 FULL
+
+Tier 3 (LAYER 2 STRUCTURAL, print when mounting cassette to frame):
+   10. Bearing Housing TOP V2.5.1
+   11. Bearing Housing BOTTOM V2.5.1
+   12. Spacer Tube (one of 22.7/22.9/23.1 mm based on stack measurement)
+   13. Drive Hub V2.4.2
+   14. Motor Mount V1.4 (NEMA 23 mount)
+
+Folder hygiene issues found:
+   - Empty 01_FRAME, 03_DRIVE_SYSTEM, 04_YARN_SYSTEM (skeleton folders)
+   - Duplicate archives in 07_KNITTING/_archive/ (already in proper
+     02_CASSETTE_HEAD/.../­_archive/)
+   - Loose reference STLs in 07_KNITTING root (Cylinder 64/72 Slots,
+     gloria-zylinder) -- not project parts
+   - MotorMount_V1_3 obsolete (replaced by V1.4 in repo)
+   - drive_bought/motor_mount_v1_4 misleading (it's a print, not a buy)
+
+================================================================
+SINKER RING AUDIT (V1.2.1)
+================================================================
+
+User asked me to double-check sinker_ring directory. Findings:
+
+GOOD:
+   - V1.2.1 macro present (29 KB), 3 STLs (FULL + 2 dual-clearance test
+     slices ID115.1 + ID115.3)
+   - V1.0, V1.1, V1.2 properly archived
+   - READMEs for each version
+   - File-for-file identical to GitHub mirror; clean working tree
+   - Dimensions consistent with canonical MD:
+     * RING_ID 115.30 = CYL_OD 114.30 + 1.0 (0.5 mm/side clearance)
+     * 72 sinkers at 5° pitch (matches SLOT_COUNT)
+     * 6 feeder windows at 60°
+   - Locked-version status per ICD R6: V1.2.1 "Final design - ready
+     for printing"
+   - All 4 review fixes applied in V1.2.1 vs V1.2 (cutter size,
+     boolean robustness, dual clearance bug fix, cut volume verify)
+
+WORTH FLAGGING (added to Phase 1 Guide §5 cleanup backlog):
+   - Hardcoded constants instead of import MD pattern -- no current
+     impact, but future CYL_OD changes will silently miss this part
+     -> V1.2.2 refactor candidate
+   - PETG cyclic load risk acknowledged in V1.2.1 header; base fillets
+     0.3 mm deferred to V1.3 if hairlines appear during 24-h dwell test
+   - Added to Phase 1 Guide: SR row in §0 index, print queue, post-print
+     critical dims, print orientation notes, sign-off table
+
+================================================================
+PSU PART F STATUS
+================================================================
+
+PSU confirmed: Mean Well S-250-24 (ASIN B07Y7L664K) per BOM_V11/V12.
+User pasted datasheet confirming external dimension 199 x 110 x 50 mm.
+
+V0.9 framework macro (commit 6d725f6):
+   - All datasheet dimensions LOCKED (199x110x50)
+   - All terminal-strip Z positions LOCKED (typical S-series)
+   - Form factor LOCKED: deck-mounted tunnel (PSU-independent)
+   - 5 installed-envelope params at top, all None:
+     TERM_PROTRUDE, WIRE_BUNDLE_OD, WIRE_BEND_RADIUS,
+     WIRE_EXIT (down/side_L/side_R/top), DECK_FASTENER (M3_insert/
+     M4_through/wood_screw_4)
+   - _check_required() raises RuntimeError if any TBD
+   - Verified: running V0.9 raises clean error listing missing params
+   - Tunnel geometry coded but inert until measurements arrive
+   - FINGER_SAFE_MAX = 11 mm enforced on all openings via asserts
+   - Service-screwdriver slot 6 mm wide above terminals
+   - 4 ventilation slots 4x30 on top
+   - 2 mounting flanges with fastener-type-aware holes
+
+Additional trimpot capture added to measurement list: V-adjust trimpot
+on S-250-24 (20-26.4 V range) -- if on terminal-end face, service slot
+may need widening in V1.0.
+
+Status: WAITING ON USER BENCH WORK (install PSU on deck, wire, measure
+per Phase 1 Guide §7, photograph). When 5 numbers + photos arrive,
+V0.9 framework becomes V1.0 in one parameter swap.
+
+================================================================
+ELECTRICAL DELIVERABLES DURING WAIT WINDOW
+================================================================
+
+User pivot (correct): "I would avoid spending that time designing more
+printable hardware that might change once you have real measurements.
+Instead, use the time to reduce project risk."
+
+Accepted. Rebooted to non-CAD planning work.
+
+Day 1 -- CSM_V3_WIRING_V1_0.md (commit e9064d6, 410 lines):
+   §0 Component inventory cross-referenced to BOM
+   §1 Block diagram (ASCII) covering mains -> DC -> logic -> actuators
+   §2 Power distribution detail:
+      - Mains side (E-stop NC + 2A T-fuse + S-250-24, 16AWG 600V)
+      - 24V DC bus (14AWG trunk, color convention)
+      - TWO separate LM2596 bucks (Pi isolated from servo transients)
+      - Pi power options: USB-C wall wart (bench) vs GPIO 5V (final)
+   §3 Signal architecture:
+      - Mega <-> Pi UART link (USB-A/B, 115200 baud, ASCII protocol)
+      - Mega -> TB6600 (step/dir/en via 220R resistors)
+      - Mega -> 6 MG90S servos (D9/10/11/12/44/45)
+      - NEMA 23 4-wire to TB6600 motor outputs
+      - E-stop dual-contact: breaks mains AND signals Mega D2 ISR
+   §4 Single-point earthing (no ground loops)
+   §5 Wire/connector/fuse table
+   §6 Wire color convention LOCKED for project
+   §7 Bench-test procedure 5 staged steps with pass criteria
+   §8 Open items (E-stop model, mains plug type, IEC inlet)
+   §9 Revision log
+
+Day 1.5 -- CSM_V3_ELECTRICAL_LAYOUT_V1_0.md (commit 9e921aa, 316 lines):
+   Companion to wiring doc. Defines WHERE each component physically lives.
+   §1 BENCH TEST layout (600x400 plywood, this week)
+   §2 FINAL MACHINE layout on Wood Base V1.1:
+      4 perimeter strips defined; precise (X, Y) coords for every part:
+        PSU: (-195, 0) on LEFT strip (long axis along Y, 199 mm)
+        TB6600: (+200, -47) on RIGHT, near motor
+        Mega: (+200, +75) on RIGHT
+        Buck #1: (-50, +160) on BACK
+        Buck #2: (+50, +160) on BACK
+        24V terminal block: (0, +180) on BACK
+        Pi 4 + touchscreen: NOT on wood base -- on mast per ICD I10
+   §2.5 Vertical front operator panel (200x60x3 mm):
+      IEC C14 inlet, 12mm fuse, 22mm E-stop, 2x 5mm LEDs
+      L-bracketed to wood base front edge
+   §2.6 Cable routing rules (mains FRONT, 24V BACK, signals RIGHT,
+        AC<->DC crossings at right angle, 50 mm separation)
+   §2.7 Mounting hardware BOM
+   §4 TBD items (PSU hole pattern verify, E-stop model, Pi placement,
+      V1.2 wood base needs electronics holes drilled)
+
+Electrical Layout Visualization (commit 15076bc):
+   FreeCAD macro CSM_V3_ElectricalLayout_Viz_V1_0.FCMacro
+   17 components placed at correct world (X, Y, Z):
+     - Wood Base V1.1 (40% transparent)
+     - 4 uprights
+     - Take-down reserved column (pink transparent marker)
+     - NEMA 23 + HG5 gearbox tower
+     - All electronics per layout doc
+     - Operator panel with cutouts
+     - E-stop mushroom (sticks out forward)
+     - IEC inlet body, fuse holder body
+   Outputs: STL (8 MB) + FCStd (20 KB, preserves colors in GUI)
+   Console prints color legend
+   Edit COMPONENTS table to iterate layout, re-run for fast feedback
+
+================================================================
+GIT COMMITS THIS SESSION (chronological)
+================================================================
+
+37b59de  Part D V1.0H: hook robustness pass (D2.2 -> D3.0, length, root fillet)
+fa674f6  Part D V2.0: metal hooks in printed carrier
+7bf6977  Take-down hook: roll back V2.0 lock; V1.0H restored as candidate
+70f7ea5  Part D V1.0G: fix floating eye-post cantilever (extend post to bed)
+6d725f6  Part F V0.9: PSU Terminal Guard architectural framework (no STL)
+e9064d6  Day 1: Electrical wiring diagram V1.0 (bench-test prep)
+9e921aa  Day 1.5: Electrical physical layout V1.0
+15076bc  Electrical layout visualization macro V1.0 (preview-only, no print)
+
+Plus prior commits this session series:
+2074d9e  Phase 1 Guide §1.5 Outsourced Parts
+e6a210b  Phase 1 Guide §3 needle freedom + collar fit + print purpose
+e416410  Phase 1 Guide §7 PSU measurement sheet
+d9862a9  Phase 1 Guide Sinker Ring + post-bring-up cleanup backlog
+... (older commits in 5e23e06...c33e96e3 range covered prior parts)
+
+All commits pushed to: leoalex196912/ChatGistory @ main
+Working tree clean; in sync with origin/main at 15076bc.
+
+================================================================
+OUTSTANDING USER ACTIONS / OPEN ITEMS
+================================================================
+
+Physical / bench (during wait window):
+   [ ] Print V1.0H hook adapter with corrected PETG settings
+       (3+ walls, 240-250 C, dry filament, <50% cooling, random Z-seam)
+   [ ] If V1.0H still breaks: photograph fracture face + fill §3.5
+       diagnostic in Phase 1 Guide
+   [ ] Install S-250-24 PSU on deck in final position
+   [ ] Wire it (mains + DC + earth)
+   [ ] Measure per §7: TERM_PROTRUDE, WIRE_BUNDLE_OD, WIRE_BEND_RADIUS,
+       WIRE_EXIT, DECK_FASTENER; also trimpot location
+   [ ] Photograph 4 angles with ruler in frame
+   [ ] Order E-stop button (not in current BOM): 22mm panel-mount,
+       NC+NC double-pole, latching mushroom, 10A/250V min
+   [ ] Decide mains plug type (region) + IEC inlet sub-part
+   [ ] Order Tier 1 parts in arrival sequence: D -> A -> I -> SR -> B
+
+Documentation to land if user wants next:
+   [ ] Day 2: Mega <-> Pi UART protocol + state machine
+   [ ] Day 3: Mega firmware architecture
+   [ ] Day 4: Assembly procedures (needle install, feeder calibration,
+       first-knit, emergency shutdown)
+   [ ] Day 5: Tools + consumables checklist (ferrules, heatshrink,
+       crimps, wire labels, threadlocker)
+   [ ] Day 6: Datum + calibration plan review
+
+Backlog (non-blocking):
+   [ ] Sinker Ring V1.2.2 (refactor to import MD)
+   [ ] Sinker Ring V1.3 (explicit 0.3 mm base fillets) if hairlines
+       appear during 24-h dwell test
+   [ ] Feeder V1.2E cosmetic "world" vs "cyl-local" label fix
+   [ ] Wood Base V1.2 (add electronics mounting holes per layout V1.0)
+
+================================================================
+KEY ARCHITECTURAL DECISIONS THIS SESSION
+================================================================
+
+1. Take-down: V1.0H is the candidate; V2.0 wire-hook architecture is
+   the fallback. Decide based on PHYSICAL diagnosis, not assumption.
+
+2. Cassette base + retainer ring: OUTSOURCED, not split-and-bonded.
+   These are datum-defining components; glued seams at exactly the
+   wrong place.
+
+3. Controller stack: Mega 2560 + Raspberry Pi 4 (NOT ESP32) per BOM.
+   Mega handles real-time motor/servo; Pi handles UI + pattern logic.
+   Link via UART/USB at 115200 baud.
+
+4. PSU placement: LEFT zone of wood base, long axis along Y, terminals
+   facing BACK strip. Deck-mounted terminal guard (Part F V0.9 ready,
+   awaiting measurements).
+
+5. Pi 4 + touchscreen: lives on touchscreen mast (ICD I10), not on
+   wood base. Saves wood-base real estate.
+
+6. Operator panel: vertical 200x60x3 mm at front edge, L-bracketed.
+   Houses IEC C14 inlet, fuse, E-stop mushroom, status LEDs.
+
+7. Two SEPARATE LM2596 5V bucks: one for Mega+servos, one for Pi.
+   Sharing one buck makes servo transients crash the Pi.
+
+8. Methodology: STOP iterating CAD on speculation; design around real
+   measurements; use wait windows for non-CAD planning work
+   (wiring/protocol/procedures/checklists).
+
+================================================================
+END OF SESSION LOG
+================================================================

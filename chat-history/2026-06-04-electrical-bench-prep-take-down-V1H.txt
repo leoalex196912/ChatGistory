@@ -402,5 +402,157 @@ KEY ARCHITECTURAL DECISIONS THIS SESSION
    (wiring/protocol/procedures/checklists).
 
 ================================================================
-END OF SESSION LOG
+ADDENDUM (later same day, 2026-06-04 evening)
+================================================================
+
+User feedback escalation: "ASCII diagrams not useful for drilling --
+need professional colorful images showing every detail with actual
+product references". Confirmed FreeCAD's bundled Python ships with
+matplotlib 3.10.8 (no install required). Pivoted from text-based
+diagrams to proper engineering drawings.
+
+DELIVERABLE: 3-sheet drilling drawing set
+File: CSM_V3_ASSEMBLY/electronics/drawings/generate_drawings.py
+      (600+ line matplotlib script, regenerable, run with FreeCAD's Python)
+Output per sheet: PNG (200 DPI raster) + PDF (vector)
+
+Sheet 1 -- wood_base_top.png/pdf  (519 / 86 KB):
+  - Wood Base V1.1 (500x400) with wood-grain texture overlay
+  - Take-down hole D100 in red dashed circle with pink halo
+  - 4 uprights as 20x20 posts with X markers + coordinate labels
+  - PSU Mean Well S-250-24 visualized realistically:
+      * silver body with 9 ventilation slots
+      * black terminal strip on +Y end with 10 screws drawn
+      * red 115/230V switch label
+      * MEAN WELL branded label panel with ASIN B07Y7L664K
+      * 4x M4 chassis holes marked Ø4.5 in red
+  - NEMA 23 + HG5 gearbox tower (top view):
+      * Outer 57x57 motor body in aluminum gray
+      * Center D14 shaft
+      * 4 visible mount holes at corners
+      * Inner gearbox circle dashed
+      * 4x M5 wood holes at PCD 47.14 (drill pattern)
+  - TB6600 driver:
+      * Red metal case with 6 heatsink fins
+      * 6 screw terminals with brass screws
+      * DIP switch bank visible
+      * 2x M3 mounting holes
+  - Arduino Mega 2560 (blue PCB):
+      * USB-B port on +X end (aluminum colored)
+      * Barrel jack (black)
+      * ATmega2560 chip block
+      * Pin headers (top + bottom)
+      * Reset button
+      * 4x M3 holes marked
+  - 2x LM2596 bucks (green PCB):
+      * Big visible toroid inductor
+      * SMD LM2596 chip
+      * Adjustment trimpot
+      * Output capacitor
+      * 2x M3 corner holes
+  - 24V distribution block: yellow with 4 terminal positions
+  - Operator panel marker on -Y edge (hatched grey)
+  - Dimensions: 500x400 overall, 300 upright pitch X, 240 pitch Y
+  - 7 component callouts with exact (X, Y) coordinates
+  - Title block (right side):
+      project, drawing name, scale 1:5, units, rev V1.0, date,
+      sheet 1/3, tolerance ±1.0 mm, material walnut hardwood 18 mm
+  - Legend with all colors + drill summary table
+
+Sheet 2 -- operator_panel.png/pdf (170 / 42 KB):
+  - 200x60x3 mm panel front view
+  - IEC C14 inlet with 3 pin-hole pattern at scale
+  - 12 mm fuse holder with cap detail
+  - 22 mm E-stop mushroom: red on black bezel with "STOP" lettering
+  - 2 status LEDs: green POWER + amber FAULT
+  - X dimensions between features: 30 / 45 / 45 / 55 mm
+  - L-bracket mounting points marked at ±90 mm in red dashed
+
+Sheet 3 -- components_card.png/pdf (316 / 73 KB):
+  - Reference card with 6 components
+  - Per entry: colored ASIN swatch, product name, ASIN, description,
+    physical specs (mm + mass + mount pattern), Amazon URL
+  - Print-friendly bench reference
+
+Commit: df5fed7 (drawings + generator)
+
+================================================================
+PERMISSION ALLOWLIST CONFIGURATION
+================================================================
+
+User: "Why do I need to give permission every time? It didn't happen
+before. You always had access to working directories."
+
+Investigation: user-level settings.json had only marketplace config;
+NO permissions.allow array; NO project-level settings.json in either
+project root. Therefore every Bash/PowerShell command was hitting a
+fresh one-off approval prompt.
+
+User invoked the fewer-permission-prompts skill.
+
+Scanned the 34.5 MB active transcript jsonl. Frequency analysis:
+
+  Bash top 5:  cd (128), ls (53), py (31), echo (15), grep (14)
+               -> all already auto-allowed OR arbitrary-code risk
+
+  PowerShell top 5:  Set-Location (27), Get-ChildItem (7),
+                     Write-Output (6), New-Item (3), Copy-Item (2)
+                     -> Set-Location/Get-ChildItem/Write-Output are
+                        read-only and not auto-allowed
+                     -> New-Item / Copy-Item mutate -> exclude
+
+  MCP top:  mcp__github__get_file_contents (8),
+            mcp__github__search_code (5),
+            mcp__mcp-registry__search_mcp_registry (4)
+            -> all read-only, no mutations
+
+WROTE: C:\3D-Project\.claude\settings.json
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(Set-Location *)",
+      "PowerShell(Get-ChildItem *)",
+      "PowerShell(Write-Output *)",
+      "Bash(where *)",
+      "mcp__github__get_file_contents",
+      "mcp__github__search_code",
+      "mcp__mcp-registry__search_mcp_registry"
+    ]
+  }
+}
+
+Expected next-session impact: ~50 prompts eliminated.
+
+Intentionally NOT committed to git: project .claude/settings.json is
+machine-specific and lives on the workstation, not in the repo. Different
+users on different machines need different reasonable permission scopes.
+If user later wants this versioned across machines, can move to
+csm-v3-repo and commit.
+
+What still prompts (intentional):
+  - Any Python/FreeCAD/Blender invocation (arbitrary code)
+  - All git mutations (push, commit, add)
+  - File create/modify (mkdir, New-Item, Copy-Item, Write/Edit tools)
+  - Any new pattern not in the allowlist
+
+================================================================
+COMMITS THIS SESSION (UPDATED)
+================================================================
+
+37b59de  Part D V1.0H: hook robustness pass
+fa674f6  Part D V2.0: metal hooks (later rolled back)
+7bf6977  Take-down hook rollback: V1.0H restored as candidate
+70f7ea5  Part D V1.0G: floating eye-post cantilever fix
+6d725f6  Part F V0.9: PSU Terminal Guard architectural framework
+e9064d6  Day 1: Electrical wiring diagram V1.0
+9e921aa  Day 1.5: Electrical physical layout V1.0
+15076bc  Electrical layout visualization macro V1.0
+2721275  Session log 2026-06-04 (initial)
+df5fed7  Electrical mounting drawings V1.0 (3 sheets, matplotlib)
+<NEXT>   Session log 2026-06-04 ADDENDUM (drawings + permissions)
+
+All pushed to: leoalex196912/ChatGistory @ main
+
+================================================================
+END OF SESSION LOG (with addendum)
 ================================================================

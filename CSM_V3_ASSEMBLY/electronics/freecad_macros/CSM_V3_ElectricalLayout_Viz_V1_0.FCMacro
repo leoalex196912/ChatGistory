@@ -1,0 +1,218 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- ELECTRICAL LAYOUT VISUALIZATION V1.0  (preview-only)
+# =============================================================================
+# Draws the Wood Base V1.1 with all electronics components placed at their
+# planned (X, Y, Z) coordinates per CSM_V3_ELECTRICAL_LAYOUT_V1_0.md.
+#
+# OUTPUT:
+#   - CSM_V3_ElectricalLayout_Viz_V1_0.stl   (geometry only, any viewer)
+#   - CSM_V3_ElectricalLayout_Viz_V1_0.FCStd (colors preserved, open in FreeCAD)
+#
+# NOTHING IN THIS MACRO GETS PRINTED OR MANUFACTURED.  It is a visual
+# verification artifact only -- helps you check fit before drilling
+# mounting holes in the real wood base.
+#
+# Coordinates: world frame from machine_datums.py
+#   X: +right (motor side), Y: +back, Z: +up (deck up)
+#   Origin at center of wood base; wood base top at Z = 18.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ======== Wood base reference (from machine_datums) ========
+WB_W = MD.WOOD_BASE_W       # 500
+WB_D = MD.WOOD_BASE_D       # 400
+WB_T = MD.WOOD_BASE_T       # 18
+WB_TOP = MD.WOOD_BASE_TOP_Z # 18
+WB_BOT = MD.WOOD_BASE_BOTTOM_Z  # 0
+HOLE_D = MD.TAKEDOWN_HOLE_D # 100
+
+# Uprights
+UP_W = MD.UPRIGHT_W         # 20
+UP_LEN = MD.UPRIGHT_LEN     # 188
+UP_BOT = MD.UPRIGHT_BOT_Z   # 18
+UP_X = MD.UPRIGHT_X_POSITIONS  # (+150, -150)
+UP_Y = MD.UPRIGHT_Y_POSITIONS  # (+120, -120)
+
+# Motor
+MX = MD.MOTOR_X             # 85
+MY = MD.MOTOR_Y             # -47
+M_BOT = MD.MOTOR_BODY_BOTTOM_Z  # 18
+
+# ======== Electronics positions (from ELECTRICAL_LAYOUT_V1_0.md) ========
+class Comp:
+    def __init__(self, name, color, cx, cy, w, d, h, z_off=0, label=""):
+        self.name  = name
+        self.color = color      # (r, g, b) 0..1
+        self.cx, self.cy = cx, cy
+        self.w, self.d, self.h = w, d, h
+        self.z_off = z_off      # standoff height above wood base top
+        self.label = label or name
+
+# Component table (name, RGB color, center X, center Y, W, D, H, Z_offset, label)
+COMPONENTS = [
+    Comp("PSU_S250-24",     (0.20, 0.20, 0.20),  -195,   0,  110, 199, 50,  0,
+         "S-250-24 PSU (199x110x50, terminals at +Y)"),
+    Comp("TB6600",          (0.10, 0.60, 0.10),  +200, -47,   96,  56, 37,  0,
+         "TB6600 stepper driver (96x56x37)"),
+    Comp("ArduinoMega",     (0.10, 0.10, 0.80),  +200, +75,  102,  54, 15, 10,
+         "Mega 2560 (102x54, on 10mm standoffs)"),
+    Comp("Buck1_MegaServo", (0.95, 0.40, 0.10),   -50,+160,   43,  21, 12,  5,
+         "LM2596 #1 -> Mega+servo 5V"),
+    Comp("Buck2_Pi",        (0.95, 0.40, 0.10),   +50,+160,   43,  21, 12,  5,
+         "LM2596 #2 -> Pi 5V (isolated)"),
+    Comp("TerminalBlock",   (0.90, 0.90, 0.10),     0,+180,   50,  20, 25,  0,
+         "24V distribution block (WAGO 221 or DIN)"),
+]
+
+# ======== Operator panel (vertical, on FRONT edge) ========
+PANEL_W      = 200.0   # X width
+PANEL_H      =  60.0   # Z height
+PANEL_T      =   3.0   # Y thickness
+PANEL_Y      = -MD.WOOD_BASE_D/2.0 - PANEL_T  # just behind front edge
+
+# Panel feature centers (X relative to panel center 0, Z relative to panel bottom 0)
+IEC_CX, IEC_CZ, IEC_W, IEC_H = -70, 30, 27, 19   # IEC C14 inlet cutout
+FUSE_CX, FUSE_CZ, FUSE_D     = -25, 30, 12       # 12 mm fuse cutout
+ESTOP_CX, ESTOP_CZ, ESTOP_D  = +20, 30, 22       # E-stop mushroom cutout
+LED_CX, LED_CZ_HI, LED_CZ_LO, LED_D = +75, 35, 25, 5
+
+# ======== Build ========
+print("=" * 70)
+print("CSM V3 -- Electrical Layout Visualization V1.0  (preview only)")
+print("=" * 70)
+
+doc = FreeCAD.newDocument("ElectricalLayout_Viz_V1_0")
+made = []
+
+def _add(name, shape, color, transp=0):
+    obj = doc.addObject("Part::Feature", name)
+    obj.Shape = shape
+    if FreeCAD.GuiUp and obj.ViewObject is not None:
+        obj.ViewObject.ShapeColor  = color
+        obj.ViewObject.Transparency = transp
+    made.append(obj)
+    return obj
+
+# --- Wood base (semi-transparent so we can see components) ---
+slab = Part.makeBox(WB_W, WB_D, WB_T, FreeCAD.Vector(-WB_W/2, -WB_D/2, WB_BOT))
+hole = Part.makeCylinder(HOLE_D/2, WB_T+2, FreeCAD.Vector(0, 0, WB_BOT-1))
+wood = slab.cut(hole)
+_add("WoodBase_V1_1", wood, (0.55, 0.40, 0.20), transp=40)
+
+# --- Uprights (4x 2020) ---
+for sx in UP_X:
+    for sy in UP_Y:
+        post = Part.makeBox(UP_W, UP_W, UP_LEN,
+                            FreeCAD.Vector(sx - UP_W/2, sy - UP_W/2, UP_BOT))
+        _add(f"Upright_{int(sx):+d}_{int(sy):+d}", post, (0.75, 0.75, 0.75))
+
+# --- Take-down column marker (transparent cylinder showing reserved space) ---
+column = Part.makeCylinder(HOLE_D/2, 250, FreeCAD.Vector(0, 0, WB_TOP))
+_add("TakeDown_ReservedColumn", column, (1.0, 0.6, 0.6), transp=80)
+
+# --- NEMA 23 + HG5 gearbox tower ---
+# Gearbox flange + body bolts to wood base top, extends 50 mm up
+gearbox = Part.makeBox(40, 40, 50, FreeCAD.Vector(MX - 20, MY - 20, M_BOT))
+# NEMA 23 motor body sits on top of gearbox
+motor_body = Part.makeBox(57, 57, 56, FreeCAD.Vector(MX - 28.5, MY - 28.5, M_BOT + 50))
+motor_assembly = gearbox.fuse(motor_body)
+_add("NEMA23_HG5_Motor", motor_assembly, (0.30, 0.30, 0.35))
+
+# --- Electronics components ---
+for c in COMPONENTS:
+    box = Part.makeBox(c.w, c.d, c.h,
+                       FreeCAD.Vector(c.cx - c.w/2, c.cy - c.d/2, WB_TOP + c.z_off))
+    _add(c.name, box, c.color)
+
+# --- Operator panel (vertical, with cutouts) ---
+panel = Part.makeBox(PANEL_W, PANEL_T, PANEL_H,
+                     FreeCAD.Vector(-PANEL_W/2, PANEL_Y, WB_TOP))
+# Cut features (each is a small box or cylinder through the panel in Y direction)
+iec_cut = Part.makeBox(IEC_W, PANEL_T + 4, IEC_H,
+                       FreeCAD.Vector(IEC_CX - IEC_W/2, PANEL_Y - 2,
+                                      WB_TOP + IEC_CZ - IEC_H/2))
+panel = panel.cut(iec_cut)
+fuse_cut = Part.makeCylinder(FUSE_D/2, PANEL_T + 4,
+                             FreeCAD.Vector(FUSE_CX, PANEL_Y - 2, WB_TOP + FUSE_CZ),
+                             FreeCAD.Vector(0, 1, 0))
+panel = panel.cut(fuse_cut)
+estop_cut = Part.makeCylinder(ESTOP_D/2, PANEL_T + 4,
+                              FreeCAD.Vector(ESTOP_CX, PANEL_Y - 2, WB_TOP + ESTOP_CZ),
+                              FreeCAD.Vector(0, 1, 0))
+panel = panel.cut(estop_cut)
+for lz in (LED_CZ_HI, LED_CZ_LO):
+    led_cut = Part.makeCylinder(LED_D/2, PANEL_T + 4,
+                                FreeCAD.Vector(LED_CX, PANEL_Y - 2, WB_TOP + lz),
+                                FreeCAD.Vector(0, 1, 0))
+    panel = panel.cut(led_cut)
+_add("OperatorPanel_Front", panel, (0.80, 0.80, 0.85))
+
+# --- E-stop mushroom (sticks out forward in -Y) ---
+mush_body = Part.makeCylinder(ESTOP_D/2, 30,
+                              FreeCAD.Vector(ESTOP_CX, PANEL_Y - 30,
+                                             WB_TOP + ESTOP_CZ),
+                              FreeCAD.Vector(0, 1, 0))
+mush_head = Part.makeSphere(16, FreeCAD.Vector(ESTOP_CX, PANEL_Y - 30,
+                                                WB_TOP + ESTOP_CZ))
+mushroom = mush_body.fuse(mush_head)
+_add("Estop_Mushroom", mushroom, (0.95, 0.10, 0.10))
+
+# --- IEC C14 inlet body (small block sticking through the panel) ---
+iec_body = Part.makeBox(IEC_W + 4, 12, IEC_H + 4,
+                        FreeCAD.Vector(IEC_CX - (IEC_W + 4)/2, PANEL_Y - 12,
+                                       WB_TOP + IEC_CZ - (IEC_H + 4)/2))
+_add("IEC_C14_Inlet", iec_body, (0.10, 0.10, 0.10))
+
+# --- Fuse holder body (cylindrical, sticking out) ---
+fuse_body = Part.makeCylinder(FUSE_D/2 + 1, 20,
+                              FreeCAD.Vector(FUSE_CX, PANEL_Y - 20,
+                                             WB_TOP + FUSE_CZ),
+                              FreeCAD.Vector(0, 1, 0))
+_add("FuseHolder", fuse_body, (0.20, 0.20, 0.20))
+
+# --- Cable routing path markers (very thin tubes showing rule §2.6) ---
+# Not exported as walls; just transparent visual guides
+# (Skipped in this version -- can add in V1.1 if useful)
+
+doc.recompute()
+
+# ======== Export ========
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+STL  = os.path.join(BASE, "CSM_V3_ElectricalLayout_Viz_V1_0.stl")
+FCS  = os.path.join(BASE, "CSM_V3_ElectricalLayout_Viz_V1_0.FCStd")
+
+Part.export(made, STL)
+doc.saveAs(FCS)
+
+stl_sz = os.path.getsize(STL)
+fcs_sz = os.path.getsize(FCS)
+
+print(f"  components placed:  {len(made)}")
+print(f"  wood base:          {WB_W} x {WB_D} x {WB_T} (top at Z={WB_TOP})")
+print(f"  uprights (4x):      20x20x{UP_LEN} at (±{abs(UP_X[0])}, ±{abs(UP_Y[0])})")
+print(f"  motor tower:        D40/57 x 106 tall at ({MX}, {MY})")
+print(f"  take-down hole:     Ø{HOLE_D} centered")
+print()
+print(f"[OK] STL:    {STL}  ({stl_sz/1024:.1f} KB)")
+print(f"[OK] FCStd:  {FCS}  ({fcs_sz/1024:.1f} KB)")
+print()
+print("COLOR LEGEND (visible when opening FCStd in FreeCAD GUI):")
+print("  brown 40%-trans  Wood Base V1.1")
+print("  gray             4x 2020 uprights")
+print("  pink trans       Take-down reserved column (Ø100, do not obstruct)")
+print("  dark gray        NEMA 23 + HG5 gearbox tower")
+print("  black            S-250-24 PSU")
+print("  green            TB6600 stepper driver")
+print("  blue             Arduino Mega 2560")
+print("  orange           LM2596 bucks (x2)")
+print("  yellow           24V distribution terminal block")
+print("  light gray       Front operator panel + IEC + fuse")
+print("  red              E-stop mushroom")
+print()
+print("Open the FCStd file in FreeCAD GUI for the full colored view.")
+print("Open the STL in any slicer / 3D viewer for geometry-only preview.")
+print("=" * 70)

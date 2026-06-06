@@ -772,9 +772,225 @@ def draw_components_card():
     print(f"  -> {out_pdf}")
 
 # ============================================================
+# Drawing 5: HARDWARE ORDER SHEET (single-page printable A4)
+# ============================================================
+def draw_hardware_order_sheet():
+    """A4 portrait, optimized for printing and taking to hardware store."""
+    # A4 portrait = 210 x 297 mm = 8.27 x 11.69 in
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=200)
+    ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 140)
+    ax.axis('off')
+
+    # ===== HEADER =====
+    ax.add_patch(Rectangle((4, 134), 92, 4, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(50, 136, 'CSM V3 — HARDWARE ORDER SHEET',
+            fontsize=14, ha='center', va='center', color='white', fontweight='bold')
+    ax.text(50, 132, 'Wood Base V1.1 Electrical Mounting   •   Rev V1.0   •   2026-06-04',
+            fontsize=8, ha='center', color='#444')
+
+    # Customer/date row
+    ax.add_patch(Rectangle((4, 126), 92, 5, facecolor='#f4f4f4', edgecolor='#ccc', lw=0.5))
+    ax.text(7, 128.5, 'NAME:', fontsize=8, fontweight='bold', va='center')
+    ax.plot([16, 50], [127.5, 127.5], color='#666', lw=0.5)
+    ax.text(54, 128.5, 'ORDER DATE:', fontsize=8, fontweight='bold', va='center')
+    ax.plot([70, 96], [127.5, 127.5], color='#666', lw=0.5)
+
+    # ===== SECTION 1: BOLTS =====
+    y = 122
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(6, y + 0.5, '1. BOLTS  (machine screws, partial thread OK, pan or socket head)',
+            fontsize=10, color='white', fontweight='bold', va='center')
+    y -= 5
+
+    # Column headers
+    headers = [('☐', 4), ('QTY', 8), ('SIZE', 16), ('USE', 40), ('NOTES', 75)]
+    for h, x in headers:
+        ax.text(x, y, h, fontsize=7, fontweight='bold', color='#444')
+    y -= 1.5
+    ax.plot([4, 96], [y, y], color='#aaa', lw=0.4)
+    y -= 2
+
+    bolts = [
+        ('4', 'M5 × 35 mm', 'NEMA 23 motor flange',         'Use w/ lock washer + threadlock'),
+        ('4', 'M4 × 30 mm', 'PSU chassis',                   'Pan-head; rubber washer optional'),
+        ('4', 'M3 × 30 mm', 'Arduino Mega (with standoffs)', '10 mm standoff under PCB'),
+        ('2', 'M3 × 25 mm', 'TB6600 stepper driver flange',  'Through 4 mm flange tabs'),
+        ('6', 'M3 × 22 mm', 'Bucks (×4) + Terminal (×2)',    'Or VHB pad on Bucks → skip 4 of these'),
+    ]
+    for qty, size, use, notes in bolts:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0050a0', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#666', style='italic')
+        y -= 3
+
+    # Bolt subtotal
+    ax.plot([4, 96], [y + 0.5, y + 0.5], color='#888', lw=0.4, linestyle=':')
+    y -= 1.5
+    ax.text(8, y, 'Subtotal: 20 bolts (or 16 if using VHB on Bucks)',
+            fontsize=8, fontweight='bold', color='#444')
+    y -= 4
+
+    # ===== SECTION 2: WASHERS =====
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(6, y + 0.5, '2. WASHERS', fontsize=10, color='white',
+            fontweight='bold', va='center')
+    y -= 5
+
+    washers = [
+        ('8',  'M5 flat washer',  'Under motor bolt head AND nut',  ''),
+        ('4',  'M5 lock washer',  'Under motor nut (anti-vibration)', 'MANDATORY — motor vibrates'),
+        ('8',  'M4 flat washer',  'PSU top + bottom',               ''),
+        ('24', 'M3 flat washer',  'All M3 bolts, both sides',       'Pack of 50 is fine'),
+    ]
+    for qty, size, use, notes in washers:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0050a0', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#a00', style='italic')
+        y -= 3
+
+    y -= 1
+
+    # ===== SECTION 3: NUTS =====
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(6, y + 0.5, '3. NUTS', fontsize=10, color='white', fontweight='bold', va='center')
+    y -= 5
+
+    nuts = [
+        ('4',  'M5 hex nut', 'Motor underside',  ''),
+        ('4',  'M4 hex nut', 'PSU underside',    ''),
+        ('12', 'M3 hex nut', 'All M3 bolts',     'Nyloc nut OK — extra security'),
+    ]
+    for qty, size, use, notes in nuts:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0050a0', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#666', style='italic')
+        y -= 3
+
+    y -= 1
+
+    # ===== SECTION 4: STANDOFFS =====
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(6, y + 0.5, '4. NYLON STANDOFFS (M3 female-female, threaded)',
+            fontsize=10, color='white', fontweight='bold', va='center')
+    y -= 5
+
+    standoffs = [
+        ('4', 'M3 × 10 mm nylon standoff', 'Under Arduino Mega', 'PCB airflow'),
+        ('4', 'M3 ×  5 mm nylon standoff', 'Under each Buck',    'Optional if using VHB tape'),
+    ]
+    for qty, size, use, notes in standoffs:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0050a0', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#666', style='italic')
+        y -= 3
+
+    y -= 1
+
+    # ===== SECTION 5: CONSUMABLES =====
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#1f4ea8', edgecolor='none'))
+    ax.text(6, y + 0.5, '5. CONSUMABLES', fontsize=10, color='white',
+            fontweight='bold', va='center')
+    y -= 5
+
+    cons = [
+        ('1', 'Loctite 243 (blue)', 'Threadlock for M5 motor bolts',  'Small bottle is plenty'),
+        ('1', '3M VHB tape (optional)', 'Alt mounting for Bucks',      '20×20 mm pads, qty 8'),
+        ('1', 'Pack ferrules 0.5-2.5 mm²', 'Wire ends into screw terms','Crimper required'),
+        ('1', 'Pack heat shrink 3-8 mm', 'Wire terminations',          'Black + red mixed'),
+    ]
+    for qty, size, use, notes in cons:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0050a0', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#666', style='italic')
+        y -= 3
+
+    y -= 1
+
+    # ===== SECTION 6: DRILL BITS =====
+    ax.add_patch(Rectangle((4, y - 1), 92, 3, facecolor='#0a6e3a', edgecolor='none'))
+    ax.text(6, y + 0.5, '6. DRILL BITS (verify you have these before starting)',
+            fontsize=10, color='white', fontweight='bold', va='center')
+    y -= 5
+
+    bits = [
+        ('1', 'Ø 2.0 mm HSS', 'Pilot drill for ALL positions',  'Prevents wandering'),
+        ('1', 'Ø 3.2 mm HSS', 'M3 clearance (10 holes)',         'Mega, Bucks, Terminal'),
+        ('1', 'Ø 3.5 mm HSS', 'M3 clearance for TB6600 (2 holes)', 'TB6600 flange'),
+        ('1', 'Ø 4.5 mm HSS', 'M4 clearance for PSU (4 holes)',  'PSU chassis'),
+        ('1', 'Ø 5.5 mm HSS', 'M5 clearance for motor (4 holes)','NEMA 23 flange'),
+        ('1', 'Ø 100 mm hole saw OR jigsaw', 'Take-down (1 hole)','Center on datum'),
+        ('1', 'Ø 8 mm HSS (optional)', 'Counterbore PSU + motor nuts', 'Recess nut into wood'),
+    ]
+    for qty, size, use, notes in bits:
+        ax.add_patch(Rectangle((5, y - 0.8), 1.8, 1.8, facecolor='white',
+                               edgecolor='black', lw=0.8))
+        ax.text(8, y, qty, fontsize=9, ha='right', va='center', fontweight='bold',
+                color='#0a6e3a', family='monospace')
+        ax.text(16, y, size, fontsize=8.5, va='center', family='monospace',
+                fontweight='bold')
+        ax.text(40, y, use, fontsize=8, va='center', color='#222')
+        ax.text(75, y, notes, fontsize=7, va='center', color='#666', style='italic')
+        y -= 3
+
+    # ===== FOOTER =====
+    ax.add_patch(Rectangle((4, y - 3.5), 92, 3, facecolor='#fff3b0',
+                           edgecolor='#a89030', lw=0.8))
+    ax.text(50, y - 2, 'TIP: A 100-piece M3 + M4 bolt/nut/washer assortment '
+                       'kit usually covers everything except M5 motor bolts.',
+            fontsize=8, ha='center', va='center', color='#5a4020', style='italic')
+    y -= 6
+
+    ax.text(50, y, 'NOTES:', fontsize=8, fontweight='bold', va='top')
+    # Note lines for handwriting
+    for i in range(3):
+        ax.plot([4, 96], [y - 2 - i * 2, y - 2 - i * 2], color='#aaa', lw=0.3)
+
+    # ===== Footer banner =====
+    ax.add_patch(Rectangle((4, 1), 92, 3, facecolor='#222', edgecolor='none'))
+    ax.text(50, 2.5, 'github.com/leoalex196912/ChatGistory  •  '
+                     'CSM_V3_ASSEMBLY/electronics/drawings/  •  '
+                     'See drilling_guide.pdf for hole coords',
+            fontsize=7, ha='center', va='center', color='white')
+
+    out_png = os.path.join(OUTDIR, 'hardware_order_sheet.png')
+    out_pdf = os.path.join(OUTDIR, 'hardware_order_sheet.pdf')
+    fig.savefig(out_png, dpi=200, facecolor='white')
+    fig.savefig(out_pdf, facecolor='white')
+    plt.close(fig)
+    print(f"  -> {out_png}")
+    print(f"  -> {out_pdf}")
+
+# ============================================================
 if __name__ == '__main__':
     print("=" * 70)
-    print("CSM V3 -- Generating drilling drawings (V1.1)")
+    print("CSM V3 -- Generating drilling drawings (V1.2)")
     print("=" * 70)
     print()
     print(f"Total drill holes to be marked: {len(DRILL_LIST)}")
@@ -791,6 +1007,10 @@ if __name__ == '__main__':
     print("Sheet 4: Components Reference Card")
     draw_components_card()
     print()
+    print("Sheet 5: Hardware Order Sheet (A4 printable)")
+    draw_hardware_order_sheet()
+    print()
     print("=" * 70)
     print("Done. PDFs are vector (print to A3 or A2 for accurate scale).")
+    print("Hardware Order Sheet PDF prints cleanly on A4.")
     print("=" * 70)

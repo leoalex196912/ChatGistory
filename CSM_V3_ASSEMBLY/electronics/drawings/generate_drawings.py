@@ -21,6 +21,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle, Circle, Polygon, FancyBboxPatch
 from matplotlib.lines import Line2D
+from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
 
 # ============================================================
@@ -988,6 +989,364 @@ def draw_hardware_order_sheet():
     print(f"  -> {out_pdf}")
 
 # ============================================================
+# Helper for the procedure / checklist sheets
+# ============================================================
+def _checkbox_step(ax, x, y, n, text, fs=8, box_size=2.0, color='#222'):
+    """Draws a checkbox + step number + step text."""
+    ax.add_patch(Rectangle((x, y - box_size/2), box_size, box_size,
+                           facecolor='white', edgecolor='black', lw=0.8))
+    ax.text(x + box_size + 1.5, y, f'{n}.', fontsize=fs, va='center',
+            fontweight='bold', color='#0050a0', family='monospace')
+    ax.text(x + box_size + 4.5, y, text, fontsize=fs, va='center', color=color)
+
+def _section_band(ax, x, y, w, h, label, color='#1f4ea8', fontsize=10):
+    """Section header band with text inside."""
+    ax.add_patch(Rectangle((x, y), w, h, facecolor=color, edgecolor='none'))
+    ax.text(x + 2, y + h/2, label, fontsize=fontsize, color='white',
+            fontweight='bold', va='center')
+
+# ============================================================
+# Drawing 6: ASSEMBLY PROCEDURE SHEET (2-page A4 PDF, 2 PNG files)
+# ============================================================
+def _header(ax, title, subtitle, banner_color='#1f4ea8',
+            fields=(('BUILDER:', 18, 50), ('DATE:', 60, 96))):
+    """Standard header for printable sheets."""
+    ax.add_patch(Rectangle((4, 134), 92, 4, facecolor=banner_color, edgecolor='none'))
+    ax.text(50, 136, title, fontsize=14, ha='center', va='center',
+            color='white', fontweight='bold')
+    ax.text(50, 132, subtitle, fontsize=8, ha='center', color='#444')
+    ax.add_patch(Rectangle((4, 126), 92, 5, facecolor='#f4f4f4',
+                           edgecolor='#ccc', lw=0.5))
+    x_cursor = 7
+    for (lab, end_x, line_end) in fields:
+        ax.text(x_cursor, 128.5, lab, fontsize=8, fontweight='bold', va='center')
+        ax.plot([end_x, line_end], [127.5, 127.5], color='#666', lw=0.5)
+        x_cursor = line_end + 2
+
+def _footer(ax, label, page=None, total=None):
+    ax.add_patch(Rectangle((4, 1), 92, 3, facecolor='#222', edgecolor='none'))
+    page_txt = f'  •  Page {page} of {total}' if page else ''
+    ax.text(50, 2.5,
+            f'github.com/leoalex196912/ChatGistory  •  CSM V3 — {label}{page_txt}',
+            fontsize=7, ha='center', va='center', color='white')
+
+def _new_a4():
+    fig = plt.figure(figsize=(8.27, 11.69), dpi=200)
+    ax = fig.add_axes([0.0, 0.0, 1.0, 1.0])
+    ax.set_xlim(0, 100)
+    ax.set_ylim(0, 140)
+    ax.axis('off')
+    return fig, ax
+
+def draw_assembly_procedure():
+    # ====================== PAGE 1 ======================
+    fig1, ax = _new_a4()
+    _header(ax, 'CSM V3 — ASSEMBLY PROCEDURE',
+            'Wood Base V1.1 Electrical Mounting  •  Rev V1.0  •  '
+            '~4-6 h  •  Page 1: Drilling + Mechanical')
+    y = 122
+
+    # === PHASE A: PREPARATION ===
+    _section_band(ax, 4, y - 1, 92, 3, 'PHASE A — PREPARATION  (30 min)', color='#0a6e3a')
+    y -= 5
+    steps_A = [
+        'Print drilling_guide.pdf at 1:1 scale. Verify with ruler that 50 mm marks measure 50 mm.',
+        'Gather all hardware per hardware_order_sheet.pdf checklist.',
+        'Stage tools: drill, drill bits (Ø2 / Ø3.2 / Ø3.5 / Ø4.5 / Ø5.5 / Ø100 saw), screwdrivers, wrenches, calipers.',
+        'Wood-base orientation: long edge = X (500 mm), short edge = Y (400 mm). Mark "FRONT" arrow on -Y edge.',
+        'Mark center of wood base (datum 0, 0). Draw faint +X and +Y axis lines with pencil.',
+        'Tape the drilling_guide printout to the wood with axis lines aligned to the printed datum.',
+    ]
+    for i, s in enumerate(steps_A, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === PHASE B: DRILLING ===
+    _section_band(ax, 4, y - 1, 92, 3, 'PHASE B — DRILLING  (1 h)', color='#0a6e3a')
+    y -= 5
+    steps_B = [
+        'Center-punch ALL 21 hole positions through the paper template into the wood.',
+        'Remove paper template. Pilot-drill every position with Ø 2.0 mm bit.',
+        'Drill 10 × Ø 3.2 mm holes  (Mega ×4, Buck#1 ×2, Buck#2 ×2, Terminal ×2).',
+        'Drill 2 × Ø 3.5 mm holes  (TB6600 flange).',
+        'Drill 4 × Ø 4.5 mm holes  (PSU chassis).',
+        'Drill 4 × Ø 5.5 mm holes  (NEMA 23 motor flange).',
+        'Cut Ø 100 mm take-down opening with hole saw or jigsaw, centered on datum.',
+        '(Optional) Counterbore PSU + Motor holes Ø 8 × 2 mm from UNDERSIDE to recess nuts.',
+        'Vacuum dust. Verify hole positions with calipers — tolerance ±1 mm.',
+    ]
+    for i, s in enumerate(steps_B, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === PHASE C: MECHANICAL MOUNTING ===
+    _section_band(ax, 4, y - 1, 92, 3, 'PHASE C — MECHANICAL MOUNTING  (1.5 h)', color='#0a6e3a')
+    y -= 5
+    steps_C = [
+        'Dry-fit PSU at (-195, 0). Verify all 4 chassis screws align with Ø 4.5 holes.',
+        'Bolt PSU: M4 × 30 + washer top, washer + nut bottom. Tighten cross-pattern.',
+        'Set NEMA 23 + HG5 motor at (+85, -47), shaft pointing UP. Verify gearbox orientation.',
+        'Bolt motor: M5 × 35 + washer + lock washer + nut. Apply Loctite 243 on threads.',
+        'Mount TB6600 at (+200, -47). Bolt: M3 × 25 + washer + nut. Terminals face +X (edge).',
+        'Install M3 × 10 mm nylon standoffs at the 4 Mega positions (+200, +75 area).',
+        'Mount Arduino Mega on standoffs. Bolt: M3 × 30 + washer + nut. USB port faces +X.',
+        'Mount LM2596 Buck #1 at (-50, +160) using M3 × 22 + 5 mm standoff (or 3M VHB).',
+        'Mount LM2596 Buck #2 at (+50, +160) same method as Buck #1.',
+        'Mount 24V terminal block at (0, +180). Use M3 × 22 OR DIN-rail clip.',
+        'Build operator panel per operator_panel.pdf. L-bracket to FRONT (-Y) edge of wood base.',
+    ]
+    for i, s in enumerate(steps_C, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    _footer(ax, 'Assembly Procedure', page=1, total=2)
+    out_png_p1 = os.path.join(OUTDIR, 'assembly_procedure_p1.png')
+    fig1.savefig(out_png_p1, dpi=200, facecolor='white')
+
+    # ====================== PAGE 2 ======================
+    fig2, ax = _new_a4()
+    _header(ax, 'CSM V3 — ASSEMBLY PROCEDURE',
+            'Wood Base V1.1 Electrical Mounting  •  Rev V1.0  •  '
+            '~4-6 h  •  Page 2: Wiring + Verify')
+    y = 122
+
+    # === PHASE D: WIRING ===
+    _section_band(ax, 4, y - 1, 92, 3,
+                  'PHASE D — WIRING  (2-3 h, see CSM_V3_WIRING_V1_0.md)',
+                  color='#c43838')
+    y -= 5
+    steps_D = [
+        'Wire mains FIRST with PSU DISCONNECTED from wall. 16 AWG brown/blue/g-y.',
+        'Order: wall → E-stop → 2 A T-fuse → PSU L/N/PE terminals.',
+        'Wire 24 V DC bus: PSU +V/-V → 24V terminal block. 14 AWG with ferrules.',
+        'Branch 24 V to TB6600 power, Buck #1 IN, Buck #2 IN.',
+        'BEFORE downstream loads: power bucks alone, adjust each to 5.10 V no-load.',
+        'Wire 5 V #1 → Mega VIN + GND + 6× servo headers. Single-point GND.',
+        'Wire 5 V #2 → Pi GPIO 5 V + GND (or USB-C wall wart for bench).',
+        'Wire Mega → TB6600 step/dir/en (D5/D6/D7 with 220 Ω each).',
+        'Wire NEMA 23 4-wire to TB6600 A+/A-/B+/B- (check motor color code).',
+        'Wire E-stop second NC contact → Mega D2 with 10 kΩ pull-up.',
+        'Cable-tie all wiring per ELECTRICAL_LAYOUT §2.6 (mains FRONT, 24V BACK).',
+        'Label every wire bundle with tape: AC / 24V / 5V / SIG.',
+    ]
+    for i, s in enumerate(steps_D, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.5
+    y -= 1
+
+    # === SAFETY BANNER ===
+    ax.add_patch(Rectangle((4, y - 4), 92, 3.5, facecolor='#ffd6d6',
+                           edgecolor='#c00000', lw=1.0))
+    ax.text(50, y - 2, '⚠ DO NOT CONNECT MAINS UNTIL BENCH-TEST PHASE 1 PASSES ⚠',
+            fontsize=9, ha='center', va='center', color='#c00000', fontweight='bold')
+    y -= 7
+
+    # === PHASE E: VERIFY ===
+    _section_band(ax, 4, y - 1, 92, 3, 'PHASE E — VERIFY BEFORE FIRST POWER  (15 min)',
+                  color='#1f4ea8')
+    y -= 5
+    steps_E = [
+        'Re-check every bolt is tight; no loose washers visible.',
+        'Confirm all 4 motor bolts have lock washers + Loctite 243.',
+        'Multimeter continuity: PE wire wall plug → PSU FG. Must be < 1 Ω.',
+        'Multimeter resistance: PSU +V to -V terminals UNPOWERED. Should be high (>1 kΩ).',
+        'No bare conductor exposed at any mains terminal. Cap unused terminals.',
+        'Verify wire colors: brown=L, blue=N, green/yellow=PE, red=+, black=GND.',
+        'PSU voltage selector SWITCH set to match your mains (115 OR 230 V).',
+        'Photograph the finished assembly (top + 4 sides) for the record.',
+        'Proceed to BENCH-TEST CHECKLIST (bench_test_checklist.pdf).',
+    ]
+    for i, s in enumerate(steps_E, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.5
+
+    # Notes section
+    y -= 1.5
+    ax.text(4, y, 'NOTES / DEVIATIONS:', fontsize=8, fontweight='bold')
+    y -= 2
+    for i in range(3):
+        ax.plot([4, 96], [y, y], color='#aaa', lw=0.3)
+        y -= 2.2
+
+    _footer(ax, 'Assembly Procedure', page=2, total=2)
+    out_png_p2 = os.path.join(OUTDIR, 'assembly_procedure_p2.png')
+    fig2.savefig(out_png_p2, dpi=200, facecolor='white')
+
+    # Save combined PDF
+    out_pdf = os.path.join(OUTDIR, 'assembly_procedure.pdf')
+    with PdfPages(out_pdf) as pdf:
+        pdf.savefig(fig1)
+        pdf.savefig(fig2)
+    plt.close(fig1)
+    plt.close(fig2)
+    print(f"  -> {out_png_p1}")
+    print(f"  -> {out_png_p2}")
+    print(f"  -> {out_pdf} (2 pages)")
+
+# ============================================================
+# Drawing 7: BENCH-TEST CHECKLIST (single-page printable A4)
+# ============================================================
+def draw_bench_test_checklist():
+    # ====================== PAGE 1 ======================
+    fig1, ax = _new_a4()
+    _header(ax, 'CSM V3 — BENCH-TEST CHECKLIST',
+            'Validate electronics BEFORE installing in machine  •  Rev V1.0  •  '
+            '~1-2 h  •  Page 1: Pre-Test + Stages 1-3',
+            banner_color='#c43838')
+    y = 122
+
+    # === PRE-TEST SAFETY ===
+    _section_band(ax, 4, y - 1, 92, 3, 'PRE-TEST SAFETY (REQUIRED)', color='#c00000')
+    y -= 5
+    pre = [
+        'Wall outlet behind a kill switch you can reach without touching the bench.',
+        'Multimeter ready (DC voltage mode, set to 20 V or 200 V range).',
+        'No food, drink, or wet items on bench. Dry hands. Insulated mat preferred.',
+        'E-stop button accessible BEFORE energizing PSU.',
+        'PSU voltage selector switch matches your wall voltage (115 OR 230 V).',
+    ]
+    for i, s in enumerate(pre, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5, color='#c00000')
+        y -= 2.6
+    y -= 1
+
+    # === STAGE 1 ===
+    _section_band(ax, 4, y - 1, 92, 3, 'STAGE 1 — PSU ONLY', color='#1f4ea8')
+    y -= 5
+    st1 = [
+        'Wire mains: wall → E-stop → 2A fuse → PSU L/N/PE. NOTHING on PSU output.',
+        'Press E-stop IN. Plug PSU into wall.',
+        'Release E-stop. PSU green LED should illuminate.',
+        ('Multimeter on PSU +V to -V terminals. Reading: ____ V  '
+         '(expect 24.0 ± 0.2 V)'),
+        'Adjust +V trimpot if needed; lock with paint marker once 24.0 V achieved.',
+        'Press E-stop. PSU LED off within 1 s. Multimeter to 0 V within 2 s.',
+        'PASS Stage 1: ☐ YES ☐ NO   (If NO: check mains wiring, do not proceed)',
+    ]
+    for i, s in enumerate(st1, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === STAGE 2 ===
+    _section_band(ax, 4, y - 1, 92, 3, 'STAGE 2 — BUCKS + MEGA', color='#1f4ea8')
+    y -= 5
+    st2 = [
+        'E-stop IN. Wire Buck #1 IN+/IN- to 24 V bus. Output disconnected.',
+        'Release E-stop. Multimeter on Buck #1 output: ____ V  (adjust to 5.10 V)',
+        'E-stop IN. Wire Buck #1 OUT+/OUT- to Mega VIN + GND.',
+        'Release E-stop. Mega power LED (ON pin) should light.',
+        'Connect USB to laptop. Mega should enumerate. Upload Blink sketch.',
+        'LED 13 on Mega blinks at 1 Hz: ☐ verified',
+        'Multimeter on Mega 5 V pin to GND: ____ V  (expect 4.95-5.10)',
+        'Press E-stop. Mega LEDs off within 1 s.',
+        'PASS Stage 2: ☐ YES ☐ NO',
+    ]
+    for i, s in enumerate(st2, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === STAGE 3 ===
+    _section_band(ax, 4, y - 1, 92, 3, 'STAGE 3 — BUCKS #2 + Pi', color='#1f4ea8')
+    y -= 5
+    st3 = [
+        'Repeat Stage 2 procedure for Buck #2. Adjust to 5.10 V no-load.',
+        'Connect Pi 4 via Buck #2 OUT (or USB-C wall wart for bench test).',
+        'Pi boots, touchscreen shows desktop within 60 s.',
+        'Multimeter on Pi 5 V pin to GND under load: ____ V  (expect ≥ 5.00)',
+        'PASS Stage 3: ☐ YES ☐ NO',
+    ]
+    for i, s in enumerate(st3, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    _footer(ax, 'Bench-Test Checklist', page=1, total=2)
+    out_png_p1 = os.path.join(OUTDIR, 'bench_test_checklist_p1.png')
+    fig1.savefig(out_png_p1, dpi=200, facecolor='white')
+
+    # ====================== PAGE 2 ======================
+    fig2, ax = _new_a4()
+    _header(ax, 'CSM V3 — BENCH-TEST CHECKLIST',
+            'Validate electronics BEFORE installing in machine  •  Rev V1.0  •  '
+            '~1-2 h  •  Page 2: Stages 4-5 + Verdict',
+            banner_color='#c43838')
+    y = 122
+
+    # === STAGE 4 ===
+    _section_band(ax, 4, y - 1, 92, 3, 'STAGE 4 — TB6600 + NEMA 23', color='#1f4ea8')
+    y -= 5
+    st4 = [
+        'E-stop IN. Wire TB6600 power (24 V), step/dir/en to Mega D5/D6/D7 via 220 Ω.',
+        'Wire NEMA 23 4-wire to TB6600 A+/A-/B+/B-.',
+        'Verify DIP switches: 8 microstep, 2.5 A current limit.',
+        'Release E-stop. Upload slow-pulse sketch (1 step/100 ms).',
+        'Motor rotates smoothly, no stutter or skipping: ☐ verified',
+        'Listen for grinding or whine. Smooth hum is OK; harsh whine = wrong current.',
+        'E-stop test: press during rotation. Motor stops within 200 ms.',
+        'PASS Stage 4: ☐ YES ☐ NO',
+    ]
+    for i, s in enumerate(st4, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === STAGE 5 ===
+    _section_band(ax, 4, y - 1, 92, 3, 'STAGE 5 — SERVOS (6× MG90S)', color='#1f4ea8')
+    y -= 5
+    st5 = [
+        'E-stop IN. Wire ONE MG90S to Mega D9 + Buck #1 5 V rail.',
+        'Release E-stop. Run sweep sketch (servo position 0-180-0).',
+        'Servo motion clean, no jitter: ☐ verified',
+        'Repeat for servos on D10, D11, D12, D44, D45. All 6 hold position.',
+        'Combined load test: command all 6 servos to move. Multimeter on Buck #1 output.',
+        'Voltage stays ≥ 4.95 V during combined motion: ____ V minimum observed',
+        'PASS Stage 5: ☐ YES ☐ NO',
+    ]
+    for i, s in enumerate(st5, 1):
+        _checkbox_step(ax, 5, y, i, s, fs=7.5)
+        y -= 2.6
+    y -= 1
+
+    # === FINAL VERDICT ===
+    ax.add_patch(Rectangle((4, y - 5), 92, 4.5, facecolor='#ffd', edgecolor='#aa9000', lw=1.2))
+    ax.text(50, y - 1.5, 'FINAL VERDICT — Bench Test Complete',
+            fontsize=10, ha='center', va='center', fontweight='bold', color='#553300')
+    ax.text(8, y - 3.5,
+            '☐ ALL 5 STAGES PASS  →  Electronics validated. Proceed to machine integration.',
+            fontsize=8, va='center', color='#0a6e3a', fontweight='bold')
+    ax.text(8, y - 4.5,
+            '☐ ANY STAGE FAILED   →  Fix at the bench, NOT in the machine. Re-test.',
+            fontsize=8, va='center', color='#c00000', fontweight='bold')
+    y -= 7
+
+    # Notes
+    ax.text(4, y, 'NOTES / ANOMALIES:', fontsize=8, fontweight='bold')
+    y -= 2.5
+    for i in range(4):
+        ax.plot([4, 96], [y, y], color='#aaa', lw=0.3)
+        y -= 2.2
+
+    _footer(ax, 'Bench-Test Checklist', page=2, total=2)
+    out_png_p2 = os.path.join(OUTDIR, 'bench_test_checklist_p2.png')
+    fig2.savefig(out_png_p2, dpi=200, facecolor='white')
+
+    # Combined PDF
+    out_pdf = os.path.join(OUTDIR, 'bench_test_checklist.pdf')
+    with PdfPages(out_pdf) as pdf:
+        pdf.savefig(fig1)
+        pdf.savefig(fig2)
+    plt.close(fig1)
+    plt.close(fig2)
+    print(f"  -> {out_png_p1}")
+    print(f"  -> {out_png_p2}")
+    print(f"  -> {out_pdf} (2 pages)")
+
+# ============================================================
 if __name__ == '__main__':
     print("=" * 70)
     print("CSM V3 -- Generating drilling drawings (V1.2)")
@@ -1010,7 +1369,12 @@ if __name__ == '__main__':
     print("Sheet 5: Hardware Order Sheet (A4 printable)")
     draw_hardware_order_sheet()
     print()
+    print("Sheet 6: Assembly Procedure (A4 printable)")
+    draw_assembly_procedure()
+    print()
+    print("Sheet 7: Bench-Test Checklist (A4 printable)")
+    draw_bench_test_checklist()
+    print()
     print("=" * 70)
-    print("Done. PDFs are vector (print to A3 or A2 for accurate scale).")
-    print("Hardware Order Sheet PDF prints cleanly on A4.")
+    print("Done. PDFs are vector (print A3/A2 for engineering drawings, A4 for sheets).")
     print("=" * 70)

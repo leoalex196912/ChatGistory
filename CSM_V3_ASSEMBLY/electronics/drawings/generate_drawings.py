@@ -36,6 +36,14 @@ MOTOR_X, MOTOR_Y = 85, -47
 
 OUTDIR = os.path.dirname(os.path.abspath(__file__))
 
+# Frame parts have their drawings in their own folders (not lumped here)
+_REPO_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(OUTDIR)))
+FRAME_DIRS = {
+    'wood_base':       os.path.join(_REPO_ROOT, 'CSM_V3_ASSEMBLY', 'frame', 'wood_base'),
+    'wood_upper_deck': os.path.join(_REPO_ROOT, 'CSM_V3_ASSEMBLY', 'frame', 'wood_upper_deck'),
+    'mount_plate':     os.path.join(_REPO_ROOT, 'CSM_V3_ASSEMBLY', 'frame', 'mount_plate_6061'),
+}
+
 # ============================================================
 # HARDWARE SPECS PER COMPONENT
 # 'bolt': thread, length (mm), head, washer, nut, hardware notes
@@ -1546,8 +1554,10 @@ def draw_wood_upper_deck():
         yy -= 0.022
 
     plt.tight_layout()
-    out_png = os.path.join(OUTDIR, 'wood_upper_deck_drilling.png')
-    out_pdf = os.path.join(OUTDIR, 'wood_upper_deck_drilling.pdf')
+    out_png = os.path.join(FRAME_DIRS['wood_upper_deck'],
+                           'CSM_V3_WoodUpperDeck_V1_0_drilling.png')
+    out_pdf = os.path.join(FRAME_DIRS['wood_upper_deck'],
+                           'CSM_V3_WoodUpperDeck_V1_0_drilling.pdf')
     fig.savefig(out_png, dpi=200, bbox_inches='tight', facecolor='white')
     fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
     plt.close(fig)
@@ -1575,7 +1585,8 @@ def draw_wood_upper_deck():
                               'CSM V3 WOOD UPPER DECK V1.0 - 320x260x18'))
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 25,
                               'Hardwood. 8x Ø5.5 + 1x Ø170'))
-    out_dxf = os.path.join(OUTDIR, 'wood_upper_deck.dxf')
+    out_dxf = os.path.join(FRAME_DIRS['wood_upper_deck'],
+                           'CSM_V3_WoodUpperDeck_V1_0.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1711,8 +1722,10 @@ def draw_aluminum_plate():
         yy -= 0.020
 
     plt.tight_layout()
-    out_png = os.path.join(OUTDIR, 'aluminum_plate_drilling.png')
-    out_pdf = os.path.join(OUTDIR, 'aluminum_plate_drilling.pdf')
+    out_png = os.path.join(FRAME_DIRS['mount_plate'],
+                           'CSM_V3_MountPlate6061_V1_1_drilling.png')
+    out_pdf = os.path.join(FRAME_DIRS['mount_plate'],
+                           'CSM_V3_MountPlate6061_V1_1_drilling.pdf')
     fig.savefig(out_png, dpi=200, bbox_inches='tight', facecolor='white')
     fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
     plt.close(fig)
@@ -1732,7 +1745,8 @@ def draw_aluminum_plate():
                               'CSM V3 ALU MASTER PLATE V1.1 - 250x250x6 6061-T6'))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 25,
                               'FLATNESS <0.2mm. 4x Ø5.5 + 1x Ø170'))
-    out_dxf = os.path.join(OUTDIR, 'aluminum_plate.dxf')
+    out_dxf = os.path.join(FRAME_DIRS['mount_plate'],
+                           'CSM_V3_MountPlate6061_V1_1.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1752,7 +1766,7 @@ def write_wood_base_dxf():
                               'CSM V3 WOOD BASE V1.1 - 500x400x18 Hardwood'))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 25,
                               '21 electrical holes + 1x Ø100 take-down'))
-    out_dxf = os.path.join(OUTDIR, 'wood_base.dxf')
+    out_dxf = os.path.join(FRAME_DIRS['wood_base'], 'CSM_V3_WoodBase_V1_1.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 

@@ -1,0 +1,242 @@
+# CSM V3 -- SESSION LOG  2026-06-27
+# Scope: Frame parts ordering session -- wood/aluminum/extrusion specs
+#        finalized for actual supplier availability and existing BOM
+# Files: 4 commits, all pushed to origin/main; STEP files added for shop CNC
+
+================================================================
+HEADLINE OUTCOMES
+================================================================
+
+1. Aluminum master-datum plate moved from 6.0 -> 6.3 mm (1/4" stock)
+   - User's supplier offered 4.7 mm or 6.3 mm; 6.3 chosen
+   - 2.4x stiffer than 4.7 (t^3 scaling)
+   - Better flatness retention during stress-relief after machining
+   - Cost delta only $5-15 vs 4.7
+   - PLATE ORDERED at 250 x 250 x 6.3 mm 6061-T6 mill finish
+
+2. Wood thickness moved 18 -> 12 mm (Baltic Birch supplier max)
+   - User searched multiple suppliers for 18 mm Baltic Birch ply, none
+     stocked at home wood shop they were using
+   - Tried 12 mm version, reverted to 18 mm, then user found 12 mm
+     supplier and ordered
+   - BOTH WOOD PIECES ORDERED at 12 mm:
+     * Wood base:       500 x 400 x 12 mm Baltic Birch
+     * Wood upper deck: 320 x 260 x 12 mm Baltic Birch
+
+3. 2020 uprights: 188 -> 200 mm cut length to compensate for thinner
+   wood (6 mm + 6 mm = 12 mm height lost from two wood layers)
+   - User confirmed B0D89YS5VP (BOM) is 500 mm x 4 V-slot black
+   - More than enough material (2000 mm total, need 800 mm)
+   - Will cut at home or local shop
+
+4. ICD R3 master datum at Z=230 (invariant B3) PRESERVED
+   - Stack rebalanced: 12 wood + 200 upright + 12 wood + 6.3 plate
+     = 230.3 nominal; CAD-exact upright at 199.7 to land plate top
+     at Z=230. Cut tolerance absorbs the 0.3 mm.
+
+================================================================
+TODAY'S Z-STACK (FINAL)
+================================================================
+
+  Z=0      ← wood base bottom (floor)
+  Z=12     ← wood base top / upright bottom        (was 18)
+  Z=211.7  ← upright top / upper deck bottom       (was 206)
+            CAD upright length = 199.7 mm; practical cut = 200 mm
+  Z=223.7  ← upper deck top / aluminum plate bottom (was 224)
+  Z=230.0  ← MASTER DATUM (top of plate, LOCKED)
+
+================================================================
+DXF / STEP / PDF GENERATION
+================================================================
+
+Per user observation: DXF is 2D-only and shops cannot see thickness.
+SHOP DELIVERABLE for each frame part = 3 files:
+   .step  - 3D solid model (thickness embedded, no ambiguity)
+   .dxf   - 2D cut path (CNC router input)
+   .pdf   - human-readable drilling drawing
+
+STEP file generation added to generate_drawings.py:
+   _make_wood_base_solid()       -> 500x400x12 + 22 holes
+   _make_wood_upper_deck_solid() -> 320x260x12 + 9 holes
+   _make_alu_plate_solid()       -> 250x250x6.3 + 5 holes
+   generate_step_files()         -> wraps Part.export
+
+All filenames now include explicit thickness in name (so file system
+is unambiguous):
+   CSM_V3_WoodBase_V1_1_500x400x12.{dxf,step}
+   CSM_V3_WoodUpperDeck_V1_0_320x260x12.{dxf,step}
+   CSM_V3_MountPlate6061_V1_1_250x250x6_3.{dxf,step}
+
+================================================================
+FRAME DRAWINGS REORGANIZED
+================================================================
+
+Earlier today: drawings were initially saved under
+electronics/drawings/ because that's where the matplotlib generator
+lives. User correctly pointed out frame parts should live with their
+frame folders.
+
+Reorganized (git mv preserving history):
+   electronics/drawings/wood_base.dxf
+     -> frame/wood_base/CSM_V3_WoodBase_V1_1_500x400x12.dxf
+   electronics/drawings/wood_upper_deck_drilling.{pdf,png}
+     -> frame/wood_upper_deck/CSM_V3_WoodUpperDeck_V1_0_drilling.{pdf,png}
+   electronics/drawings/aluminum_plate_drilling.{pdf,png}
+     -> frame/mount_plate_6061/CSM_V3_MountPlate6061_V1_1_drilling.{pdf,png}
+
+generate_drawings.py updated with FRAME_DIRS dict so future regens
+write to the correct folders directly.
+
+Electronics-specific drawings remain in electronics/drawings/:
+   wood_base_top.pdf (electrical-mount drilling layout)
+   drilling_guide.pdf (electronics hole coordinate table)
+   operator_panel.pdf
+   components_card.pdf
+   hardware_order_sheet.pdf
+   assembly_procedure.{pdf,png}
+   bench_test_checklist.{pdf,png}
+
+================================================================
+BOM VERIFICATION
+================================================================
+
+User asked "did you check buy list?" before I suggested ordering
+2020 uprights. CORRECT -- everything was already on BOM V12:
+
+   B0D89YS5VP   2020 V-slot 500 mm x 4 (frame uprights)    ORDERED
+   B0D89Y43YK   2020 extrusion 400 mm x 2 (touchscreen mast) ORDERED
+   B0FLD88X6Y   Corner brackets for 2020                    ORDERED
+   B0GG4N5GR4   M5 T-nuts 230pk                             ORDERED
+   B0DPQJ4W3Z   M5 brass heat-set inserts                   ORDERED
+
+User has 500 mm sticks, not pre-cut 188 mm. Needs to cut to 200 mm
+each. 2000 mm material total, only 800 mm needed for 4 uprights,
+1200 mm spare for future mods or touchscreen mast.
+
+Cut tolerance: +/- 1.0 mm acceptable (+/- 0.5 better).
+Squareness: critical for upright verticality (wood bolts to ends).
+
+STILL MISSING FROM BOM (safety items before powered test):
+   - E-stop mushroom 22mm panel mount, NC+NC, 10A/250V
+   - IEC C14 panel-mount AC inlet
+   - 2A T-fuse panel-mount holder
+   - Status LEDs (green + amber 5 mm) -- optional
+
+================================================================
+PERMISSION ALLOWLIST EXPANSION (local, not in repo)
+================================================================
+
+User frustrated with frequent permission prompts. Expanded
+C:\3D-Project\.claude\settings.json from 7 patterns to 50+:
+   - All "Get-*" PowerShell cmdlets
+   - All "Test-*", "Select-*", "Format-*", "Where-*", "Sort-*",
+     "Measure-*", "ForEach-*", "Resolve-*", "Split-*", "Join-*",
+     "Convert-*"
+   - "Start-Sleep", "Out-*" pipeline operations
+   - Bash read-only git subcommands
+   - Read(*), Edit(*), Write(*), Glob(*), Grep(*) -- broad file access
+   - All MCP github read-only operations
+   - mcp-registry read operations
+
+Honest note to user: cannot allowlist arbitrary code execution
+(Python, FreeCAD, etc.) or destructive ops (git push, Remove-Item)
+per safety constraints. Those continue to prompt.
+
+NOT committed to repo (machine-specific settings).
+
+================================================================
+GIT COMMITS THIS SESSION (chronological)
+================================================================
+
+55e7348  Move frame drawings to their proper folders (not under
+         electronics/)
+f658a60  Add STEP files (3D solid models) for the 3 CNC frame parts
+a870c80  Aluminum master-datum plate: 6.0 -> 6.3 mm (1/4 inch
+         supplier stock)
+7535b3f  Wood 18 -> 12 mm + uprights 188 -> 200 mm (user ordered
+         12 mm Baltic Birch)
+
+All pushed to: leoalex196912/ChatGistory @ main
+
+================================================================
+USER ORDERING STATUS (END OF SESSION)
+================================================================
+
+ORDERED / RECEIVED:
+   [x] All 3D-printed cassette parts (received)
+   [x] Aluminum master-datum plate 250x250x6.3 mm 6061-T6 (ordered)
+   [x] Wood base 500x400x12 mm Baltic Birch (ordered)
+   [x] Wood upper deck 320x260x12 mm Baltic Birch (ordered)
+   [x] 2020 V-slot 500 mm x 4 (in hand, need to cut to 4x 200 mm)
+   [x] 2020 extrusion x 2 x 400 mm for touchscreen mast (in hand)
+   [x] Corner brackets, T-nuts, M5 heat-set inserts (in hand)
+   [x] All electronics (PSU, Mega, Pi 4, TB6600, 2x bucks,
+       6x MG90S servos, NEMA 23 + HG5 gearbox, etc.)
+
+STILL TO ORDER (safety items):
+   [ ] E-stop mushroom 22 mm panel mount NC+NC 10A/250V
+   [ ] IEC C14 panel-mount AC inlet
+   [ ] 2A T-fuse panel-mount holder
+   [ ] (optional) 5 mm green + amber status LEDs
+
+NEXT PHYSICAL ACTIONS:
+   1. Wait 5-10 business days for wood + aluminum plate to arrive
+   2. Cut 4x 200 mm uprights from 500 mm V-slot sticks
+   3. Receive wood and aluminum plate, verify dimensions match files
+   4. Order safety items (E-stop, IEC inlet, fuse holder)
+   5. Begin assembly per assembly_procedure_p1.pdf / p2.pdf
+
+================================================================
+KEY DESIGN DECISIONS LOCKED THIS SESSION
+================================================================
+
+1. Aluminum plate is 6.3 mm (1/4"), 6061-T6, NOT 4.7 mm
+   - Stiffness > weight savings here
+   - Flatness retention critical for master datum
+
+2. Wood is 12 mm Baltic Birch ply, NOT 18 mm hardwood
+   - Supplier availability dictated
+   - Master datum at Z=230 preserved by lengthening uprights
+
+3. 2020 uprights are 200 mm long (cut from 500 mm V-slot sticks)
+   - Practical cut length absorbs the 0.3 mm CAD-vs-practical delta
+   - V-slot fully compatible with T-nuts in user's inventory
+
+4. Frame deliverables = STEP + DXF + PDF per part
+   - STEP is the unambiguous thickness reference
+   - DXF is the 2D cut path for CNC software
+   - PDF is human-readable drawing
+
+5. NEVER 3D-print the wood/aluminum structural parts
+   - Wood/aluminum is cheaper, stiffer, more dimensionally stable
+   - 3D printing reserved for cassette + tooling + brackets
+
+================================================================
+OUTSTANDING ITEMS / NEXT SESSION
+================================================================
+
+Documentation:
+   [ ] (deferred) Day 2 Mega <-> Pi UART protocol + state machine
+   [ ] (deferred) Day 3 Mega firmware architecture
+   [ ] (deferred) Day 4 Assembly procedure expansion beyond Phase 1
+   [ ] (deferred) Day 5 Consumables checklist (ferrules, heatshrink)
+
+Physical:
+   [ ] Receive ordered wood + aluminum (5-10 days)
+   [ ] Cut 4x 200 mm uprights when ready
+   [ ] Order 3 safety items before powered test
+   [ ] PSU install + wire + measure (Part F V0.9 framework awaiting
+       installed-envelope measurements)
+
+ICD update consideration:
+   [ ] May want to bump ICD R6 -> R7 with formal note of:
+       - Wood 12 mm change
+       - Aluminum 6.3 mm change
+       - Upright 200 mm change
+     Or keep ICD R6 stable and note these as "build configuration"
+     rather than design changes (master datum at Z=230 preserved =
+     no functional change)
+
+================================================================
+END OF SESSION LOG
+================================================================

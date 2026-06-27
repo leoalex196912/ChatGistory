@@ -16,13 +16,30 @@ Run:
   "C:/Program Files/FreeCAD 1.1/bin/python.exe" generate_drawings.py
 """
 
-import os
+import os, sys
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 from matplotlib.patches import Rectangle, Circle, Polygon, FancyBboxPatch
 from matplotlib.lines import Line2D
 from matplotlib.backends.backend_pdf import PdfPages
 import numpy as np
+
+# FreeCAD Part for STEP export (only available when run via FreeCAD's Python)
+try:
+    import FreeCAD
+    import Part
+    HAS_FREECAD = True
+except ImportError:
+    HAS_FREECAD = False
+    print("WARNING: FreeCAD not available; STEP export will be skipped.")
+
+# machine_datums for STEP geometry
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+try:
+    import machine_datums as MD
+except ImportError:
+    MD = None
+    print("WARNING: machine_datums not importable; STEP export will be skipped.")
 
 # ============================================================
 # WOOD BASE + INFRASTRUCTURE (from machine_datums.py)
@@ -1582,11 +1599,15 @@ def draw_wood_upper_deck():
         entities.append(_dxf_circle(hx, hy, 5.5/2))
     # text labels
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 15,
-                              'CSM V3 WOOD UPPER DECK V1.0 - 320x260x18'))
+                              'CSM V3 WOOD UPPER DECK V1.0'))
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 25,
-                              'Hardwood. 8x Ø5.5 + 1x Ø170'))
+                              'MATERIAL: Hardwood Plywood 18mm'))
+    entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 35,
+                              'SIZE: 320 x 260 mm'))
+    entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 45,
+                              'HOLES: 8x Dia 5.5 + 1x Dia 170'))
     out_dxf = os.path.join(FRAME_DIRS['wood_upper_deck'],
-                           'CSM_V3_WoodUpperDeck_V1_0.dxf')
+                           'CSM_V3_WoodUpperDeck_V1_0_320x260x18.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1742,11 +1763,17 @@ def draw_aluminum_plate():
         hy = (PCD_FRAME_MOUNT/2) * np.sin(ang)
         entities.append(_dxf_circle(hx, hy, 5.5/2))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 15,
-                              'CSM V3 ALU MASTER PLATE V1.1 - 250x250x6 6061-T6'))
+                              'CSM V3 ALU MASTER PLATE V1.1'))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 25,
-                              'FLATNESS <0.2mm. 4x Ø5.5 + 1x Ø170'))
+                              'MATERIAL: 6061-T6 Aluminum 6mm'))
+    entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 35,
+                              'SIZE: 250 x 250 mm  (square)'))
+    entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 45,
+                              'FLATNESS <0.2mm CRITICAL'))
+    entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 55,
+                              'HOLES: 4x Dia 5.5 + 1x Dia 170'))
     out_dxf = os.path.join(FRAME_DIRS['mount_plate'],
-                           'CSM_V3_MountPlate6061_V1_1.dxf')
+                           'CSM_V3_MountPlate6061_V1_1_250x250x6.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1763,12 +1790,108 @@ def write_wood_base_dxf():
             continue
         entities.append(_dxf_circle(h['x'], h['y'], h['d']/2))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 15,
-                              'CSM V3 WOOD BASE V1.1 - 500x400x18 Hardwood'))
+                              'CSM V3 WOOD BASE V1.1'))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 25,
-                              '21 electrical holes + 1x Ø100 take-down'))
-    out_dxf = os.path.join(FRAME_DIRS['wood_base'], 'CSM_V3_WoodBase_V1_1.dxf')
+                              'MATERIAL: Hardwood Plywood 18mm'))
+    entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 35,
+                              'SIZE: 500 x 400 mm'))
+    entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 45,
+                              'HOLES: 21 electrical + 1x Dia 100 take-down'))
+    out_dxf = os.path.join(FRAME_DIRS['wood_base'],
+                           'CSM_V3_WoodBase_V1_1_500x400x18.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
+
+# ============================================================
+# STEP file generation (3D solid models with thickness embedded)
+# ============================================================
+def _make_wood_base_solid():
+    """500 × 400 × 18 slab with take-down hole + all 21 electronics holes."""
+    t = MD.WOOD_BASE_T
+    slab = Part.makeBox(MD.WOOD_BASE_W, MD.WOOD_BASE_D, t,
+                        FreeCAD.Vector(-MD.WOOD_BASE_W/2, -MD.WOOD_BASE_D/2, 0))
+    # Take-down hole
+    td = Part.makeCylinder(MD.TAKEDOWN_HOLE_D/2.0, t + 2.0,
+                            FreeCAD.Vector(0, 0, -1.0))
+    shape = slab.cut(td)
+    # All 21 electronics mounting holes
+    for h in DRILL_LIST:
+        if h['n'] == 0:
+            continue
+        eh = Part.makeCylinder(h['d']/2.0, t + 2.0,
+                                FreeCAD.Vector(h['x'], h['y'], -1.0))
+        shape = shape.cut(eh)
+    return shape
+
+def _make_wood_upper_deck_solid():
+    """320 × 260 × 18 slab with Ø170 center + 4 upright + 4 PCD-180 holes."""
+    t = MD.UPPER_DECK_T
+    slab = Part.makeBox(UD_W, UD_D, t,
+                        FreeCAD.Vector(-UD_W/2, -UD_D/2, 0))
+    # Center hole
+    center = Part.makeCylinder(UD_CENTER_HOLE_D/2.0, t + 2.0,
+                                FreeCAD.Vector(0, 0, -1.0))
+    shape = slab.cut(center)
+    # 4× corner holes for uprights
+    for sx in (+150, -150):
+        for sy in (+120, -120):
+            h = Part.makeCylinder(5.5/2.0, t + 2.0,
+                                   FreeCAD.Vector(sx, sy, -1.0))
+            shape = shape.cut(h)
+    # 4× PCD 180 holes at 45°
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2.0) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2.0) * np.sin(ang)
+        h = Part.makeCylinder(5.5/2.0, t + 2.0,
+                               FreeCAD.Vector(hx, hy, -1.0))
+        shape = shape.cut(h)
+    return shape
+
+def _make_alu_plate_solid():
+    """250 × 250 × 6 plate with Ø170 center + 4 PCD-180 holes."""
+    t = MD.ALU_PLATE_T
+    slab = Part.makeBox(ALU_W, ALU_W, t,
+                        FreeCAD.Vector(-ALU_W/2, -ALU_W/2, 0))
+    center = Part.makeCylinder(ALU_CENTER_HOLE_D/2.0, t + 2.0,
+                                FreeCAD.Vector(0, 0, -1.0))
+    shape = slab.cut(center)
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2.0) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2.0) * np.sin(ang)
+        h = Part.makeCylinder(5.5/2.0, t + 2.0,
+                               FreeCAD.Vector(hx, hy, -1.0))
+        shape = shape.cut(h)
+    return shape
+
+def generate_step_files():
+    """Export STEP (3D) for the three CNC frame parts."""
+    if not HAS_FREECAD or MD is None:
+        print("STEP export skipped (FreeCAD or machine_datums missing).")
+        return
+    doc = FreeCAD.newDocument("FrameStepExport")
+    parts = [
+        ('WoodBase',       _make_wood_base_solid,
+         FRAME_DIRS['wood_base'],
+         f'CSM_V3_WoodBase_V1_1_500x400x{int(MD.WOOD_BASE_T)}.step'),
+        ('WoodUpperDeck',  _make_wood_upper_deck_solid,
+         FRAME_DIRS['wood_upper_deck'],
+         f'CSM_V3_WoodUpperDeck_V1_0_320x260x{int(MD.UPPER_DECK_T)}.step'),
+        ('AluPlate',       _make_alu_plate_solid,
+         FRAME_DIRS['mount_plate'],
+         f'CSM_V3_MountPlate6061_V1_1_250x250x{int(MD.ALU_PLATE_T)}.step'),
+    ]
+    for name, builder, folder, filename in parts:
+        try:
+            obj = doc.addObject("Part::Feature", name)
+            obj.Shape = builder()
+            out = os.path.join(folder, filename)
+            Part.export([obj], out)
+            print(f"  -> {out} (3D STEP, thickness embedded)")
+        except Exception as e:
+            print(f"  STEP FAILED for {name}: {e}")
+    FreeCAD.closeDocument("FrameStepExport")
 
 # ============================================================
 if __name__ == '__main__':
@@ -1809,5 +1932,11 @@ if __name__ == '__main__':
     write_wood_base_dxf()
     print()
     print("=" * 70)
-    print("Done. PDFs are vector. DXFs are CNC-ready for the wood shop.")
+    print("STEP FILES (3D solid models with thickness embedded)")
+    print("=" * 70)
+    generate_step_files()
+    print()
+    print("=" * 70)
+    print("Done. PDFs are vector. DXFs are 2D CNC paths. STEPs are 3D solids.")
+    print("Send shop:  *.step (verification + thickness) + *.dxf (cut path)")
     print("=" * 70)

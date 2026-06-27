@@ -383,7 +383,7 @@ TEXT
 40
 4.0
 1
-CSM V3 WOOD BASE V1.1 - 500x400x18 Hardwood
+CSM V3 WOOD BASE V1.1
 0
 TEXT
 8
@@ -397,7 +397,35 @@ TEXT
 40
 4.0
 1
-21 electrical holes + 1x Ø100 take-down
+MATERIAL: Hardwood Plywood 18mm
+0
+TEXT
+8
+TEXT
+10
+-240.0
+20
+165.0
+30
+0
+40
+4.0
+1
+SIZE: 500 x 400 mm
+0
+TEXT
+8
+TEXT
+10
+-240.0
+20
+155.0
+30
+0
+40
+4.0
+1
+HOLES: 21 electrical + 1x Dia 100 take-down
 0
 ENDSEC
 0

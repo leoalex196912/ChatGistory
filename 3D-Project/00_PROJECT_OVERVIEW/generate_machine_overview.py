@@ -351,8 +351,8 @@ fig.text(0.5, 0.025, 'Master Datum Z=230 (aluminum plate top)  •  '
          ha='center', fontsize=7, color='#888', style='italic')
 
 # Save
-out_png = os.path.join(OUTDIR, 'CSM_V3_MACHINE_OVERVIEW.png')
-out_pdf = os.path.join(OUTDIR, 'CSM_V3_MACHINE_OVERVIEW.pdf')
+out_png = os.path.join(OUTDIR, 'CSM_V3_MACHINE_OVERVIEW_AUTO.png')
+out_pdf = os.path.join(OUTDIR, 'CSM_V3_MACHINE_OVERVIEW_AUTO.pdf')
 fig.savefig(out_png, dpi=200, bbox_inches='tight', facecolor='white')
 fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
 plt.close(fig)

@@ -131,9 +131,9 @@ UPPER_DECK_TOP_Z       = 224.0
 # Aluminum master-datum plate
 ALU_PLATE_W            = 250.0
 ALU_PLATE_D            = 250.0
-ALU_PLATE_T            =   6.0
-ALU_PLATE_BOTTOM_Z     = 224.0
-ALU_PLATE_TOP_Z        = 230.0   # MASTER DATUM PLANE (ICD invariant B3)
+ALU_PLATE_T            =   6.3    # 1/4" plate (was 6.0 mm — supplier stock)
+ALU_PLATE_BOTTOM_Z     = 223.7    # = ALU_PLATE_TOP_Z - ALU_PLATE_T
+ALU_PLATE_TOP_Z        = 230.0    # MASTER DATUM PLANE (ICD invariant B3, locked)
 ALU_PLATE_MATERIAL     = "6061-T6 mill finish"
 
 # Touchscreen mast (dual 2020 + crossbar, REAR of wood base, -Y)
@@ -282,7 +282,7 @@ SPRING_WIRE_D          =   2.79   # 0.110 inch music wire
 SPRING_QTY_PURCHASED   =   3
 
 # --- ALUMINUM PLATE (purchased B0D9S2KH4V, size TBD-verify) ---
-ALU_PLATE_PURCHASED_T  =   6.00   # 6 mm thick confirmed
+ALU_PLATE_PURCHASED_T  =   6.30   # 1/4 inch nominal = 6.35; ordered 6.3
 # (W and D values come from ALU_PLATE_W and ALU_PLATE_D in frame block above)
 
 # ============================================================

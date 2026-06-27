@@ -1420,7 +1420,7 @@ def draw_bench_test_checklist():
 # ============================================================
 UD_W, UD_D, UD_T = 320, 260, 18   # Wood upper deck
 UD_CENTER_HOLE_D = 170
-ALU_W, ALU_T = 250, 6              # Aluminum plate (square)
+ALU_W, ALU_T = 250, 6.3            # Aluminum plate (square, 1/4" / 6.3 mm)
 ALU_CENTER_HOLE_D = 170
 PCD_FRAME_MOUNT = 180
 PCD_OFFSET_DEG = 45
@@ -1677,7 +1677,7 @@ def draw_aluminum_plate():
     ax.set_xlabel('X (mm) — origin at center', fontsize=9)
     ax.set_ylabel('Y (mm) — origin at center', fontsize=9)
     ax.set_title('CSM V3 — ALUMINUM MASTER-DATUM PLATE V1.1 — DRILLING DRAWING\n'
-                 '250 × 250 × 6 mm  6061-T6  •  MASTER DATUM PLANE (top surface)',
+                 '250 × 250 × 6.3 mm (1/4") 6061-T6  •  MASTER DATUM PLANE (top surface)',
                  fontsize=12, fontweight='bold', pad=14)
 
     # Title block
@@ -1687,7 +1687,7 @@ def draw_aluminum_plate():
     rows = [
         ('PROJECT',   'CSM V3 — Circular Sock Machine'),
         ('PART',      'Aluminum Master Datum Plate V1.1'),
-        ('SIZE',      '250 × 250 × 6 mm  (square)'),
+        ('SIZE',      '250 × 250 × 6.3 mm  (square, 1/4")'),
         ('MATERIAL',  '6061-T6 aluminum, mill finish'),
         ('FLATNESS',  '< 0.2 mm across full plate (CRITICAL)'),
         ('TOLERANCE', '±0.5 mm (holes), ±1 mm (outline)'),
@@ -1765,7 +1765,7 @@ def draw_aluminum_plate():
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 15,
                               'CSM V3 ALU MASTER PLATE V1.1'))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 25,
-                              'MATERIAL: 6061-T6 Aluminum 6mm'))
+                              'MATERIAL: 6061-T6 Aluminum 6.3mm (1/4 inch)'))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 35,
                               'SIZE: 250 x 250 mm  (square)'))
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 45,
@@ -1773,7 +1773,7 @@ def draw_aluminum_plate():
     entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 55,
                               'HOLES: 4x Dia 5.5 + 1x Dia 170'))
     out_dxf = os.path.join(FRAME_DIRS['mount_plate'],
-                           'CSM_V3_MountPlate6061_V1_1_250x250x6.dxf')
+                           'CSM_V3_MountPlate6061_V1_1_250x250x6_3.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1880,7 +1880,7 @@ def generate_step_files():
          f'CSM_V3_WoodUpperDeck_V1_0_320x260x{int(MD.UPPER_DECK_T)}.step'),
         ('AluPlate',       _make_alu_plate_solid,
          FRAME_DIRS['mount_plate'],
-         f'CSM_V3_MountPlate6061_V1_1_250x250x{int(MD.ALU_PLATE_T)}.step'),
+         f'CSM_V3_MountPlate6061_V1_1_250x250x{str(MD.ALU_PLATE_T).replace(".", "_")}.step'),
     ]
     for name, builder, folder, filename in parts:
         try:

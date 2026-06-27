@@ -989,6 +989,50 @@ def draw_hardware_order_sheet():
     print(f"  -> {out_pdf}")
 
 # ============================================================
+# Helper: minimal DXF writer (for wood shop / CNC input)
+# ============================================================
+def _dxf_header():
+    return ("0\nSECTION\n2\nHEADER\n9\n$INSUNITS\n70\n4\n0\nENDSEC\n"
+            "0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLAYER\n"
+            "0\nLAYER\n2\nOUTLINE\n70\n0\n62\n7\n6\nCONTINUOUS\n"
+            "0\nLAYER\n2\nHOLES\n70\n0\n62\n1\n6\nCONTINUOUS\n"
+            "0\nLAYER\n2\nTEXT\n70\n0\n62\n3\n6\nCONTINUOUS\n"
+            "0\nENDTAB\n0\nENDSEC\n"
+            "0\nSECTION\n2\nENTITIES\n")
+
+def _dxf_footer():
+    return "0\nENDSEC\n0\nEOF\n"
+
+def _dxf_line(x1, y1, x2, y2, layer='OUTLINE'):
+    return (f"0\nLINE\n8\n{layer}\n"
+            f"10\n{x1}\n20\n{y1}\n30\n0\n"
+            f"11\n{x2}\n21\n{y2}\n31\n0\n")
+
+def _dxf_circle(cx, cy, r, layer='HOLES'):
+    return (f"0\nCIRCLE\n8\n{layer}\n"
+            f"10\n{cx}\n20\n{cy}\n30\n0\n40\n{r}\n")
+
+def _dxf_text(x, y, text, height=4.0, layer='TEXT'):
+    return (f"0\nTEXT\n8\n{layer}\n"
+            f"10\n{x}\n20\n{y}\n30\n0\n40\n{height}\n1\n{text}\n")
+
+def _dxf_rect(cx, cy, w, h, layer='OUTLINE'):
+    x0, y0 = cx - w/2, cy - h/2
+    x1, y1 = cx + w/2, cy + h/2
+    return (_dxf_line(x0, y0, x1, y0, layer) +
+            _dxf_line(x1, y0, x1, y1, layer) +
+            _dxf_line(x1, y1, x0, y1, layer) +
+            _dxf_line(x0, y1, x0, y0, layer))
+
+def write_dxf(filepath, entities):
+    """entities = list of strings (each from _dxf_line/_circle/etc.)"""
+    with open(filepath, 'w') as f:
+        f.write(_dxf_header())
+        for e in entities:
+            f.write(e)
+        f.write(_dxf_footer())
+
+# ============================================================
 # Helper for the procedure / checklist sheets
 # ============================================================
 def _checkbox_step(ax, x, y, n, text, fs=8, box_size=2.0, color='#222'):
@@ -1347,6 +1391,372 @@ def draw_bench_test_checklist():
     print(f"  -> {out_pdf} (2 pages)")
 
 # ============================================================
+# WOOD UPPER DECK + ALUMINUM PLATE common dims
+# ============================================================
+UD_W, UD_D, UD_T = 320, 260, 18   # Wood upper deck
+UD_CENTER_HOLE_D = 170
+ALU_W, ALU_T = 250, 6              # Aluminum plate (square)
+ALU_CENTER_HOLE_D = 170
+PCD_FRAME_MOUNT = 180
+PCD_OFFSET_DEG = 45
+
+# ============================================================
+# Drawing 8: WOOD UPPER DECK DRILLING SHEET (shop-ready)
+# ============================================================
+def draw_wood_upper_deck():
+    fig = plt.figure(figsize=(20, 14), dpi=150)
+    gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.02)
+    ax = fig.add_subplot(gs[0])
+    tb = fig.add_subplot(gs[1])
+
+    ax.set_aspect('equal')
+    ax.set_xlim(-220, 220)
+    ax.set_ylim(-180, 180)
+    ax.set_facecolor('white')
+    ax.grid(True, linestyle=':', linewidth=0.3, color='#cccccc', zorder=0)
+    ax.set_xticks(np.arange(-200, 201, 50))
+    ax.set_yticks(np.arange(-150, 151, 50))
+
+    # Datum
+    ax.axhline(0, color='#888', lw=0.5, linestyle='-.', alpha=0.6, zorder=1)
+    ax.axvline(0, color='#888', lw=0.5, linestyle='-.', alpha=0.6, zorder=1)
+    ax.plot(0, 0, '+', color='#000', markersize=16, mew=1.5, zorder=3)
+    ax.text(8, -8, 'DATUM (0, 0)', fontsize=7, color='#444')
+
+    # Deck outline
+    ax.add_patch(Rectangle((-UD_W/2, -UD_D/2), UD_W, UD_D,
+                           facecolor=WOOD_FILL, edgecolor=WOOD_EDGE, lw=2.5, zorder=1))
+    for gy in np.linspace(-UD_D/2 + 15, UD_D/2 - 15, 10):
+        ax.plot([-UD_W/2 + 4, UD_W/2 - 4], [gy, gy], color='#a8865a',
+                lw=0.3, alpha=0.4, zorder=1.5)
+
+    # Center cam-ring hole
+    ax.add_patch(Circle((0, 0), UD_CENTER_HOLE_D/2 + 4, facecolor='#ffeeee',
+                        edgecolor='none', alpha=0.4, zorder=2))
+    ax.add_patch(Circle((0, 0), UD_CENTER_HOLE_D/2, facecolor='white',
+                        edgecolor=HOLE_COLOR, lw=1.8, linestyle='--', zorder=3))
+    ax.text(0, 5, f'Ø{UD_CENTER_HOLE_D}', fontsize=11, ha='center', va='center',
+            color=HOLE_COLOR, fontweight='bold')
+    ax.text(0, -8, 'CAM RING + TAKE-DOWN', fontsize=7, ha='center', color=HOLE_COLOR)
+
+    # 4× corner holes for uprights at (±150, ±120)
+    n = 1
+    for sx in (+150, -150):
+        for sy in (+120, -120):
+            draw_hole(ax, sx, sy, 5.5, n=n, fs=7)
+            ax.text(sx + 10, sy + 10, f'({sx:+d}, {sy:+d})', fontsize=6, color='#222')
+            n += 1
+
+    # 4× PCD 180 holes at 45° offset
+    pcd_holes = []
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2) * np.sin(ang)
+        draw_hole(ax, hx, hy, 5.5, n=n, fs=7)
+        ax.text(hx + 8, hy + 8, f'({hx:+.1f}, {hy:+.1f})', fontsize=6, color='#222')
+        pcd_holes.append((hx, hy))
+        n += 1
+
+    # PCD reference circle (dotted)
+    ax.add_patch(Circle((0, 0), PCD_FRAME_MOUNT/2, facecolor='none',
+                        edgecolor='#888', lw=0.6, linestyle=':', zorder=2))
+    ax.text(0, -PCD_FRAME_MOUNT/2 - 5, f'PCD Ø{PCD_FRAME_MOUNT}',
+            fontsize=7, ha='center', color='#888')
+
+    # Overall dimensions
+    dim_h(ax, -UD_W/2, UD_W/2, -UD_D/2, '320 mm  (UPPER_DECK_W)', offset_y=20)
+    dim_v(ax, -UD_D/2, UD_D/2, UD_W/2, '260 mm  (UPPER_DECK_D)', offset_x=20)
+    # Half dimensions
+    dim_h(ax, -UD_W/2, 0, UD_D/2 + 6, '160', offset_y=-10, color=DIM_FAINT, fontsize=6)
+    dim_h(ax, 0, UD_W/2, UD_D/2 + 6, '160', offset_y=-10, color=DIM_FAINT, fontsize=6)
+    dim_v(ax, -UD_D/2, 0, -UD_W/2 - 6, '130', offset_x=-22, color=DIM_FAINT, fontsize=6)
+    dim_v(ax, 0, UD_D/2, -UD_W/2 - 6, '130', offset_x=-22, color=DIM_FAINT, fontsize=6)
+    # Upright pitch
+    dim_h(ax, -150, +150, +120 - 10, '300 (upright pitch)', offset_y=10,
+          color='#0050a0', fontsize=7)
+    dim_v(ax, -120, +120, +150 + 10, '240', offset_x=10, color='#0050a0', fontsize=7)
+
+    ax.set_xlabel('X (mm) — origin at center', fontsize=9)
+    ax.set_ylabel('Y (mm) — origin at center', fontsize=9)
+    ax.set_title('CSM V3 — WOOD UPPER DECK V1.0 — DRILLING DRAWING\n'
+                 'Sheet 8 of 8   |   320 × 260 × 18 mm hardwood',
+                 fontsize=12, fontweight='bold', pad=14)
+
+    # Title block
+    tb.set_xlim(0, 1); tb.set_ylim(0, 1); tb.axis('off')
+    tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96,
+                           facecolor='white', edgecolor='black', lw=1.5))
+    rows = [
+        ('PROJECT',   'CSM V3 — Circular Sock Machine'),
+        ('PART',      'Wood Upper Deck V1.0'),
+        ('SIZE',      '320 × 260 × 18 mm'),
+        ('MATERIAL',  'Hardwood (walnut/maple/Baltic birch)'),
+        ('FINISH',    'Sanded smooth, oiled or sealed'),
+        ('TOLERANCE', '±1.0 mm (holes), ±2 mm (outline)'),
+        ('REV',       'V1.0'),
+        ('DATE',      '2026-06-05'),
+        ('QTY',       '1 piece'),
+    ]
+    y = 0.96
+    for k, v in rows:
+        tb.text(0.06, y, k, fontsize=8, fontweight='bold', color='#444')
+        tb.text(0.40, y, v, fontsize=8, color='#111')
+        y -= 0.040
+
+    tb.text(0.06, 0.55, 'HOLE LIST', fontsize=10, fontweight='bold')
+    tb.text(0.06, 0.52, '#   X       Y      Drill   Use', fontsize=7,
+            family='monospace', color='#444', fontweight='bold')
+    holes_list = [
+        ('1',  '+150', '-120',  'Ø5.5',  'upright SE'),
+        ('2',  '+150', '+120',  'Ø5.5',  'upright NE'),
+        ('3',  '-150', '-120',  'Ø5.5',  'upright SW'),
+        ('4',  '-150', '+120',  'Ø5.5',  'upright NW'),
+        ('5',  '+63.6', '+63.6', 'Ø5.5',  'plate NE (PCD180 @ 45°)'),
+        ('6',  '-63.6', '+63.6', 'Ø5.5',  'plate NW (PCD180 @ 135°)'),
+        ('7',  '-63.6', '-63.6', 'Ø5.5',  'plate SW (PCD180 @ 225°)'),
+        ('8',  '+63.6', '-63.6', 'Ø5.5',  'plate SE (PCD180 @ 315°)'),
+        ('—',  '0',    '0',     'Ø170',  'cam ring through-hole'),
+    ]
+    yy = 0.49
+    for row in holes_list:
+        tb.text(0.06, yy, f'{row[0]:<3s} {row[1]:>5s}  {row[2]:>5s}  {row[3]:>5s}  {row[4]}',
+                fontsize=6.5, family='monospace')
+        yy -= 0.026
+
+    yy -= 0.01
+    tb.plot([0.04, 0.96], [yy, yy], color='black', lw=0.6)
+    yy -= 0.02
+    tb.text(0.06, yy, 'TOTAL: 9 holes  (8× Ø5.5 + 1× Ø170)',
+            fontsize=8, fontweight='bold')
+
+    yy -= 0.05
+    tb.text(0.06, yy, 'NOTES', fontsize=10, fontweight='bold')
+    yy -= 0.025
+    notes = [
+        '• Hole tolerance ±1 mm acceptable',
+        '• Cam-ring hole can be jigsawed if no Ø170 hole saw',
+        '• Sand all edges before assembly',
+        '• Bolt: M5 × 35 mm through wood into',
+        '  T-nut (upright) or M5 insert (plate)',
+        '• Dry-fit before any glue/finish',
+    ]
+    for n in notes:
+        tb.text(0.06, yy, n, fontsize=7, color='#222')
+        yy -= 0.022
+
+    plt.tight_layout()
+    out_png = os.path.join(OUTDIR, 'wood_upper_deck_drilling.png')
+    out_pdf = os.path.join(OUTDIR, 'wood_upper_deck_drilling.pdf')
+    fig.savefig(out_png, dpi=200, bbox_inches='tight', facecolor='white')
+    fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print(f"  -> {out_png}")
+    print(f"  -> {out_pdf}")
+
+    # DXF export
+    entities = []
+    # outline (rectangle)
+    entities.append(_dxf_rect(0, 0, UD_W, UD_D))
+    # center hole
+    entities.append(_dxf_circle(0, 0, UD_CENTER_HOLE_D/2))
+    # 4 corner holes
+    for sx in (+150, -150):
+        for sy in (+120, -120):
+            entities.append(_dxf_circle(sx, sy, 5.5/2))
+    # 4 PCD holes
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2) * np.sin(ang)
+        entities.append(_dxf_circle(hx, hy, 5.5/2))
+    # text labels
+    entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 15,
+                              'CSM V3 WOOD UPPER DECK V1.0 - 320x260x18'))
+    entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 25,
+                              'Hardwood. 8x Ø5.5 + 1x Ø170'))
+    out_dxf = os.path.join(OUTDIR, 'wood_upper_deck.dxf')
+    write_dxf(out_dxf, entities)
+    print(f"  -> {out_dxf} (CNC-ready)")
+
+# ============================================================
+# Drawing 9: ALUMINUM MASTER-DATUM PLATE DRILLING SHEET
+# ============================================================
+def draw_aluminum_plate():
+    fig = plt.figure(figsize=(20, 14), dpi=150)
+    gs = fig.add_gridspec(1, 2, width_ratios=[3, 1], wspace=0.02)
+    ax = fig.add_subplot(gs[0])
+    tb = fig.add_subplot(gs[1])
+
+    ax.set_aspect('equal')
+    ax.set_xlim(-180, 180)
+    ax.set_ylim(-180, 180)
+    ax.set_facecolor('white')
+    ax.grid(True, linestyle=':', linewidth=0.3, color='#cccccc', zorder=0)
+    ax.set_xticks(np.arange(-150, 151, 50))
+    ax.set_yticks(np.arange(-150, 151, 50))
+
+    # Datum
+    ax.axhline(0, color='#888', lw=0.5, linestyle='-.', alpha=0.6, zorder=1)
+    ax.axvline(0, color='#888', lw=0.5, linestyle='-.', alpha=0.6, zorder=1)
+    ax.plot(0, 0, '+', color='#000', markersize=16, mew=1.5, zorder=3)
+    ax.text(8, -8, 'DATUM (0, 0)', fontsize=7, color='#444')
+
+    # Plate outline (aluminum gray with subtle brushed effect)
+    ax.add_patch(Rectangle((-ALU_W/2, -ALU_W/2), ALU_W, ALU_W,
+                           facecolor='#cfd2d6', edgecolor='#5a5d62', lw=2.5, zorder=1))
+    # Brushed-aluminum texture lines
+    for gy in np.linspace(-ALU_W/2 + 10, ALU_W/2 - 10, 30):
+        ax.plot([-ALU_W/2 + 4, ALU_W/2 - 4], [gy, gy], color='#aaaeb3',
+                lw=0.3, alpha=0.5, zorder=1.5)
+
+    # Center cam-ring clearance hole
+    ax.add_patch(Circle((0, 0), ALU_CENTER_HOLE_D/2 + 4, facecolor='#ffeeee',
+                        edgecolor='none', alpha=0.4, zorder=2))
+    ax.add_patch(Circle((0, 0), ALU_CENTER_HOLE_D/2, facecolor='white',
+                        edgecolor=HOLE_COLOR, lw=1.8, linestyle='--', zorder=3))
+    ax.text(0, 5, f'Ø{ALU_CENTER_HOLE_D}', fontsize=11, ha='center', va='center',
+            color=HOLE_COLOR, fontweight='bold')
+    ax.text(0, -8, 'CAM RING CLEARANCE', fontsize=7, ha='center', color=HOLE_COLOR)
+
+    # 4× PCD 180 holes at 45° offset (M5 frame mount)
+    n = 1
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2) * np.sin(ang)
+        draw_hole(ax, hx, hy, 5.5, n=n, fs=7)
+        ax.text(hx + 8, hy + 8, f'({hx:+.1f}, {hy:+.1f})', fontsize=6, color='#222')
+        n += 1
+
+    # PCD reference circle
+    ax.add_patch(Circle((0, 0), PCD_FRAME_MOUNT/2, facecolor='none',
+                        edgecolor='#888', lw=0.7, linestyle=':', zorder=2))
+    ax.text(0, -PCD_FRAME_MOUNT/2 - 5, f'PCD Ø{PCD_FRAME_MOUNT}',
+            fontsize=7, ha='center', color='#888')
+
+    # Overall dimensions
+    dim_h(ax, -ALU_W/2, ALU_W/2, -ALU_W/2, '250 mm  (ALU_PLATE_W)', offset_y=20)
+    dim_v(ax, -ALU_W/2, ALU_W/2, ALU_W/2, '250 mm  (square)', offset_x=20)
+    # Half
+    dim_h(ax, -ALU_W/2, 0, ALU_W/2 + 6, '125', offset_y=-10, color=DIM_FAINT, fontsize=6)
+    dim_h(ax, 0, ALU_W/2, ALU_W/2 + 6, '125', offset_y=-10, color=DIM_FAINT, fontsize=6)
+
+    ax.set_xlabel('X (mm) — origin at center', fontsize=9)
+    ax.set_ylabel('Y (mm) — origin at center', fontsize=9)
+    ax.set_title('CSM V3 — ALUMINUM MASTER-DATUM PLATE V1.1 — DRILLING DRAWING\n'
+                 '250 × 250 × 6 mm  6061-T6  •  MASTER DATUM PLANE (top surface)',
+                 fontsize=12, fontweight='bold', pad=14)
+
+    # Title block
+    tb.set_xlim(0, 1); tb.set_ylim(0, 1); tb.axis('off')
+    tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96,
+                           facecolor='white', edgecolor='black', lw=1.5))
+    rows = [
+        ('PROJECT',   'CSM V3 — Circular Sock Machine'),
+        ('PART',      'Aluminum Master Datum Plate V1.1'),
+        ('SIZE',      '250 × 250 × 6 mm  (square)'),
+        ('MATERIAL',  '6061-T6 aluminum, mill finish'),
+        ('FLATNESS',  '< 0.2 mm across full plate (CRITICAL)'),
+        ('TOLERANCE', '±0.5 mm (holes), ±1 mm (outline)'),
+        ('REV',       'V1.1'),
+        ('DATE',      '2026-06-05'),
+        ('QTY',       '1 piece'),
+        ('STATUS',    'MASTER DATUM — top surface = Z=230'),
+    ]
+    y = 0.96
+    for k, v in rows:
+        tb.text(0.06, y, k, fontsize=8, fontweight='bold', color='#444')
+        tb.text(0.40, y, v, fontsize=8, color='#111')
+        y -= 0.038
+
+    tb.text(0.06, 0.56, 'HOLE LIST', fontsize=10, fontweight='bold')
+    tb.text(0.06, 0.53, '#   X         Y       Drill   Use', fontsize=7,
+            family='monospace', color='#444', fontweight='bold')
+    holes_list = [
+        ('1', '+63.64',  '+63.64', 'Ø5.5', 'NE (PCD180 @ 45°)'),
+        ('2', '-63.64',  '+63.64', 'Ø5.5', 'NW (PCD180 @ 135°)'),
+        ('3', '-63.64',  '-63.64', 'Ø5.5', 'SW (PCD180 @ 225°)'),
+        ('4', '+63.64',  '-63.64', 'Ø5.5', 'SE (PCD180 @ 315°)'),
+        ('—', '0',       '0',      'Ø170', 'cam ring clearance'),
+    ]
+    yy = 0.50
+    for row in holes_list:
+        tb.text(0.06, yy, f'{row[0]:<3s} {row[1]:>7s}  {row[2]:>7s}  {row[3]:>5s}  {row[4]}',
+                fontsize=6.5, family='monospace')
+        yy -= 0.028
+
+    yy -= 0.01
+    tb.plot([0.04, 0.96], [yy, yy], color='black', lw=0.6)
+    yy -= 0.02
+    tb.text(0.06, yy, 'TOTAL: 5 holes  (4× Ø5.5 + 1× Ø170)',
+            fontsize=8, fontweight='bold')
+
+    yy -= 0.045
+    tb.text(0.06, yy, 'CRITICAL NOTES', fontsize=10, fontweight='bold', color='#c00')
+    yy -= 0.022
+    notes = [
+        '• FLATNESS < 0.2 mm — this is the master',
+        '  datum for the entire cassette stack',
+        '• Top surface must NOT be brushed/abraded',
+        '  after machining (preserve flatness)',
+        '• Center hole can be plunge-milled OR drilled',
+        '  + reamed to Ø170 ±0.5',
+        '• 4× M5 holes are clearance (no threading)',
+        '• Optional: chamfer 0.5×45° all top edges',
+        '• Anodizing OK but not required',
+    ]
+    for n in notes:
+        tb.text(0.06, yy, n, fontsize=7, color='#222')
+        yy -= 0.020
+
+    plt.tight_layout()
+    out_png = os.path.join(OUTDIR, 'aluminum_plate_drilling.png')
+    out_pdf = os.path.join(OUTDIR, 'aluminum_plate_drilling.pdf')
+    fig.savefig(out_png, dpi=200, bbox_inches='tight', facecolor='white')
+    fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
+    plt.close(fig)
+    print(f"  -> {out_png}")
+    print(f"  -> {out_pdf}")
+
+    # DXF export
+    entities = []
+    entities.append(_dxf_rect(0, 0, ALU_W, ALU_W))
+    entities.append(_dxf_circle(0, 0, ALU_CENTER_HOLE_D/2))
+    for i in range(4):
+        ang = np.radians(i * 90 + PCD_OFFSET_DEG)
+        hx = (PCD_FRAME_MOUNT/2) * np.cos(ang)
+        hy = (PCD_FRAME_MOUNT/2) * np.sin(ang)
+        entities.append(_dxf_circle(hx, hy, 5.5/2))
+    entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 15,
+                              'CSM V3 ALU MASTER PLATE V1.1 - 250x250x6 6061-T6'))
+    entities.append(_dxf_text(-ALU_W/2 + 10, ALU_W/2 - 25,
+                              'FLATNESS <0.2mm. 4x Ø5.5 + 1x Ø170'))
+    out_dxf = os.path.join(OUTDIR, 'aluminum_plate.dxf')
+    write_dxf(out_dxf, entities)
+    print(f"  -> {out_dxf} (CNC-ready)")
+
+# ============================================================
+# Also: write DXF for wood base (existing drawing has it as PNG only)
+# ============================================================
+def write_wood_base_dxf():
+    entities = []
+    entities.append(_dxf_rect(0, 0, WB_W, WB_D))
+    entities.append(_dxf_circle(0, 0, HOLE_D/2))
+    # All 21 electrical mount holes
+    for h in DRILL_LIST:
+        if h['n'] == 0:
+            continue
+        entities.append(_dxf_circle(h['x'], h['y'], h['d']/2))
+    entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 15,
+                              'CSM V3 WOOD BASE V1.1 - 500x400x18 Hardwood'))
+    entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 25,
+                              '21 electrical holes + 1x Ø100 take-down'))
+    out_dxf = os.path.join(OUTDIR, 'wood_base.dxf')
+    write_dxf(out_dxf, entities)
+    print(f"  -> {out_dxf} (CNC-ready)")
+
+# ============================================================
 if __name__ == '__main__':
     print("=" * 70)
     print("CSM V3 -- Generating drilling drawings (V1.2)")
@@ -1375,6 +1785,15 @@ if __name__ == '__main__':
     print("Sheet 7: Bench-Test Checklist (A4 printable)")
     draw_bench_test_checklist()
     print()
+    print("Sheet 8: Wood Upper Deck Drilling (+DXF)")
+    draw_wood_upper_deck()
+    print()
+    print("Sheet 9: Aluminum Master-Datum Plate Drilling (+DXF)")
+    draw_aluminum_plate()
+    print()
+    print("Sheet 10: Wood Base DXF (companion to existing drawing)")
+    write_wood_base_dxf()
+    print()
     print("=" * 70)
-    print("Done. PDFs are vector (print A3/A2 for engineering drawings, A4 for sheets).")
+    print("Done. PDFs are vector. DXFs are CNC-ready for the wood shop.")
     print("=" * 70)

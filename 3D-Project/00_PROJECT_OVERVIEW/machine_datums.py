@@ -106,27 +106,32 @@ PCD_HALL_MAGNET        =  95.0   # 1x D6 magnet, 0 deg
 FRAME_ORIGIN_XY        = (0.0, 0.0)
 
 # Wood base
+# Wood thickness 18 -> 12 mm (2026-06-27): user ordered 12 mm Baltic Birch.
+# Uprights lengthened 188 -> 200 mm to compensate (cut tolerance absorbs
+# the 0.3 mm needed to keep master datum at Z=230 exactly).
 WOOD_BASE_W            = 500.0
 WOOD_BASE_D            = 400.0
-WOOD_BASE_T            =  18.0
+WOOD_BASE_T            =  12.0   # 12 mm Baltic Birch plywood (was 18)
 WOOD_BASE_BOTTOM_Z     =   0.0
-WOOD_BASE_TOP_Z        =  18.0
+WOOD_BASE_TOP_Z        =  12.0   # = WOOD_BASE_T
 TAKEDOWN_HOLE_D        = 100.0   # ICD Interface 11 (sock take-down column)
 
 # 2020 aluminum uprights (precision frame, 4x at corners of upper deck)
+# Practical cut length 200 mm; CAD-exact is 199.7 to land plate top exactly
+# at Z=230. 0.3 mm is well within saw kerf / stack tolerance.
 UPRIGHT_W              =  20.0
-UPRIGHT_LEN            = 188.0
-UPRIGHT_BOT_Z          =  18.0   # = WOOD_BASE_TOP_Z
-UPRIGHT_TOP_Z          = 206.0   # = UPRIGHT_BOT_Z + UPRIGHT_LEN
+UPRIGHT_LEN            = 199.7   # cut to 200 mm in practice (was 188)
+UPRIGHT_BOT_Z          =  12.0   # = WOOD_BASE_TOP_Z
+UPRIGHT_TOP_Z          = 211.7   # = UPRIGHT_BOT_Z + UPRIGHT_LEN
 UPRIGHT_X_POSITIONS    = (+150.0, -150.0)
 UPRIGHT_Y_POSITIONS    = (+120.0, -120.0)
 
 # Wood upper deck (sits on uprights)
 UPPER_DECK_W           = 320.0   # X span
 UPPER_DECK_D           = 260.0   # Y span
-UPPER_DECK_T           =  18.0
-UPPER_DECK_BOTTOM_Z    = 206.0
-UPPER_DECK_TOP_Z       = 224.0
+UPPER_DECK_T           =  12.0   # 12 mm Baltic Birch plywood (was 18)
+UPPER_DECK_BOTTOM_Z    = 211.7   # = UPRIGHT_TOP_Z (was 206)
+UPPER_DECK_TOP_Z       = 223.7   # = UPPER_DECK_BOTTOM_Z + UPPER_DECK_T
 
 # Aluminum master-datum plate
 ALU_PLATE_W            = 250.0

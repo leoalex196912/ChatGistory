@@ -1418,7 +1418,7 @@ def draw_bench_test_checklist():
 # ============================================================
 # WOOD UPPER DECK + ALUMINUM PLATE common dims
 # ============================================================
-UD_W, UD_D, UD_T = 320, 260, 18   # Wood upper deck
+UD_W, UD_D, UD_T = 320, 260, 12   # Wood upper deck (12 mm Baltic Birch)
 UD_CENTER_HOLE_D = 170
 ALU_W, ALU_T = 250, 6.3            # Aluminum plate (square, 1/4" / 6.3 mm)
 ALU_CENTER_HOLE_D = 170
@@ -1505,7 +1505,7 @@ def draw_wood_upper_deck():
     ax.set_xlabel('X (mm) — origin at center', fontsize=9)
     ax.set_ylabel('Y (mm) — origin at center', fontsize=9)
     ax.set_title('CSM V3 — WOOD UPPER DECK V1.0 — DRILLING DRAWING\n'
-                 'Sheet 8 of 8   |   320 × 260 × 18 mm hardwood',
+                 '320 × 260 × 12 mm Baltic Birch Plywood',
                  fontsize=12, fontweight='bold', pad=14)
 
     # Title block
@@ -1515,8 +1515,8 @@ def draw_wood_upper_deck():
     rows = [
         ('PROJECT',   'CSM V3 — Circular Sock Machine'),
         ('PART',      'Wood Upper Deck V1.0'),
-        ('SIZE',      '320 × 260 × 18 mm'),
-        ('MATERIAL',  'Hardwood (walnut/maple/Baltic birch)'),
+        ('SIZE',      '320 × 260 × 12 mm'),
+        ('MATERIAL',  'Baltic Birch Plywood, 12 mm'),
         ('FINISH',    'Sanded smooth, oiled or sealed'),
         ('TOLERANCE', '±1.0 mm (holes), ±2 mm (outline)'),
         ('REV',       'V1.0'),
@@ -1601,13 +1601,13 @@ def draw_wood_upper_deck():
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 15,
                               'CSM V3 WOOD UPPER DECK V1.0'))
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 25,
-                              'MATERIAL: Hardwood Plywood 18mm'))
+                              'MATERIAL: Baltic Birch Plywood 12mm'))
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 35,
                               'SIZE: 320 x 260 mm'))
     entities.append(_dxf_text(-UD_W/2 + 10, UD_D/2 - 45,
                               'HOLES: 8x Dia 5.5 + 1x Dia 170'))
     out_dxf = os.path.join(FRAME_DIRS['wood_upper_deck'],
-                           'CSM_V3_WoodUpperDeck_V1_0_320x260x18.dxf')
+                           'CSM_V3_WoodUpperDeck_V1_0_320x260x12.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 
@@ -1792,13 +1792,13 @@ def write_wood_base_dxf():
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 15,
                               'CSM V3 WOOD BASE V1.1'))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 25,
-                              'MATERIAL: Hardwood Plywood 18mm'))
+                              'MATERIAL: Baltic Birch Plywood 12mm'))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 35,
                               'SIZE: 500 x 400 mm'))
     entities.append(_dxf_text(-WB_W/2 + 10, WB_D/2 - 45,
                               'HOLES: 21 electrical + 1x Dia 100 take-down'))
     out_dxf = os.path.join(FRAME_DIRS['wood_base'],
-                           'CSM_V3_WoodBase_V1_1_500x400x18.dxf')
+                           'CSM_V3_WoodBase_V1_1_500x400x12.dxf')
     write_dxf(out_dxf, entities)
     print(f"  -> {out_dxf} (CNC-ready)")
 

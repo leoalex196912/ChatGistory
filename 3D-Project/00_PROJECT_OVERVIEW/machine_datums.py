@@ -225,6 +225,20 @@ HMI_CABLE_CH_D         = 4.0
 HMI_FRONT_INSERT_COUNT = 6                 # FRONT-face accessory inserts (beam)
 HMI_FRONT_INSERT_PITCH = 22.0
 
+# === Pi Carrier V1.0 (Part M10-P03) ===
+# Adapter plate between beam (58 x 28 PCD inserts) and Pi 4 (58 x 49 PCD).
+# Hangs from beam bottom face via M5 socket-head bolts going UP into beam
+# inserts.  Pi 4 mounts BELOW plate via M2.5 standoffs into self-tap pilots.
+HMI_PI_CARRIER_W       = 90.0              # X (along beam direction)
+HMI_PI_CARRIER_D       = 60.0              # Y (front-back of machine)
+HMI_PI_CARRIER_T       = 8.0               # plate thickness
+HMI_PI4_PCD_X          = 58.0              # Pi 4 mount holes, X spread
+HMI_PI4_PCD_Y          = 49.0              # Pi 4 mount holes, Y spread
+HMI_M2_5_PILOT_D       = 2.0               # M2.5 self-tap pilot hole
+HMI_M2_5_PILOT_H       = 6.0
+HMI_PI_CABLE_NOTCH_W   = 14.0              # cable cutout, X width
+HMI_PI_CABLE_NOTCH_D   = 6.0               # cable cutout, Y depth
+
 # === Boolean / overcut helpers (FDM print engineering convention) ===
 # Small offsets used in cuts to avoid coincident faces from Boolean ops.
 # Centralized so they read as engineering intent, not magic numbers.

@@ -1,0 +1,197 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- PI CARRIER V1.0  (Part M10-P03)
+# =============================================================================
+# Adapter plate that hangs the Raspberry Pi 4 below the Cross Beam V1.2.
+#
+# Interfaces:
+#   TOP face   -> Cross Beam V1.2 bottom face, 4x M5 heat-set inserts on
+#                  PCD 58 x 28 (HMI_PI_MOUNT_PCD_*).  M5 socket-head bolts
+#                  come from BELOW the carrier, threaded UP into the beam.
+#   BOTTOM face -> Raspberry Pi 4, 4x M2.5 mounting holes on
+#                  PCD 58 x 49 (HMI_PI4_PCD_*).  M2.5 standoffs self-tap
+#                  into Ø2.0 pilots; Pi screws to standoff bottoms.
+#
+# Why two PCDs:  Pi 4 native pattern is 58 x 49, but that doesn't fit a
+# 40 mm-wide beam.  This carrier is the adapter.  Its plate is wider
+# than the beam so the Pi 4 (49 mm Y) fits.
+#
+# Cable routing: small notch on -Y edge for USB/power cable strain
+# relief; the bulk of cabling runs up the rear mast face into the
+# beam's cable channel.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# PART METADATA (CSM V3 macro standard header)
+# ============================================================
+PART_NUMBER     = "M10-P03"
+PART_NAME       = "Pi Carrier"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_PiCarrier_V1_0"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+# ============================================================
+# Helpers
+# ============================================================
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+# ============================================================
+# Geometry parameters -- all from machine_datums.py (HMI block)
+# ============================================================
+PLATE_W       = MD.HMI_PI_CARRIER_W
+PLATE_D       = MD.HMI_PI_CARRIER_D
+PLATE_T       = MD.HMI_PI_CARRIER_T
+
+# Beam interface (TOP of plate -> bottom of beam)
+BEAM_PCD_X    = MD.HMI_PI_MOUNT_PCD_X        # 58
+BEAM_PCD_Y    = MD.HMI_PI_MOUNT_PCD_Y        # 28
+M5_THROUGH_D  = MD.HMI_M5_THROUGH_D
+BOLT_CB_D     = MD.HMI_BOLT_CB_D
+BOLT_CB_H     = MD.HMI_BOLT_CB_H
+
+# Pi mount interface (BOTTOM of plate -> top of Pi 4)
+PI_PCD_X      = MD.HMI_PI4_PCD_X             # 58
+PI_PCD_Y      = MD.HMI_PI4_PCD_Y             # 49
+M2_5_D        = MD.HMI_M2_5_PILOT_D
+M2_5_H        = MD.HMI_M2_5_PILOT_H
+
+# Cable routing notch on -Y edge
+NOTCH_W       = MD.HMI_PI_CABLE_NOTCH_W
+NOTCH_D       = MD.HMI_PI_CABLE_NOTCH_D
+
+# Boolean / overcut helpers
+EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA     = MD.HMI_CUT_EXTRA
+CUT_START_OFF = MD.HMI_CUT_START_OFFSET
+
+# ============================================================
+# Standard CSM V3 banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
+print("WALL-THICKNESS CHECK:")
+plate_edge_to_beam_bolt_y = PLATE_D / 2.0 - BEAM_PCD_Y / 2.0 - BOLT_CB_D / 2.0
+plate_edge_to_pi_hole_y   = PLATE_D / 2.0 - PI_PCD_Y / 2.0 - M2_5_D / 2.0
+plate_edge_to_bolt_x      = PLATE_W / 2.0 - BEAM_PCD_X / 2.0 - BOLT_CB_D / 2.0
+beam_bolt_to_pi_hole_y    = (PI_PCD_Y - BEAM_PCD_Y) / 2.0 - (BOLT_CB_D + M2_5_D) / 2.0
+material_above_cb         = PLATE_T - BOLT_CB_H
+# Notch is at X in [-NOTCH_W/2, +NOTCH_W/2] and Y in [-PLATE_D/2, -PLATE_D/2+NOTCH_D]
+# Pi corner hole at (PI_PCD_X/2, -PI_PCD_Y/2).  3D distance between notch
+# nearest corner and Pi hole center, minus M2.5 radius.
+notch_corner_x = NOTCH_W / 2.0
+notch_corner_y = -PLATE_D / 2.0 + NOTCH_D
+pi_hole_x      = PI_PCD_X / 2.0
+pi_hole_y      = -PI_PCD_Y / 2.0
+notch_to_pi_dist = math.hypot(pi_hole_x - notch_corner_x,
+                              pi_hole_y - notch_corner_y) - M2_5_D / 2.0
+checks = [
+    ("Plate edge to beam bolt CB (Y)",   plate_edge_to_beam_bolt_y, 2.0),
+    ("Plate edge to Pi hole (Y)",        plate_edge_to_pi_hole_y,   2.0),
+    ("Plate edge to beam bolt CB (X)",   plate_edge_to_bolt_x,      2.0),
+    ("Beam bolt CB to Pi hole (Y)",      beam_bolt_to_pi_hole_y,    2.0),
+    ("Material above counterbore (Z)",   material_above_cb,         2.0),
+    ("Cable notch corner to Pi hole 3D", notch_to_pi_dist,          3.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  plate:          {PLATE_W} x {PLATE_D} x {PLATE_T} mm")
+print(f"  beam interface: 4x M5, CB {BOLT_CB_D} x {BOLT_CB_H} on BOTTOM,")
+print(f"                  PCD {BEAM_PCD_X} x {BEAM_PCD_Y} (matches beam)")
+print(f"  Pi interface:   4x M2.5 self-tap pilot D{M2_5_D} x {M2_5_H} on BOTTOM,")
+print(f"                  PCD {PI_PCD_X} x {PI_PCD_Y} (Pi 4 native)")
+print(f"  cable notch:    {NOTCH_W} x {NOTCH_D} on -Y edge")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# ============================================================
+# Build plate
+# Local frame: origin at plate center, on plate BOTTOM face.
+#   X = along beam, Y = front-back, Z = up (toward beam)
+# Plate Z = 0 (bottom) to PLATE_T (top, mates to beam bottom)
+# ============================================================
+plate = Part.makeBox(PLATE_W, PLATE_D, PLATE_T,
+                     FreeCAD.Vector(-PLATE_W/2.0, -PLATE_D/2.0, 0))
+
+# Beam-interface M5 bolts (through-hole + bottom counterbore)
+# Bolt heads sit in BOTTOM counterbores; bolt shanks pass up through
+# plate; threads engage beam's heat-set inserts above.
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (BEAM_PCD_X / 2.0)
+        hy = sy * (BEAM_PCD_Y / 2.0)
+        plate = cut_cylinder(plate, M5_THROUGH_D, PLATE_T + 2 * CUT_EXTRA,
+                              FreeCAD.Vector(hx, hy, -CUT_EXTRA))
+        plate = cut_cylinder(plate, BOLT_CB_D, BOLT_CB_H + EPS_OVERCUT,
+                              FreeCAD.Vector(hx, hy, -EPS_OVERCUT))
+
+# Pi 4 mount pilots (M2.5 self-tap holes on BOTTOM face going UP)
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (PI_PCD_X / 2.0)
+        hy = sy * (PI_PCD_Y / 2.0)
+        plate = cut_cylinder(plate, M2_5_D, M2_5_H + EPS_OVERCUT,
+                              FreeCAD.Vector(hx, hy, -EPS_OVERCUT))
+
+# Cable routing notch on -Y edge (centered on X)
+notch = Part.makeBox(NOTCH_W, NOTCH_D + EPS_OVERCUT, PLATE_T + 2 * EPS_OVERCUT,
+                      FreeCAD.Vector(-NOTCH_W/2.0,
+                                      -PLATE_D/2.0 - EPS_OVERCUT,
+                                      -EPS_OVERCUT))
+plate = plate.cut(notch)
+
+# Export
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = plate
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.50, 0.65, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = plate.CenterOfMass
+except AttributeError:
+    com = plate.Solids[0].CenterOfMass if plate.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {plate.Volume:.0f} mm^3  (~{plate.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (plate-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
+print("    (BOTTOM face down for best counterbore + pilot finish)")
+print(" 2. Pre-install Pi standoffs: M2.5 brass standoffs (~10 mm) thread")
+print("    UP into the 4 pilot holes on BOTTOM face")
+print(" 3. Mount Raspberry Pi 4 to standoff bottoms with M2.5 x 6 screws")
+print(" 4. Position assembly under Cross Beam, align 4 beam-bolt holes")
+print(" 5. M5 x 16 socket-head bolts UP from carrier BOTTOM counterbores")
+print("    into beam BOTTOM-face heat-set inserts; tighten gently")
+print(" 6. Pi SD card slot faces up into beam service opening")
+print(" 7. Route power + HDMI + USB cables through -Y notch, up rear")
+print("    mast face, into beam cable channel")
+print("=" * 70)

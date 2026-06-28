@@ -255,13 +255,17 @@ HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
 HMI_PI_FAN_COVER_W      = 80.0     # plate X (inside Pi 88)
 HMI_PI_FAN_COVER_D      = 60.0     # plate Y (matches Pi 58 + margin)
 HMI_PI_FAN_COVER_T      = 3.0      # plate thickness
-HMI_PI_FAN_OPENING_D    = 22.0     # round air intake opening
-HMI_PI_FAN_BODY_W       = 30.0     # 30 x 30 x 10 mm fan dimensions
+HMI_PI_FAN_OPENING_D    = 24.0     # round air intake (better airflow than 22)
+HMI_PI_FAN_BODY_W       = 30.0     # standard 30 x 30 x 10 mm fan
 HMI_PI_FAN_BODY_H       = 10.0
 HMI_PI_FAN_MOUNT_PCD    = 24.0     # standard 30 mm fan screw spacing
 HMI_PI_FAN_M3_CLEAR_D   = 3.5      # M3 clearance for fan mount screws
 HMI_PI_FAN_STANDOFF_H   = 11.0     # user-supplied M2.5 brass standoff height
                                     # (Pi PCB to Fan Cover; clears 10 mm fan)
+HMI_PI_FAN_VOLTAGE      = 5.0      # supplied from Pi GPIO header
+HMI_PI_FAN_AIRFLOW      = "TOWARD_PI"  # arrow on fan should point at Pi PCB
+HMI_PI_FAN_RIB_W        = 2.0      # stiffening rib width (perpendicular)
+HMI_PI_FAN_RIB_H        = 1.5      # stiffening rib height (above top face)
 
 # === Pi Carrier V1.0 (Part M10-P03) ===
 # Adapter plate between beam (58 x 28 PCD inserts) and Pi 4 (58 x 49 PCD).

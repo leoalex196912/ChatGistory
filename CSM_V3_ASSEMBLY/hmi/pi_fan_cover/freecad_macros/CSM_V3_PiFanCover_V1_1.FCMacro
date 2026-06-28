@@ -1,10 +1,24 @@
 # -*- coding: utf-8 -*-
 # =============================================================================
-# CSM V3 -- MODULE 10 HMI -- PI FAN COVER V1.0 (Part M10-P04)
+# CSM V3 -- MODULE 10 HMI -- PI FAN COVER V1.1 (Part M10-P04)
 # =============================================================================
 # Flat plate that hangs below the Raspberry Pi 4 (opposite side from the
-# Pi Carrier).  Carries a standard 30 x 30 x 10 mm 5 V fan blowing air
-# toward the Pi's downward-facing components (SoC + RAM).
+# Pi Carrier).  Carries a standard 30 x 30 x 10 mm 5 V fan that draws
+# outside air through the round intake and exhausts toward the Pi's
+# downward-facing components (SoC + RAM).
+#
+# AIRFLOW direction (mount the fan so its arrow points TOWARD the Pi):
+#
+#     outside air
+#         |
+#         v
+#     Cover intake hole (D24)
+#         |
+#         v
+#     Fan body (5 V, 30 x 30 x 10)
+#         |
+#         v
+#     Pi 4 PCB (component side)  <-- cooling target
 #
 # Mount stack (top -> bottom):
 #   Pi Carrier (M10-P03)
@@ -14,14 +28,27 @@
 #   Pi Fan Cover (this part)
 #     | -- M2.5 x 25 mm screw heads (4x)           -- user-supplied
 #
-# The 4 mount screws are M2.5 x 25 mm and pass UP through the Cover,
-# through the 11 mm spacer, through the Pi PCB hole, into the Pi Carrier
-# heat-set standoff.  Replaces the M2.5 x 6 mm screw that V1.0 of the Pi
-# Carrier assembly notes called for.
+# Screw length math:
+#     25 (screw)
+#   -  3 (Cover plate)
+#   - 11 (brass standoff)
+#   -  2 (Pi PCB)
+#   ---------------
+#   =  9 mm thread engagement into the Pi Carrier standoff -- comfortable
 #
 # The 30 mm fan bolts to the Cover TOP face with M3 x 14 mm screws
 # (typically supplied with the fan).  Fan body lives in the 11 mm gap
 # between Cover and Pi PCB.
+#
+# V1.1 changes (engineering review of V1.0):
+#   * Intake opening D22 -> D24 (more free area, lower pressure drop)
+#   * 4 diagonal stiffening RIBS on top face, from each Pi mount toward
+#     the central opening (reduces fan-induced vibration)
+#   * Renamed fan_corner_to_center -> fan_hole_radius (readability)
+#   * Wall-check label "Standoff clears fan body" -> "Fan clearance"
+#   * Assembly text: "fan blows UP" -> "fan arrow points at Pi PCB"
+#   * Removed connector-type assumption (any 2-wire fan works)
+#   * Promoted hardcoded fan params into machine_datums.py
 #
 # Local frame (plate-local):
 #   X = along Pi long axis
@@ -38,9 +65,9 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P04"
 PART_NAME       = "Pi Fan Cover"
-VERSION         = "V1.0"
-STATUS          = "DRAFT"
-PART_ID         = "CSM_V3_PiFanCover_V1_0"
+VERSION         = "V1.1"
+STATUS          = "RC1"
+PART_ID         = "CSM_V3_PiFanCover_V1_1"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
 PRINT_INFILL    = "100%"
@@ -71,12 +98,17 @@ PI_PCD_Y      = MD.HMI_PI4_PCD_Y                 # 49 mm
 M2_5_CLEAR_D  = MD.HMI_M2_5_CLEAR_D              # 3.0 mm
 
 # 30 x 30 x 10 fan
-FAN_OPENING_D = MD.HMI_PI_FAN_OPENING_D          # 22 mm round intake
-FAN_MOUNT_PCD = MD.HMI_PI_FAN_MOUNT_PCD          # 24 mm corner-to-corner
+FAN_OPENING_D = MD.HMI_PI_FAN_OPENING_D          # 24 mm round intake (V1.1)
+FAN_MOUNT_PCD = MD.HMI_PI_FAN_MOUNT_PCD          # 24 mm screw spacing
 M3_CLEAR_D    = MD.HMI_PI_FAN_M3_CLEAR_D         # 3.5 mm
 FAN_BODY_W    = MD.HMI_PI_FAN_BODY_W             # 30 mm
 FAN_BODY_H    = MD.HMI_PI_FAN_BODY_H             # 10 mm
+FAN_VOLTAGE   = MD.HMI_PI_FAN_VOLTAGE            # 5 V from Pi GPIO
 STANDOFF_H    = MD.HMI_PI_FAN_STANDOFF_H         # 11 mm Pi-to-Cover spacer
+
+# V1.1: stiffening ribs to suppress fan-induced plate resonance
+RIB_W         = MD.HMI_PI_FAN_RIB_W              # 2.0 mm wide
+RIB_H         = MD.HMI_PI_FAN_RIB_H              # 1.5 mm tall (above top face)
 
 # Boolean / overcut helpers
 EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
@@ -97,12 +129,12 @@ plate_edge_to_pi_hole_x   = PLATE_W / 2.0 - PI_PCD_X / 2.0 - M2_5_CLEAR_D / 2.0
 plate_edge_to_pi_hole_y   = PLATE_D / 2.0 - PI_PCD_Y / 2.0 - M2_5_CLEAR_D / 2.0
 plate_edge_to_fan_hole_x  = PLATE_W / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
 plate_edge_to_fan_hole_y  = PLATE_D / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
-fan_corner_to_center      = math.sqrt(2.0) * FAN_MOUNT_PCD / 2.0      # 17.0 mm
-opening_edge_to_fan_hole  = fan_corner_to_center - FAN_OPENING_D / 2.0 - M3_CLEAR_D / 2.0
+fan_hole_radius           = math.sqrt(2.0) * FAN_MOUNT_PCD / 2.0      # 17.0 mm
+opening_edge_to_fan_hole  = fan_hole_radius - FAN_OPENING_D / 2.0 - M3_CLEAR_D / 2.0
 pi_hole_distance          = math.sqrt((PI_PCD_X/2 - FAN_MOUNT_PCD/2)**2 +
                                       (PI_PCD_Y/2 - FAN_MOUNT_PCD/2)**2)
 pi_hole_to_fan_hole       = pi_hole_distance - M2_5_CLEAR_D/2 - M3_CLEAR_D/2
-standoff_clears_fan       = STANDOFF_H - FAN_BODY_H                    # 1.0 mm
+fan_clearance             = STANDOFF_H - FAN_BODY_H                    # 1.0 mm
 checks = [
     ("Plate edge to Pi mount hole (X)",   plate_edge_to_pi_hole_x,   2.0),
     ("Plate edge to Pi mount hole (Y)",   plate_edge_to_pi_hole_y,   2.0),
@@ -110,7 +142,7 @@ checks = [
     ("Plate edge to fan mount hole (Y)",  plate_edge_to_fan_hole_y,  2.0),
     ("Opening edge to fan mount hole",    opening_edge_to_fan_hole,  2.0),
     ("Pi mount to fan mount diagonal",    pi_hole_to_fan_hole,       5.0),
-    ("Standoff clears fan body height",   standoff_clears_fan,       0.5),
+    ("Fan clearance (standoff - body)",   fan_clearance,             0.5),
 ]
 for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
@@ -154,6 +186,39 @@ for sx in (-1, +1):
 plate = cut_cylinder(plate, FAN_OPENING_D, PLATE_T + 2 * CUT_EXTRA,
                       FreeCAD.Vector(0, 0, -PLATE_T - CUT_EXTRA))
 
+# V1.1: 4 diagonal stiffening RIBS on top face (Z = 0 to RIB_H),
+# from each Pi mount toward the central opening.  Ends short of the
+# fan footprint (30 x 30 centered at origin) so they don't fight the
+# fan body.
+def make_rib(sx, sy):
+    start_pt = FreeCAD.Vector(sx * PI_PCD_X / 2.0, sy * PI_PCD_Y / 2.0, 0)
+    # Direction toward origin
+    L_full = math.hypot(start_pt.x, start_pt.y)
+    ux, uy = -start_pt.x / L_full, -start_pt.y / L_full
+    # Stop the rib just outside the 30 mm fan footprint corner
+    # (and outside the intake opening with margin)
+    # Maximum length where rib stays outside both fan body and opening:
+    #   along the rib, X reaches sign(sx) * FAN_BODY_W/2 at d = (|start_pt.x| - 15) / |ux|
+    #   along the rib, Y reaches sign(sy) * FAN_BODY_W/2 at d = (|start_pt.y| - 15) / |uy|
+    dx_lim = (abs(start_pt.x) - FAN_BODY_W / 2.0) / abs(ux)
+    dy_lim = (abs(start_pt.y) - FAN_BODY_W / 2.0) / abs(uy)
+    rib_length = min(dx_lim, dy_lim) - 1.0  # 1 mm safety from fan footprint
+    end_pt = FreeCAD.Vector(start_pt.x + rib_length * ux,
+                            start_pt.y + rib_length * uy, 0)
+    # Perpendicular vector for rib width
+    px, py = -uy, ux
+    c1 = FreeCAD.Vector(start_pt.x + px * RIB_W/2, start_pt.y + py * RIB_W/2, 0)
+    c2 = FreeCAD.Vector(end_pt.x   + px * RIB_W/2, end_pt.y   + py * RIB_W/2, 0)
+    c3 = FreeCAD.Vector(end_pt.x   - px * RIB_W/2, end_pt.y   - py * RIB_W/2, 0)
+    c4 = FreeCAD.Vector(start_pt.x - px * RIB_W/2, start_pt.y - py * RIB_W/2, 0)
+    wire = Part.makePolygon([c1, c2, c3, c4, c1])
+    face = Part.Face(wire)
+    return face.extrude(FreeCAD.Vector(0, 0, RIB_H))
+
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        plate = plate.fuse(make_rib(sx, sy))
+
 # Export
 obj = doc.addObject("Part::Feature", PART_ID)
 obj.Shape = plate
@@ -189,14 +254,15 @@ print(" 4. Thread the 4x 11 mm brass standoffs onto the BOTTOM of the Pi")
 print("    Carrier standoffs through the Pi PCB holes -- they sandwich the")
 print("    Pi between the carrier standoffs (above) and these (below)")
 print(" 5. Mount the fan to the Cover TOP face with 4x M3 x 14 screws into")
-print("    the 4 fan mount holes (PCD 24 x 24); fan should blow UP (toward")
-print("    the Pi components when assembled)")
+print("    the 4 fan mount holes (PCD 24 x 24); the airflow ARROW on the")
+print("    fan side must POINT TOWARD THE PI PCB (away from the Cover plate)")
 print(" 6. Position the Cover under the Pi: align Cover Pi-mount holes with")
 print("    the 11 mm standoffs; pass 4x M2.5 x 25 screws UP from BELOW the")
 print("    Cover into the 11 mm standoff threads")
-print(" 7. Connect fan's 2-pin connector to Pi GPIO header:")
+print(" 7. Connect fan power leads to Pi GPIO header:")
 print("    - Red wire   -> Pin 4 (+5V)")
 print("    - Black wire -> Pin 6 (GND)")
+print("    (any 2-wire 5 V fan works -- connector style is irrelevant)")
 print(" 8. Verify fan spins on Pi power-up; airflow should pass UPWARD")
 print("    through the Cover opening into the Pi component area")
 print("=" * 70)

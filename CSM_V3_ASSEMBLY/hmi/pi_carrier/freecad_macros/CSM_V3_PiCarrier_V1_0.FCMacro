@@ -31,7 +31,7 @@ import machine_datums as MD
 PART_NUMBER     = "M10-P03"
 PART_NAME       = "Pi Carrier"
 VERSION         = "V1.0"
-STATUS          = "DRAFT"
+STATUS          = "RC1"
 PART_ID         = "CSM_V3_PiCarrier_V1_0"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
@@ -73,7 +73,6 @@ NOTCH_D       = MD.HMI_PI_CABLE_NOTCH_D
 # Boolean / overcut helpers
 EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
 CUT_EXTRA     = MD.HMI_CUT_EXTRA
-CUT_START_OFF = MD.HMI_CUT_START_OFFSET
 
 # ============================================================
 # Standard CSM V3 banner
@@ -86,11 +85,12 @@ print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} 
 print(f"  Quantity:   {PRINT_QTY}")
 print()
 print("WALL-THICKNESS CHECK:")
-plate_edge_to_beam_bolt_y = PLATE_D / 2.0 - BEAM_PCD_Y / 2.0 - BOLT_CB_D / 2.0
+cb_clearance_to_edge_x    = PLATE_W / 2.0 - BEAM_PCD_X / 2.0 - BOLT_CB_D / 2.0
+cb_clearance_to_edge_y    = PLATE_D / 2.0 - BEAM_PCD_Y / 2.0 - BOLT_CB_D / 2.0
 plate_edge_to_pi_hole_y   = PLATE_D / 2.0 - PI_PCD_Y / 2.0 - M2_5_D / 2.0
-plate_edge_to_bolt_x      = PLATE_W / 2.0 - BEAM_PCD_X / 2.0 - BOLT_CB_D / 2.0
 beam_bolt_to_pi_hole_y    = (PI_PCD_Y - BEAM_PCD_Y) / 2.0 - (BOLT_CB_D + M2_5_D) / 2.0
 material_above_cb         = PLATE_T - BOLT_CB_H
+pilot_remaining           = PLATE_T - M2_5_H
 # Notch is at X in [-NOTCH_W/2, +NOTCH_W/2] and Y in [-PLATE_D/2, -PLATE_D/2+NOTCH_D]
 # Pi corner hole at (PI_PCD_X/2, -PI_PCD_Y/2).  3D distance between notch
 # nearest corner and Pi hole center, minus M2.5 radius.
@@ -101,12 +101,13 @@ pi_hole_y      = -PI_PCD_Y / 2.0
 notch_to_pi_dist = math.hypot(pi_hole_x - notch_corner_x,
                               pi_hole_y - notch_corner_y) - M2_5_D / 2.0
 checks = [
-    ("Plate edge to beam bolt CB (Y)",   plate_edge_to_beam_bolt_y, 2.0),
-    ("Plate edge to Pi hole (Y)",        plate_edge_to_pi_hole_y,   2.0),
-    ("Plate edge to beam bolt CB (X)",   plate_edge_to_bolt_x,      2.0),
-    ("Beam bolt CB to Pi hole (Y)",      beam_bolt_to_pi_hole_y,    2.0),
-    ("Material above counterbore (Z)",   material_above_cb,         2.0),
-    ("Cable notch corner to Pi hole 3D", notch_to_pi_dist,          3.0),
+    ("Counterbore clearance to edge (X)", cb_clearance_to_edge_x,   2.0),
+    ("Counterbore clearance to edge (Y)", cb_clearance_to_edge_y,   2.0),
+    ("Plate edge to Pi hole (Y)",         plate_edge_to_pi_hole_y,  2.0),
+    ("Beam bolt CB to Pi hole (Y)",       beam_bolt_to_pi_hole_y,   2.0),
+    ("Material above counterbore (Z)",    material_above_cb,        2.0),
+    ("Material above M2.5 pilot (Z)",     pilot_remaining,          2.0),
+    ("Cable notch corner to Pi hole 3D",  notch_to_pi_dist,         3.0),
 ]
 for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
@@ -185,9 +186,10 @@ print()
 print("ASSEMBLY:")
 print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
 print("    (BOTTOM face down for best counterbore + pilot finish)")
-print(" 2. Pre-install Pi standoffs: M2.5 brass standoffs (~10 mm) thread")
-print("    UP into the 4 pilot holes on BOTTOM face")
-print(" 3. Mount Raspberry Pi 4 to standoff bottoms with M2.5 x 6 screws")
+print(" 2. Install the four M2.5 brass standoffs (~10 mm) INTO the carrier")
+print("    BEFORE attaching the Pi: thread one standoff up into each of the")
+print("    4 BOTTOM-face pilot holes (Pi PCD 58 x 49)")
+print(" 3. Mount Raspberry Pi 4 to standoff bottoms with M2.5 x 6 mm screws")
 print(" 4. Position assembly under Cross Beam, align 4 beam-bolt holes")
 print(" 5. M5 x 16 socket-head bolts UP from carrier BOTTOM counterbores")
 print("    into beam BOTTOM-face heat-set inserts; tighten gently")

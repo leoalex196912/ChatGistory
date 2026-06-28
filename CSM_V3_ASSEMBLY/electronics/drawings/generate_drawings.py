@@ -1423,7 +1423,12 @@ def draw_bench_test_checklist():
 # WOOD UPPER DECK + ALUMINUM PLATE common dims
 # ============================================================
 UD_W, UD_D, UD_T = 320, 260, 12   # Wood upper deck (12 mm Baltic Birch)
-UD_CENTER_HOLE_D = 170
+UD_CENTER_HOLE_D = 166    # 170 -> 166 (2026-06-28): 170 left only 2.25 mm
+                            # between the center hole and the 4 PCD-180 M5
+                            # bolts; SendCutSend min is 3.61 mm (.142") for
+                            # 12 mm plywood.  166 gives 4.25 mm clearance,
+                            # still far larger than the D100 take-down sock
+                            # column it must clear.
 ALU_W, ALU_T = 250, 6.3            # Aluminum plate (square, 1/4" / 6.3 mm)
 ALU_CENTER_HOLE_D = 170
 PCD_FRAME_MOUNT = 180

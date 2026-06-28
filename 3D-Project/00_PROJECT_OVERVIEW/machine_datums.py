@@ -276,8 +276,15 @@ HMI_PI_FAN_CORNER_R        = 3.0   # plate corner fillet radius
 HMI_PI_FAN_CABLE_NOTCH_W   = 4.0   # cable exit notch width (X)
 HMI_PI_FAN_CABLE_NOTCH_L   = 8.0   # cable exit notch length (X, away from fan)
 HMI_PI_FAN_CABLE_NOTCH_D   = 2.0   # cable exit notch depth (Z, into plate top)
-HMI_PI_HEATSINK_H_NOMINAL  = 0.0   # if user adds a Pi heatsink, set this for
-                                    # envelope check (0 = no heatsink)
+HMI_PI_HEATSINK_H_NOMINAL  = 6.0   # typical low-profile Pi 4 heatsink (set to
+                                    # 8 for tall heatsinks or 0 for bare PCB)
+# V1.3 -- M3 fan screw counterbore (heads flush on bottom face, away from wires)
+HMI_PI_FAN_M3_CB_D         = 6.0   # M3 pan-head counterbore diameter
+HMI_PI_FAN_M3_CB_H         = 1.5   # counterbore depth (into bottom face)
+# V1.3 -- orientation-tolerant cable channels (replaces single corner notch)
+HMI_PI_FAN_CABLE_CH_W      = 4.0   # channel width (Y dimension if X-aligned)
+HMI_PI_FAN_CABLE_CH_L      = 6.0   # channel length from fan body edge
+HMI_PI_FAN_CABLE_CH_D      = 1.5   # depth into plate top
 
 # === Pi Carrier V1.0 (Part M10-P03) ===
 # Adapter plate between beam (58 x 28 PCD inserts) and Pi 4 (58 x 49 PCD).

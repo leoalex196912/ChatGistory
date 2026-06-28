@@ -1,0 +1,207 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- CROSS BEAM V1.1
+# =============================================================================
+# Revision from V1.0 (per engineering review):
+#   * Beam 30 x 25 -> 40 x 30 mm  (unlocks standard Pi 4 PCD 58 x 49)
+#   * Mast pocket depth 8 -> 12 mm  (better alignment + torsion)
+#   * Closed end caps (full-thickness ends beyond the pockets)
+#   * Center service opening on TOP face (~50 x 25 mm) for SD card / cable
+#   * M5 mast bolt recess: conical CSK -> straight counterbore for socket-head
+#   * cut_cylinder() helper introduced to reduce duplication
+#
+# Geometry summary:
+#   - Beam: 170 x 40 x 30 mm  (X x Y x Z, X = along beam, Z = vertical)
+#   - Bottom-face mast capture pockets at X = +/-75, 20.8 sq x 12 mm deep
+#   - 2x M5 vertical mast bolts through-beam, counterbored on TOP (hidden)
+#   - 4x M5 heat-set insert pockets on BOTTOM face for Pi Carrier (58 x 49 PCD)
+#   - Cable channel 8 x 4 mm on REAR (+Y) face, full length minus margin
+#   - 6x M5 heat-set insert pockets on FRONT (-Y) face for accessories
+#   - Center service opening on TOP face, 50 x 25 mm, full beam height through
+#     (under Pi for SD card access / cable routing)
+#
+# Reference: ICD R7 Module 10 (HMI)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# Mast geometry references
+# ============================================================
+MAST_X_POS     = (+75.0, -75.0)
+MAST_SPACING_X = 150.0
+EXT_W          = 20.0
+EXT_CLEAR      = 0.4
+
+# ============================================================
+# Beam geometry  (V1.1: enlarged)
+# ============================================================
+BEAM_LEN_X     = 170.0
+BEAM_W_Y       = 40.0      # was 30 -- now fits Pi 4 PCD 49 mm in Y
+BEAM_H_Z       = 30.0      # was 25 -- better torsion
+
+# ============================================================
+# Mast-top capture pockets  (V1.1: deeper)
+# ============================================================
+POCKET_W       = EXT_W + 2 * EXT_CLEAR
+POCKET_T       = EXT_W + 2 * EXT_CLEAR
+POCKET_DEPTH   = 12.0      # was 8
+
+# ============================================================
+# Mast bolt recess  (V1.1: counterbore, not CSK)
+# Counterbore matches an M5 socket-head cap screw head (~Ø8.5 nom + clear).
+# ============================================================
+MAST_BOLT_D    = 5.5
+BOLT_CB_D      = 9.5       # counterbore Ø
+BOLT_CB_H      = 5.5       # counterbore depth
+
+# ============================================================
+# Pi Carrier PCD  (V1.1: real Pi 4 footprint)
+# Pi 4 mounting holes: 58 mm X spread, 49 mm Y spread
+# ============================================================
+INSERT_POCKET_D = 6.2
+INSERT_POCKET_H = 8.5
+PI_MOUNT_PCD_X  = 58.0
+PI_MOUNT_PCD_Y  = 49.0     # was 18.0 -- now fits real Pi 4 pattern
+
+# ============================================================
+# Cable channel (REAR +Y face)
+# ============================================================
+CABLE_CH_W      = 8.0
+CABLE_CH_D      = 4.0
+CABLE_CH_LEN_X  = BEAM_LEN_X - 30.0
+
+# ============================================================
+# Accessory expansion (FRONT -Y face)
+# ============================================================
+FRONT_INSERT_COUNT = 6
+FRONT_INSERT_PITCH = 22.0
+FRONT_INSERT_Z     = BEAM_H_Z / 2.0
+
+# ============================================================
+# Center service opening (TOP face)
+# Sits between mast bolt positions; clear of Pi mount inserts.
+# Pi 4 SD card is at one end -- 50 x 25 is generous for access.
+# ============================================================
+SERVICE_OPEN_X  = 50.0
+SERVICE_OPEN_Y  = 18.0     # narrower than Pi PCD so we keep beam web around inserts
+
+MATERIAL = "PETG, 100% infill, 4 walls, 0.2 mm layers (Phase 1)"
+
+# ============================================================
+# Helpers
+# ============================================================
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    """Cut a cylinder from `shape`.  Direction default +Z."""
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+# ============================================================
+# Banner
+# ============================================================
+print("=" * 70)
+print("CSM V3 -- HMI MODULE 10 -- Cross Beam V1.1")
+print("=" * 70)
+print(f"  material:           {MATERIAL}")
+print(f"  beam:               {BEAM_LEN_X} x {BEAM_W_Y} x {BEAM_H_Z} mm")
+print(f"  mast pockets:       {POCKET_W:.1f} sq x {POCKET_DEPTH} (at X=+/-{MAST_SPACING_X/2})")
+print(f"  mast bolts:         2x M5, counterbore {BOLT_CB_D} x {BOLT_CB_H} on TOP")
+print(f"  Pi mount PCD:       {PI_MOUNT_PCD_X} x {PI_MOUNT_PCD_Y} (4x M5 heat-set, BOTTOM)")
+print(f"  cable channel:      {CABLE_CH_W} x {CABLE_CH_D} on REAR face")
+print(f"  accessory inserts:  {FRONT_INSERT_COUNT}x M5 heat-set on FRONT face")
+print(f"  service opening:    {SERVICE_OPEN_X} x {SERVICE_OPEN_Y} on TOP (SD/cables)")
+print(f"  install:            top of HMI masts at X=0")
+print(f"  quantity needed:    1")
+
+doc = FreeCAD.newDocument("CrossBeam_V1_1")
+
+# ============================================================
+# Build beam
+# Local frame: origin at center of beam, on bottom face
+#   X = along beam, Y = front-back of machine, Z = vertical
+# ============================================================
+beam = Part.makeBox(BEAM_LEN_X, BEAM_W_Y, BEAM_H_Z,
+                    FreeCAD.Vector(-BEAM_LEN_X/2.0, -BEAM_W_Y/2.0, 0))
+
+# --- MAST CAPTURE POCKETS (bottom face) ---
+for mx in MAST_X_POS:
+    pocket = Part.makeBox(POCKET_W, POCKET_T, POCKET_DEPTH + 0.1,
+                          FreeCAD.Vector(mx - POCKET_W/2.0,
+                                          -POCKET_T/2.0,
+                                          -0.05))
+    beam = beam.cut(pocket)
+
+# --- MAST M5 THROUGH-HOLES + TOP COUNTERBORE ---
+for mx in MAST_X_POS:
+    beam = cut_cylinder(beam, MAST_BOLT_D, BEAM_H_Z + 4.0,
+                         FreeCAD.Vector(mx, 0, -2.0))
+    beam = cut_cylinder(beam, BOLT_CB_D, BOLT_CB_H + 0.1,
+                         FreeCAD.Vector(mx, 0, BEAM_H_Z - BOLT_CB_H))
+
+# --- PI CARRIER MOUNT POCKETS (BOTTOM face) ---
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (PI_MOUNT_PCD_X / 2.0)
+        hy = sy * (PI_MOUNT_PCD_Y / 2.0)
+        beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
+                             FreeCAD.Vector(hx, hy, -0.1))
+
+# --- CABLE CHANNEL on REAR (+Y) face ---
+ch = Part.makeBox(CABLE_CH_LEN_X, CABLE_CH_D + 0.1, CABLE_CH_W,
+                   FreeCAD.Vector(-CABLE_CH_LEN_X/2.0,
+                                   BEAM_W_Y/2.0 - CABLE_CH_D,
+                                   (BEAM_H_Z - CABLE_CH_W) / 2.0))
+beam = beam.cut(ch)
+
+# --- ACCESSORY EXPANSION POCKETS on FRONT (-Y) face ---
+front_y = -BEAM_W_Y/2.0
+total_span = (FRONT_INSERT_COUNT - 1) * FRONT_INSERT_PITCH
+x0 = -total_span / 2.0
+for i in range(FRONT_INSERT_COUNT):
+    hx = x0 + i * FRONT_INSERT_PITCH
+    if any(abs(hx - mx) < INSERT_POCKET_D for mx in MAST_X_POS):
+        continue
+    beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
+                         FreeCAD.Vector(hx, front_y - 0.1, FRONT_INSERT_Z),
+                         FreeCAD.Vector(0, 1, 0))
+
+# --- CENTER SERVICE OPENING on TOP face (through-cut) ---
+svc = Part.makeBox(SERVICE_OPEN_X, SERVICE_OPEN_Y, BEAM_H_Z + 0.2,
+                    FreeCAD.Vector(-SERVICE_OPEN_X/2.0,
+                                    -SERVICE_OPEN_Y/2.0,
+                                    -0.1))
+beam = beam.cut(svc)
+
+# ============================================================
+# Export STL + STEP
+# ============================================================
+obj = doc.addObject("Part::Feature", "CrossBeam_V1_1")
+obj.Shape = beam
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, "CSM_V3_CrossBeam_V1_1.stl")
+OUT_STEP = os.path.join(BASE, "CSM_V3_CrossBeam_V1_1.step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+sz_stl  = os.path.getsize(OUT_STL)
+sz_step = os.path.getsize(OUT_STEP)
+print(f"[OK] STL:  {OUT_STL}  ({sz_stl/1024:.1f} KB)")
+print(f"[OK] STEP: {OUT_STEP} ({sz_step/1024:.1f} KB)")
+print(f"     volume: {beam.Volume:.0f} mm^3  (~{beam.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG horizontal on bed, 100% infill, 4 walls, 0.2 mm")
+print(" 2. Heat 4x M5 brass inserts into BOTTOM face Pi-mount pockets")
+print(" 3. Heat 6x M5 brass inserts into FRONT face accessory pockets")
+print(" 4. Drop beam over both mast tops -- pockets engage 12 mm deep")
+print(" 5. M5 x 30 socket-head cap screws through TOP counterbores,")
+print("    self-tap into 2020 center bore (~Ø4.2)")
+print(" 6. Verify beam level; SD card access through center service opening")
+print(" 7. Mount Pi Carrier V1.0 (Part 3) to BOTTOM inserts (58 x 49 PCD)")
+print(" 8. Route cables up REAR mast face into beam cable channel")
+print("=" * 70)

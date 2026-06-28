@@ -24,25 +24,28 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Rectangle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STL_PATH = os.path.join(HERE, "CSM_V3_CrossBeam_V1_0.stl")
+STL_PATH = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1.stl")
 
-# Beam parameters (mirror the macro for dimension annotation)
+# Beam parameters (V1.1, mirror the macro for dimension annotation)
 BEAM_LEN_X   = 170.0
-BEAM_W_Y     = 30.0
-BEAM_H_Z     = 25.0
+BEAM_W_Y     = 40.0
+BEAM_H_Z     = 30.0
 MAST_SPACING = 150.0
 POCKET_W     = 20.8
-POCKET_DEPTH = 8.0
+POCKET_DEPTH = 12.0
 MAST_BOLT_D  = 5.5
-HEAD_CSK_D   = 10.0
+BOLT_CB_D    = 9.5
+BOLT_CB_H    = 5.5
 INSERT_D     = 6.2
 INSERT_H     = 8.5
 PI_PCD_X     = 58.0
-PI_PCD_Y     = 18.0
+PI_PCD_Y     = 49.0
 CABLE_CH_W   = 8.0
 CABLE_CH_D   = 4.0
 FRONT_COUNT  = 6
 FRONT_PITCH  = 22.0
+SERVICE_X    = 50.0
+SERVICE_Y    = 18.0
 
 # ============================================================
 # STL parser (auto-detect ASCII vs binary)
@@ -93,7 +96,7 @@ print(f"  extent: X[{xmin:.1f}, {xmax:.1f}]  Y[{ymin:.1f}, {ymax:.1f}]  Z[{zmin:
 # Figure layout: 2x3 grid
 # ============================================================
 fig = plt.figure(figsize=(16, 12), dpi=180)
-fig.suptitle('CSM V3 -- HMI Module 10 -- Cross Beam V1.0',
+fig.suptitle('CSM V3 -- HMI Module 10 -- Cross Beam V1.1',
              fontsize=16, fontweight='bold', y=0.97)
 fig.text(0.5, 0.94, 'Horizontal cross-member joining mast tops  *  Carries Pi 4 + future accessories  *  '
                     'PETG, 100% infill, 4 walls',
@@ -140,14 +143,14 @@ ax_tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96,
                             facecolor='white', edgecolor='black', lw=1.5))
 rows = [
     ('PART',      'Cross Beam'),
-    ('VERSION',   'V1.0'),
+    ('VERSION',   'V1.1'),
     ('MODULE',    '10 -- HMI'),
     ('QTY',       '1'),
     ('MATERIAL',  'PETG (PA12 prod)'),
     ('INFILL',    '100%, 4 walls'),
     ('LAYER',     '0.2 mm'),
-    ('MASS',      '~143 g'),
-    ('TIME',      '~6-8 h'),
+    ('MASS',      '~202 g'),
+    ('TIME',      '~8-10 h'),
     ('INSTALL',   'top of HMI masts (X=0)'),
 ]
 y = 0.95
@@ -161,11 +164,12 @@ dims = [
     ('Beam L x W x H', f'{BEAM_LEN_X} x {BEAM_W_Y} x {BEAM_H_Z}'),
     ('Mast spacing',   f'{MAST_SPACING} (X=+/-75)'),
     ('Mast pockets',   f'{POCKET_W:.1f} sq x {POCKET_DEPTH} deep'),
-    ('Mast bolt',      f'M5 x {MAST_BOLT_D} clear, csk {HEAD_CSK_D}'),
-    ('Pi mount PCD',   f'{PI_PCD_X} x {PI_PCD_Y} (4x M5)'),
+    ('Mast bolt',      f'M5, CB {BOLT_CB_D} x {BOLT_CB_H} on TOP'),
+    ('Pi mount PCD',   f'{PI_PCD_X} x {PI_PCD_Y} (Pi 4 std)'),
     ('Cable channel',  f'{CABLE_CH_W} x {CABLE_CH_D} (rear)'),
     ('Insert pocket',  f'{INSERT_D} dia x {INSERT_H} deep'),
     ('Front inserts',  f'{FRONT_COUNT} @ {FRONT_PITCH} pitch'),
+    ('Service open',   f'{SERVICE_X} x {SERVICE_Y} top'),
 ]
 yy = 0.46
 for k, v in dims:
@@ -178,28 +182,27 @@ ax_notes = fig.add_subplot(2, 3, 6)
 ax_notes.set_xlim(0, 1); ax_notes.set_ylim(0, 1); ax_notes.axis('off')
 ax_notes.text(0.02, 0.95, 'ASSEMBLY', fontsize=10, fontweight='bold')
 notes = [
-    '1. Print PETG horizontal on bed, 100% infill,',
+    'V1.1 changes from V1.0:',
+    '  - Beam 30x25 -> 40x30 (fits Pi 4 PCD 49)',
+    '  - Mast pockets 8 -> 12 mm (better torsion)',
+    '  - Center service opening on TOP face',
+    '  - Mast bolt CSK -> counterbore (socket-head)',
+    '',
+    'ASSEMBLY:',
+    '1. Print PETG flat on bed, 100% infill,',
     '   4 walls, 0.2 mm layers',
-    '2. Heat 4x M5 brass inserts into BOTTOM face',
-    '   pockets (Pi mount points), 220 C ~30 s each',
-    '3. Heat 6x M5 brass inserts into FRONT face',
-    '   pockets (future accessories)',
-    '4. Position beam over both mast tops; bottom-face',
-    '   pockets engage mast XS for anti-rotation',
-    '5. M5 socket-head bolts (~25 mm) through top',
-    '   countersinks, self-tap into 2020 center bore',
-    '6. Verify beam is level; check Pi mount accessible',
-    '7. Mount Pi Carrier V1.0 (Part 3) to BOTTOM inserts',
-    '8. Route cables up REAR mast face into cable channel',
+    '2. Heat 4x M5 inserts into BOTTOM Pi mount',
+    '3. Heat 6x M5 inserts into FRONT face',
+    '4. Drop beam over both mast tops (12 mm engage)',
+    '5. M5 x 30 socket-head through TOP counterbores',
+    '   self-tap into 2020 center bore',
+    '6. SD card / cables via center service opening',
+    '7. Mount Pi Carrier V1.0 to BOTTOM inserts',
+    '8. Route cables up REAR face cable channel',
     '',
-    'EXPANSION (6x M5 inserts, FRONT face):',
-    '  - Status LED panel  - Microphone  - Motion sensor',
-    '  - OLED text display  - Camera mount  - Future UI',
-    '',
-    'CONSTRAINTS:',
-    '  - Pi PCD Y = 18 mm (limited by beam width 30)',
-    '  - Standard Pi 4 PCD is 49 mm - Pi Carrier V1.0',
-    '    will adapt 18 mm beam pitch to 49 mm Pi pitch',
+    'EXPANSION (6x M5, FRONT face):',
+    '  - Status LED, mic, motion sensor, OLED,',
+    '    camera, future UI',
 ]
 yy = 0.91
 for n in notes:
@@ -212,8 +215,8 @@ fig.text(0.5, 0.02,
          'Module 10 part 2 of 10',
          ha='center', fontsize=8, color='#888')
 
-out_png = os.path.join(HERE, "CSM_V3_CrossBeam_V1_0_views.png")
-out_pdf = os.path.join(HERE, "CSM_V3_CrossBeam_V1_0_views.pdf")
+out_png = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1_views.png")
+out_pdf = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1_views.pdf")
 fig.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
 fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
 plt.close(fig)

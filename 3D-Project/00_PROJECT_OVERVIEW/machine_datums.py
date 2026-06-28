@@ -239,10 +239,10 @@ HMI_FRAME_CABLE_CUT_H      = 10.0    # bottom-edge cable cutout, Z up
 HMI_TOUCH_W                = 165.0   # ELECROW RC070S panel dimensions
 HMI_TOUCH_H                = 100.0
 HMI_TOUCH_T                = 10.0
-HMI_TOUCH_PCD_X_NOMINAL    = 130.0   # screen mount PCD (assumed; user verifies)
-HMI_TOUCH_PCD_Y_NOMINAL    = 75.0
-HMI_TOUCH_SLOT_LEN_X       = 20.0    # elongated slot X (+/-10 mm adjustment)
-HMI_TOUCH_SLOT_LEN_Z       = 10.0    # elongated slot Z (+/-5 mm adjustment)
+HMI_TOUCH_PCD_X_NOMINAL    = 58.0    # Pi 4 pattern (most likely per ELECROW kit)
+HMI_TOUCH_PCD_Y_NOMINAL    = 49.0
+HMI_TOUCH_WIN_W            = 30.0    # mount window X (covers PCD X 28-88)
+HMI_TOUCH_WIN_H            = 30.0    # mount window Z (covers PCD Y 19-79, includes VESA-75)
 HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
 
 # === Pi Carrier V1.0 (Part M10-P03) ===

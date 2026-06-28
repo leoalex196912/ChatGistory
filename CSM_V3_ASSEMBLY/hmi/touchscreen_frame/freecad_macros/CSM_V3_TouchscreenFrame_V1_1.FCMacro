@@ -41,9 +41,9 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P05"
 PART_NAME       = "Touchscreen Frame"
-VERSION         = "V1.0"
+VERSION         = "V1.1"
 STATUS          = "DRAFT"
-PART_ID         = "CSM_V3_TouchscreenFrame_V1_0"
+PART_ID         = "CSM_V3_TouchscreenFrame_V1_1"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
 PRINT_INFILL    = "100%"
@@ -80,11 +80,13 @@ BEAM_BOLT_XS      = (-1.5 * FRONT_PITCH, -2.5 * FRONT_PITCH,      # -33, -55
                      +1.5 * FRONT_PITCH, +2.5 * FRONT_PITCH)      # +33, +55
 M5_BOLT_D         = MD.HMI_M5_THROUGH_D
 
-# Screen mount slots
-SCREEN_PCD_X      = MD.HMI_TOUCH_PCD_X_NOMINAL
-SCREEN_PCD_Y      = MD.HMI_TOUCH_PCD_Y_NOMINAL
-SLOT_X            = MD.HMI_TOUCH_SLOT_LEN_X
-SLOT_Z            = MD.HMI_TOUCH_SLOT_LEN_Z
+# Screen mount: 4 corner WINDOWS (universal, M2.5 + fender washer)
+# Covers any PCD within the window range: Pi 4 (58 x 49), VESA-75 (75 x 75),
+# and most generic 7" patterns.  Frame nominal at Pi 4 = 58 x 49.
+SCREEN_PCD_X_NOM  = MD.HMI_TOUCH_PCD_X_NOMINAL                # 58 (Pi 4)
+SCREEN_PCD_Y_NOM  = MD.HMI_TOUCH_PCD_Y_NOMINAL                # 49 (Pi 4)
+WIN_W             = MD.HMI_TOUCH_WIN_W                        # 30 mm in X
+WIN_H             = MD.HMI_TOUCH_WIN_H                        # 20 mm in Z
 M2_5_CLEAR_D      = MD.HMI_M2_5_CLEAR_D
 
 # Cable cutout (bottom edge)
@@ -101,9 +103,15 @@ TAB_BAND_BOTTOM_Z = FRAME_H - TAB_HEIGHT                            # 112
 SCREEN_TOP_GAP    = 1.0
 SCREEN_TOP_Z      = TAB_BAND_BOTTOM_Z - SCREEN_TOP_GAP              # 111
 SCREEN_CENTER_Z   = SCREEN_TOP_Z - TOUCH_H / 2.0                    # 61
-SLOT_TOP_Z        = SCREEN_CENTER_Z + SCREEN_PCD_Y / 2.0            # 98.5
-SLOT_BOT_Z        = SCREEN_CENTER_Z - SCREEN_PCD_Y / 2.0            # 23.5
+WIN_TOP_Z         = SCREEN_CENTER_Z + SCREEN_PCD_Y_NOM / 2.0        # 85.5
+WIN_BOT_Z         = SCREEN_CENTER_Z - SCREEN_PCD_Y_NOM / 2.0        # 36.5
 BEAM_BOLT_Z       = FRAME_H - BEAM_BOLT_Z_TOP                       # 123
+
+# PCD adjustment range (for documentation/banner)
+PCD_X_MIN         = max(0.0, SCREEN_PCD_X_NOM - WIN_W)
+PCD_X_MAX         = SCREEN_PCD_X_NOM + WIN_W
+PCD_Y_MIN         = max(0.0, SCREEN_PCD_Y_NOM - WIN_H)
+PCD_Y_MAX         = SCREEN_PCD_Y_NOM + WIN_H
 
 # ============================================================
 # Standard CSM V3 banner
@@ -120,19 +128,23 @@ top_to_beam_bolt        = FRAME_H - BEAM_BOLT_Z - M5_BOLT_D / 2.0       # frame 
 beam_bolt_to_tab_bottom = BEAM_BOLT_Z - M5_BOLT_D / 2.0 - TAB_BAND_BOTTOM_Z
 side_to_outer_bolt      = FRAME_W / 2.0 - max(abs(x) for x in BEAM_BOLT_XS) - M5_BOLT_D / 2.0
 bolt_spacing            = (sorted(BEAM_BOLT_XS)[1] - sorted(BEAM_BOLT_XS)[0]) - M5_BOLT_D
-top_to_slot_top         = FRAME_H - (SLOT_TOP_Z + SLOT_Z / 2.0)
-bot_to_slot_bot         = (SLOT_BOT_Z - SLOT_Z / 2.0) - CABLE_CUT_H
-side_to_slot            = FRAME_W / 2.0 - (SCREEN_PCD_X / 2.0 + SLOT_X / 2.0)
-tab_band_to_slot        = TAB_BAND_BOTTOM_Z - (SLOT_TOP_Z + SLOT_Z / 2.0)
+top_to_window_top       = FRAME_H - (WIN_TOP_Z + WIN_H / 2.0)
+window_bot_to_cable_top = (WIN_BOT_Z - WIN_H / 2.0) - CABLE_CUT_H
+side_to_window_outer    = FRAME_W / 2.0 - (SCREEN_PCD_X_NOM / 2.0 + WIN_W / 2.0)
+inner_window_gap        = SCREEN_PCD_X_NOM - WIN_W                              # X gap between L/R windows
+inner_window_gap_z      = SCREEN_PCD_Y_NOM - WIN_H                              # Z gap between top/bot windows
+tab_band_to_window_top  = TAB_BAND_BOTTOM_Z - (WIN_TOP_Z + WIN_H / 2.0)
 checks = [
-    ("Top edge to beam bolt (Z)",        top_to_beam_bolt,        3.0),
-    ("Beam bolt to tab-band bottom (Z)", beam_bolt_to_tab_bottom, 3.0),
-    ("Side edge to outer beam bolt (X)", side_to_outer_bolt,      3.0),
-    ("Adjacent beam bolt spacing (X)",   bolt_spacing,            5.0),
-    ("Top edge to slot top (Z)",         top_to_slot_top,         3.0),
-    ("Slot bottom to cable cutout (Z)",  bot_to_slot_bot,         3.0),
-    ("Side edge to slot outer (X)",      side_to_slot,            5.0),
-    ("Tab-band bottom to slot top (Z)",  tab_band_to_slot,        2.0),
+    ("Top edge to beam bolt (Z)",          top_to_beam_bolt,        3.0),
+    ("Beam bolt to tab-band bottom (Z)",   beam_bolt_to_tab_bottom, 3.0),
+    ("Side edge to outer beam bolt (X)",   side_to_outer_bolt,      3.0),
+    ("Adjacent beam bolt spacing (X)",     bolt_spacing,            5.0),
+    ("Top edge to window top (Z)",         top_to_window_top,       3.0),
+    ("Window bottom to cable cutout (Z)",  window_bot_to_cable_top, 3.0),
+    ("Side edge to window outer (X)",      side_to_window_outer,    5.0),
+    ("Tab-band bottom to window top (Z)",  tab_band_to_window_top,  2.0),
+    ("Inner spine between L/R windows (X)",inner_window_gap,        5.0),
+    ("Inner spine between T/B windows (Z)",inner_window_gap_z,      5.0),
 ]
 for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
@@ -142,9 +154,10 @@ print("GEOMETRY:")
 print(f"  plate:           {FRAME_W} x {FRAME_T} x {FRAME_H} mm")
 print(f"  tab band:        top {TAB_HEIGHT} mm")
 print(f"  beam mount:      4x M5 at X={BEAM_BOLT_XS}, Z={BEAM_BOLT_Z}")
-print(f"  screen window:   nominal PCD {SCREEN_PCD_X} x {SCREEN_PCD_Y}")
-print(f"  screen slots:    4x M2.5 elongated, {SLOT_X} x {SLOT_Z} mm")
-print(f"                   adjustment range +/-{SLOT_X/2} mm X, +/-{SLOT_Z/2} mm Z")
+print(f"  screen windows:  4x {WIN_W} x {WIN_H} mm at corners of nominal")
+print(f"                   PCD {SCREEN_PCD_X_NOM} x {SCREEN_PCD_Y_NOM} (Pi 4 pattern)")
+print(f"  PCD coverage:    X {PCD_X_MIN:.0f}-{PCD_X_MAX:.0f} mm, Y {PCD_Y_MIN:.0f}-{PCD_Y_MAX:.0f} mm")
+print(f"                   (includes Pi 4 58x49 + VESA-75 75x75 + most 7\" panels)")
 print(f"  cable cutout:    bottom edge, {CABLE_CUT_W} x {CABLE_CUT_H} mm")
 print(f"  screen target:   {TOUCH_W} x {TOUCH_H} (ELECROW RC070S, B08FMNDDSL)")
 print()
@@ -167,16 +180,17 @@ for bx in BEAM_BOLT_XS:
                           FreeCAD.Vector(bx, -FRAME_T/2.0 - CUT_EXTRA, BEAM_BOLT_Z),
                           FreeCAD.Vector(0, 1, 0))
 
-# Screen mount slots (elongated rectangles, cut Y full thickness)
+# Screen mount: 4 corner WINDOWS (each WIN_W x WIN_H, cut full Y thickness)
+# Use M2.5 screw + small fender washer (~10 mm OD) to clamp anywhere
+# within the window.  Covers any PCD inside the adjustment range.
 for sx in (-1, +1):
     for sz in (-1, +1):
-        cx = sx * (SCREEN_PCD_X / 2.0)
-        cz = SCREEN_CENTER_Z + sz * (SCREEN_PCD_Y / 2.0)
-        # Stadium-ish slot: simple rectangle (FDM-friendly)
-        plate = cut_box(plate, SLOT_X, FRAME_T + 2 * EPS_OVERCUT, SLOT_Z,
-                         FreeCAD.Vector(cx - SLOT_X/2.0,
+        cx = sx * (SCREEN_PCD_X_NOM / 2.0)
+        cz = SCREEN_CENTER_Z + sz * (SCREEN_PCD_Y_NOM / 2.0)
+        plate = cut_box(plate, WIN_W, FRAME_T + 2 * EPS_OVERCUT, WIN_H,
+                         FreeCAD.Vector(cx - WIN_W/2.0,
                                          -FRAME_T/2.0 - EPS_OVERCUT,
-                                         cz - SLOT_Z/2.0))
+                                         cz - WIN_H/2.0))
 
 # Cable cutout (bottom edge, full Y depth)
 plate = cut_box(plate, CABLE_CUT_W, FRAME_T + 2 * EPS_OVERCUT, CABLE_CUT_H + EPS_OVERCUT,
@@ -209,16 +223,18 @@ if com is not None:
 print()
 print("ASSEMBLY:")
 print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
-print("    (BACK face up so the slot edges print clean)")
-print(" 2. Verify the ELECROW RC070S back-panel mounting hole pattern.")
-print("    Loosen the 4 M2.5 screws to fit -- the 20x10 slots give")
-print("    +/-10 mm X and +/-5 mm Z adjustment.  If your PCD is outside")
-print("    that range, update HMI_TOUCH_PCD_X/Y_NOMINAL in machine_datums")
-print("    and re-run for V1.1.")
-print(" 3. Thread 4x brass pillars (from ELECROW kit) INTO the screen back")
-print(" 4. Hold screen behind the frame; pass 4x M2.5 screws THROUGH the")
-print("    front face slots INTO the pillars; tighten gently")
-print(" 5. Connect HDMI + USB cables to screen (they hide in the pillar gap)")
+print("    (BACK face up so the window edges print clean)")
+print(" 2. Identify your screen's 4-hole back-panel pattern.  This frame")
+print("    accommodates ANY pattern with X spacing 28-88 mm and Y spacing")
+print("    29-69 mm: includes Pi 4 (58 x 49), VESA-75 (75 x 75), and most")
+print("    7\" panel layouts.  No measurement needed before printing.")
+print(" 3. Thread 4x brass pillars (ELECROW kit) INTO the screen back")
+print(" 4. Hold the screen behind the frame.  For each of the 4 pillars:")
+print("    - Pass an M2.5 screw + small fender washer (~10 mm OD) through")
+print("      the corner window from the FRONT face")
+print("    - Thread into the pillar; snug -- the washer bridges the window")
+print("      edges and clamps the position")
+print(" 5. Cables (HDMI + USB) hide in the pillar gap behind the screen")
 print(" 6. Route cables DOWN through the bottom-edge cutout")
 print(" 7. Bolt 4x M5 x 12 mm socket-head into beam FRONT face inserts")
 print("    (at X = +/-33 and +/-55; skip the middle pair)")

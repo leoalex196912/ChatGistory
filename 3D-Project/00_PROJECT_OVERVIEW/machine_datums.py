@@ -240,6 +240,7 @@ HMI_TOUCH_W                = 164.9   # ELECROW RC070S, from official drawing 7in
 HMI_TOUCH_H                = 102.0   # (was 165 x 100; corrected from drawing)
 HMI_TOUCH_T                = 10.0    # LCD module thickness (front bezel)
 HMI_TOUCH_DEPTH_TOTAL      = 34.73   # total depth incl. back PCB (per drawing)
+HMI_TOUCH_TOP_MARGIN       = 1.0     # clearance between tab band and screen top
 HMI_TOUCH_PCD_X_NOMINAL    = 80.0    # ELECROW mount PCD 79.45 (drawing) -> round 80
 HMI_TOUCH_PCD_Y_NOMINAL    = 64.0    # ELECROW mount PCD 64.4 (drawing) -> round 64
 HMI_TOUCH_WIN_W            = 30.0    # mount window X (PCD X range 50-110)

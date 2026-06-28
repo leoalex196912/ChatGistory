@@ -42,7 +42,7 @@ import machine_datums as MD
 PART_NUMBER     = "M10-P05"
 PART_NAME       = "Touchscreen Frame"
 VERSION         = "V1.2"
-STATUS          = "DRAFT"
+STATUS          = "RC1"
 PART_ID         = "CSM_V3_TouchscreenFrame_V1_2"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
@@ -80,13 +80,14 @@ BEAM_BOLT_XS      = (-1.5 * FRONT_PITCH, -2.5 * FRONT_PITCH,      # -33, -55
                      +1.5 * FRONT_PITCH, +2.5 * FRONT_PITCH)      # +33, +55
 M5_BOLT_D         = MD.HMI_M5_THROUGH_D
 
-# Screen mount: 4 corner WINDOWS (universal, M2.5 + fender washer)
-# Covers any PCD within the window range: Pi 4 (58 x 49), VESA-75 (75 x 75),
-# and most generic 7" patterns.  Frame nominal at Pi 4 = 58 x 49.
-SCREEN_PCD_X_NOM  = MD.HMI_TOUCH_PCD_X_NOMINAL                # 58 (Pi 4)
-SCREEN_PCD_Y_NOM  = MD.HMI_TOUCH_PCD_Y_NOMINAL                # 49 (Pi 4)
+# Screen mount: 4 corner WINDOWS (M2.5 + fender washer when needed).
+# Frame nominal = ELECROW RC070S measured PCD 79.45 x 64.4 mm (from
+# the manufacturer's drawing, rounded to 80 x 64 mm).  The window
+# adjustment range also accommodates VESA-75 and most other 7" patterns.
+SCREEN_PCD_X_NOM  = MD.HMI_TOUCH_PCD_X_NOMINAL                # 80 (ELECROW)
+SCREEN_PCD_Y_NOM  = MD.HMI_TOUCH_PCD_Y_NOMINAL                # 64 (ELECROW)
 WIN_W             = MD.HMI_TOUCH_WIN_W                        # 30 mm in X
-WIN_H             = MD.HMI_TOUCH_WIN_H                        # 20 mm in Z
+WIN_H             = MD.HMI_TOUCH_WIN_H                        # 30 mm in Z
 M2_5_CLEAR_D      = MD.HMI_M2_5_CLEAR_D
 
 # Cable cutout (bottom edge)
@@ -100,7 +101,7 @@ CUT_EXTRA         = MD.HMI_CUT_EXTRA
 # Derived: screen vertical centerline (within frame Z)
 # Tab band is the top 18 mm; screen seats below it with some breathing gap.
 TAB_BAND_BOTTOM_Z = FRAME_H - TAB_HEIGHT                            # 112
-SCREEN_TOP_GAP    = 1.0
+SCREEN_TOP_GAP    = MD.HMI_TOUCH_TOP_MARGIN
 SCREEN_TOP_Z      = TAB_BAND_BOTTOM_Z - SCREEN_TOP_GAP              # 111
 SCREEN_CENTER_Z   = SCREEN_TOP_Z - TOUCH_H / 2.0                    # 61
 WIN_TOP_Z         = SCREEN_CENTER_Z + SCREEN_PCD_Y_NOM / 2.0        # 85.5
@@ -155,9 +156,13 @@ print(f"  plate:           {FRAME_W} x {FRAME_T} x {FRAME_H} mm")
 print(f"  tab band:        top {TAB_HEIGHT} mm")
 print(f"  beam mount:      4x M5 at X={BEAM_BOLT_XS}, Z={BEAM_BOLT_Z}")
 print(f"  screen windows:  4x {WIN_W} x {WIN_H} mm at corners of nominal")
-print(f"                   PCD {SCREEN_PCD_X_NOM} x {SCREEN_PCD_Y_NOM} (Pi 4 pattern)")
-print(f"  PCD coverage:    X {PCD_X_MIN:.0f}-{PCD_X_MAX:.0f} mm, Y {PCD_Y_MIN:.0f}-{PCD_Y_MAX:.0f} mm")
-print(f"                   (includes Pi 4 58x49 + VESA-75 75x75 + most 7\" panels)")
+print(f"                   PCD {SCREEN_PCD_X_NOM} x {SCREEN_PCD_Y_NOM} (ELECROW RC070S nominal)")
+print(f"  PCD coverage:")
+print(f"    nominal:       {SCREEN_PCD_X_NOM} x {SCREEN_PCD_Y_NOM} mm (ELECROW RC070S, drawing 79.45 x 64.4)")
+print(f"    adjustable:    X {PCD_X_MIN:.0f}-{PCD_X_MAX:.0f} mm, Y {PCD_Y_MIN:.0f}-{PCD_Y_MAX:.0f} mm")
+print(f"    also fits:     - VESA-75 (75 x 75)")
+print(f"                   - Raspberry Pi display patterns (58 x 49)")
+print(f"                   - generic 7\" HDMI LCDs within range")
 print(f"  cable cutout:    bottom edge, {CABLE_CUT_W} x {CABLE_CUT_H} mm")
 print(f"  screen target:   {TOUCH_W} x {TOUCH_H} (ELECROW RC070S, B08FMNDDSL)")
 print()
@@ -238,6 +243,7 @@ print(" 5. Connect HDMI + USB-C (power) -- cables hide in pillar gap")
 print(" 6. Route cables DOWN through the bottom-edge cutout")
 print(" 7. Bolt 4x M5 x 12 mm socket-head into beam FRONT face inserts")
 print("    (at X = +/-33 and +/-55; skip the middle pair)")
-print(" 8. Route HDMI + USB up rear mast face into beam cable channel,")
-print("    then forward to the Pi Carrier inside the service opening")
+print(" 8. Route HDMI and USB-C cables up the rear mast face, through the")
+print("    Cross Beam cable channel, then forward to the Raspberry Pi Carrier")
+print("    beneath the beam (cables enter Pi via the service opening on top)")
 print("=" * 70)

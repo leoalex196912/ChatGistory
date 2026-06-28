@@ -87,30 +87,39 @@ BOLT_CB_H       = MD.HMI_BOLT_CB_H
 FOOT_BOLT_DX    = MD.HMI_FOOT_BOLT_DX
 FOOT_BOLT_DY    = MD.HMI_FOOT_BOLT_DY
 
-FRONT_BOSS_W           = MD.HMI_FRONT_BOSS_W
-FRONT_BOSS_T           = MD.HMI_FRONT_BOSS_T
-FRONT_BOSS_H_TOP_REL   = 5.0
+FRONT_BOSS_W         = MD.HMI_FRONT_BOSS_W
+FRONT_BOSS_T         = MD.HMI_FRONT_BOSS_T
+FRONT_BOSS_Z0_REL    = MD.HMI_FRONT_BOSS_Z0_REL
+FRONT_BOSS_H_TOP_REL = MD.HMI_FRONT_BOSS_TOP_REL
 
 M5_T_BOLT_D     = MD.HMI_M5_THROUGH_D
-T_BOLT_Z1, T_BOLT_Z2 = 12.0, 38.0
+T_BOLT_Z1       = MD.HMI_T_BOLT_Z1
+T_BOLT_Z2       = MD.HMI_T_BOLT_Z2
 
 GUSSET_BASE     = MD.HMI_GUSSET_BASE
 GUSSET_RISE     = MD.HMI_GUSSET_RISE
 GUSSET_T        = MD.HMI_GUSSET_T
 
-RIB_T = 3.0
-RIB_H = 6.0
-RIB_OVERLAP_INTO_GUSSET = 4.0                    # V1.3+ review: feed into gusset volume
+RIB_T                   = MD.HMI_RIB_T
+RIB_H                   = MD.HMI_RIB_H
+RIB_OVERLAP_INTO_GUSSET = MD.HMI_RIB_OVERLAP
 
 CABLE_CH_W      = MD.HMI_CABLE_CH_W
 CABLE_CH_D      = MD.HMI_CABLE_CH_D
-CABLE_CH_H      = SOCKET_H + FOOT_T - 4.0
+CABLE_CH_H      = SOCKET_H + FOOT_T - 4.0       # derived (bracket-local)
 
-INSERT_POCKET_D = MD.HMI_INSERT_POCKET_D
-INSERT_POCKET_H = MD.HMI_INSERT_POCKET_H
-EXP_INSERT_COUNT, EXP_INSERT_PITCH, EXP_INSERT_Z0_REL = 4, 20.0, 6.0
+INSERT_POCKET_D    = MD.HMI_INSERT_POCKET_D
+INSERT_POCKET_H    = MD.HMI_INSERT_POCKET_H
+EXP_INSERT_COUNT   = MD.HMI_EXP_INSERT_COUNT
+EXP_INSERT_PITCH   = MD.HMI_EXP_INSERT_PITCH
+EXP_INSERT_Z0_REL  = MD.HMI_EXP_INSERT_Z0_REL
 
 DRAIN_D         = MD.HMI_DRAIN_D
+
+# Boolean / overcut helpers (FDM print engineering)
+EPS_OVERCUT     = MD.HMI_BOOLEAN_OVERCUT        # 0.1 mm past target face
+CUT_EXTRA       = MD.HMI_CUT_EXTRA              # 2.0 mm through-cut margin
+CUT_START_OFF   = MD.HMI_CUT_START_OFFSET       # 0.05 mm pre-face start
 
 # ============================================================
 # Wall-thickness verification (V1.3 freeze documentation)
@@ -167,7 +176,7 @@ socket = Part.makeBox(SOCKET_OUTER_W, SOCKET_OUTER_T, SOCKET_H,
 # Pocket (main bore, top-open)
 pocket_face = rounded_rect_face(POCKET_W, POCKET_T, POCKET_FILLET_R)
 pocket_face.translate(FreeCAD.Vector(0, 0, socket_z + SOCKET_BOT_T))
-pocket = pocket_face.extrude(FreeCAD.Vector(0, 0, SOCKET_H - SOCKET_BOT_T + 2))
+pocket = pocket_face.extrude(FreeCAD.Vector(0, 0, SOCKET_H - SOCKET_BOT_T + CUT_EXTRA))
 socket = socket.cut(pocket)
 
 # V1.3: 1 mm stepped lead-in chamfer at pocket entry (top of socket)
@@ -176,7 +185,7 @@ chamfer_face = rounded_rect_face(POCKET_W + 2 * CHAMFER_SIZE,
                                    POCKET_FILLET_R + CHAMFER_SIZE)
 chamfer_top_z = socket_z + SOCKET_H - CHAMFER_SIZE
 chamfer_face.translate(FreeCAD.Vector(0, 0, chamfer_top_z))
-chamfer = chamfer_face.extrude(FreeCAD.Vector(0, 0, CHAMFER_SIZE + 0.1))
+chamfer = chamfer_face.extrude(FreeCAD.Vector(0, 0, CHAMFER_SIZE + EPS_OVERCUT))
 socket = socket.cut(chamfer)
 
 bracket = foot.fuse(socket)
@@ -197,11 +206,11 @@ for sx in (-1, +1):
     bracket = bracket.fuse(make_gusset(sx))
 
 # V1.3: FRONT FACE BOSS for heat-set inserts (local thickening)
-boss_h = SOCKET_H - FRONT_BOSS_H_TOP_REL - 1.0
+boss_h = SOCKET_H - FRONT_BOSS_H_TOP_REL - FRONT_BOSS_Z0_REL
 boss = Part.makeBox(FRONT_BOSS_W, FRONT_BOSS_T, boss_h,
                      FreeCAD.Vector(-FRONT_BOSS_W / 2.0,
                                      -SOCKET_OUTER_T / 2.0 - FRONT_BOSS_T,
-                                     FOOT_T + 1.0))
+                                     FOOT_T + FRONT_BOSS_Z0_REL))
 bracket = bracket.fuse(boss)
 
 # V1.3: 4 DIAGONAL RIBS  (corner bolts -> gusset attach on socket X face)
@@ -236,9 +245,9 @@ for sxf in (-1, +1):
     for syf in (-1, +1):
         hx = sxf * FOOT_BOLT_DX
         hy = syf * FOOT_BOLT_DY
-        bracket = cut_cylinder(bracket, M5_THROUGH_D, FOOT_T + 4.0,
-                                FreeCAD.Vector(hx, hy, -2.0))
-        bracket = cut_cylinder(bracket, BOLT_CB_D, BOLT_CB_H + 0.1,
+        bracket = cut_cylinder(bracket, M5_THROUGH_D, FOOT_T + 2 * CUT_EXTRA,
+                                FreeCAD.Vector(hx, hy, -CUT_EXTRA))
+        bracket = cut_cylinder(bracket, BOLT_CB_D, BOLT_CB_H + EPS_OVERCUT,
                                 FreeCAD.Vector(hx, hy, FOOT_T - BOLT_CB_H))
 
 # Lateral 2020 bolts
@@ -246,15 +255,15 @@ front_y = -SOCKET_OUTER_T / 2.0
 for tz in (T_BOLT_Z1, T_BOLT_Z2):
     z_center = socket_z + SOCKET_BOT_T + tz
     bracket = cut_cylinder(bracket, M5_T_BOLT_D,
-                            FRONT_BOSS_T + WALL_T + POCKET_T + WALL_T + 4.0,
-                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - 2.0, z_center),
+                            FRONT_BOSS_T + WALL_T + POCKET_T + WALL_T + 2 * CUT_EXTRA,
+                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - CUT_EXTRA, z_center),
                             FreeCAD.Vector(0, 1, 0))
 
 # Cable channel (REAR)
 rear_y = SOCKET_OUTER_T / 2.0
-ch = Part.makeBox(CABLE_CH_W, CABLE_CH_D + 0.1, CABLE_CH_H,
+ch = Part.makeBox(CABLE_CH_W, CABLE_CH_D + EPS_OVERCUT, CABLE_CH_H,
                    FreeCAD.Vector(-CABLE_CH_W / 2.0,
-                                   rear_y - CABLE_CH_D, 2.0))
+                                   rear_y - CABLE_CH_D, CUT_EXTRA))
 bracket = bracket.cut(ch)
 
 # Heat-set insert pockets (FRONT)
@@ -263,12 +272,12 @@ for i in range(EXP_INSERT_COUNT):
     if z > FOOT_T + SOCKET_H - 5:
         continue
     bracket = cut_cylinder(bracket, INSERT_POCKET_D, INSERT_POCKET_H,
-                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - 0.1, z),
+                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - EPS_OVERCUT, z),
                             FreeCAD.Vector(0, 1, 0))
 
 # V1.3: Ø3 DRAIN HOLE through pocket floor (vertical, all the way through foot)
-bracket = cut_cylinder(bracket, DRAIN_D, FOOT_T + SOCKET_BOT_T + 1.0,
-                        FreeCAD.Vector(0, 0, -0.5))
+bracket = cut_cylinder(bracket, DRAIN_D, FOOT_T + SOCKET_BOT_T + CUT_EXTRA,
+                        FreeCAD.Vector(0, 0, -CUT_EXTRA / 2.0))
 
 # Defensive fillet at foot-socket transition (may skip on OCC error)
 def _try_fillet(shape, radius, edge_filter, label):

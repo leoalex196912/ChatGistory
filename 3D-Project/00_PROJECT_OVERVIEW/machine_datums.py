@@ -198,17 +198,39 @@ HMI_FRONT_BOSS_W       = 14.0
 HMI_FRONT_BOSS_T       = 4.0
 HMI_DRAIN_D            = 3.0
 
+# === Mast Base Socket V1.3 (continued) ===
+HMI_RIB_T              = 3.0               # diagonal anti-creep rib thickness
+HMI_RIB_H              = 6.0               # rib height above foot
+HMI_RIB_OVERLAP        = 4.0               # rib end inside gusset footprint
+HMI_T_BOLT_Z1          = 12.0              # lateral 2020 T-nut bolt, low
+HMI_T_BOLT_Z2          = 38.0              # lateral 2020 T-nut bolt, high
+HMI_EXP_INSERT_COUNT   = 4                 # FRONT-face accessory inserts (socket)
+HMI_EXP_INSERT_PITCH   = 20.0
+HMI_EXP_INSERT_Z0_REL  = 6.0               # first insert above foot top
+HMI_FRONT_BOSS_Z0_REL  = 1.0               # boss starts 1 mm above foot
+HMI_FRONT_BOSS_TOP_REL = 5.0               # boss ends N mm below socket top
+
 # === Cross Beam V1.2 ===
 HMI_BEAM_LEN_X         = 178.0
 HMI_BEAM_W_Y           = 40.0
 HMI_BEAM_H_Z           = 30.0
 HMI_BEAM_POCKET_DEPTH  = 12.0
+HMI_BEAM_END_MARGIN    = 15.0              # cable channel margin each end
 HMI_PI_MOUNT_PCD_X     = 58.0              # beam-side Pi Carrier interface
 HMI_PI_MOUNT_PCD_Y     = 28.0              # Pi Carrier adapts to Pi 4 58 x 49
 HMI_SERVICE_OPEN_X     = 50.0
 HMI_SERVICE_OPEN_Y     = 16.0
 HMI_CABLE_CH_W         = 8.0
 HMI_CABLE_CH_D         = 4.0
+HMI_FRONT_INSERT_COUNT = 6                 # FRONT-face accessory inserts (beam)
+HMI_FRONT_INSERT_PITCH = 22.0
+
+# === Boolean / overcut helpers (FDM print engineering convention) ===
+# Small offsets used in cuts to avoid coincident faces from Boolean ops.
+# Centralized so they read as engineering intent, not magic numbers.
+HMI_BOOLEAN_OVERCUT    = 0.1               # extend cut volume past target face
+HMI_CUT_EXTRA          = 2.0               # extra length on through-cuts
+HMI_CUT_START_OFFSET   = 0.05              # start cut just below target face
 
 # ============================================================
 # BOUGHT-PARTS DIMENSIONS (from BOM V12 -- physical inventory)

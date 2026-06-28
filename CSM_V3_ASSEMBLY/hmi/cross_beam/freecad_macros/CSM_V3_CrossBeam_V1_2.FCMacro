@@ -53,14 +53,20 @@ PI_MOUNT_PCD_Y  = MD.HMI_PI_MOUNT_PCD_Y
 
 CABLE_CH_W      = MD.HMI_CABLE_CH_W
 CABLE_CH_D      = MD.HMI_CABLE_CH_D
-CABLE_CH_LEN_X  = BEAM_LEN_X - 30.0
+END_MARGIN      = MD.HMI_BEAM_END_MARGIN
+CABLE_CH_LEN_X  = BEAM_LEN_X - 2 * END_MARGIN
 
-FRONT_INSERT_COUNT = 6
-FRONT_INSERT_PITCH = 22.0
-FRONT_INSERT_Z     = BEAM_H_Z / 2.0
+FRONT_INSERT_COUNT = MD.HMI_FRONT_INSERT_COUNT
+FRONT_INSERT_PITCH = MD.HMI_FRONT_INSERT_PITCH
+FRONT_INSERT_Z     = BEAM_H_Z / 2.0             # derived
 
 SERVICE_OPEN_X  = MD.HMI_SERVICE_OPEN_X
 SERVICE_OPEN_Y  = MD.HMI_SERVICE_OPEN_Y
+
+# Boolean / overcut helpers (FDM print engineering)
+EPS_OVERCUT     = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA       = MD.HMI_CUT_EXTRA
+CUT_START_OFF   = MD.HMI_CUT_START_OFFSET
 
 # ============================================================
 # Wall-thickness verification (V1.2 freeze documentation)
@@ -109,36 +115,36 @@ beam = Part.makeBox(BEAM_LEN_X, BEAM_W_Y, BEAM_H_Z,
 
 # Mast capture pockets (cut from bottom)
 for mx in MAST_X_POS:
-    pocket = Part.makeBox(POCKET_W, POCKET_T, POCKET_DEPTH + 0.1,
+    pocket = Part.makeBox(POCKET_W, POCKET_T, POCKET_DEPTH + EPS_OVERCUT,
                           FreeCAD.Vector(mx - POCKET_W/2.0,
-                                          -POCKET_T/2.0, -0.05))
+                                          -POCKET_T/2.0, -CUT_START_OFF))
     beam = beam.cut(pocket)
     # V1.2: 1 mm stepped lead-in at entry (bottom face)
     cham = Part.makeBox(POCKET_W + 2 * CHAMFER_SIZE,
                          POCKET_T + 2 * CHAMFER_SIZE,
-                         CHAMFER_SIZE + 0.1,
+                         CHAMFER_SIZE + EPS_OVERCUT,
                          FreeCAD.Vector(mx - (POCKET_W + 2 * CHAMFER_SIZE)/2.0,
                                          -(POCKET_T + 2 * CHAMFER_SIZE)/2.0,
-                                         -0.05))
+                                         -CUT_START_OFF))
     beam = beam.cut(cham)
 
 # Mast through-bolts + top counterbore
 for mx in MAST_X_POS:
-    beam = cut_cylinder(beam, MAST_BOLT_D, BEAM_H_Z + 4.0,
-                         FreeCAD.Vector(mx, 0, -2.0))
-    beam = cut_cylinder(beam, BOLT_CB_D, BOLT_CB_H + 0.1,
+    beam = cut_cylinder(beam, MAST_BOLT_D, BEAM_H_Z + 2 * CUT_EXTRA,
+                         FreeCAD.Vector(mx, 0, -CUT_EXTRA))
+    beam = cut_cylinder(beam, BOLT_CB_D, BOLT_CB_H + EPS_OVERCUT,
                          FreeCAD.Vector(mx, 0, BEAM_H_Z - BOLT_CB_H))
 
-# Pi mount inserts (BOTTOM face) -- 58 x 30 PCD; Pi Carrier adapts to Pi 4
+# Pi mount inserts (BOTTOM face) -- Pi Carrier adapts to Pi 4 58 x 49
 for sx in (-1, +1):
     for sy in (-1, +1):
         hx = sx * (PI_MOUNT_PCD_X / 2.0)
         hy = sy * (PI_MOUNT_PCD_Y / 2.0)
         beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
-                             FreeCAD.Vector(hx, hy, -0.1))
+                             FreeCAD.Vector(hx, hy, -EPS_OVERCUT))
 
 # Cable channel (REAR)
-ch = Part.makeBox(CABLE_CH_LEN_X, CABLE_CH_D + 0.1, CABLE_CH_W,
+ch = Part.makeBox(CABLE_CH_LEN_X, CABLE_CH_D + EPS_OVERCUT, CABLE_CH_W,
                    FreeCAD.Vector(-CABLE_CH_LEN_X/2.0,
                                    BEAM_W_Y/2.0 - CABLE_CH_D,
                                    (BEAM_H_Z - CABLE_CH_W) / 2.0))
@@ -153,13 +159,13 @@ for i in range(FRONT_INSERT_COUNT):
     if any(abs(hx - mx) < INSERT_POCKET_D for mx in MAST_X_POS):
         continue
     beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
-                         FreeCAD.Vector(hx, front_y - 0.1, FRONT_INSERT_Z),
+                         FreeCAD.Vector(hx, front_y - EPS_OVERCUT, FRONT_INSERT_Z),
                          FreeCAD.Vector(0, 1, 0))
 
 # Center service opening (TOP through-cut)
-svc = Part.makeBox(SERVICE_OPEN_X, SERVICE_OPEN_Y, BEAM_H_Z + 0.2,
+svc = Part.makeBox(SERVICE_OPEN_X, SERVICE_OPEN_Y, BEAM_H_Z + 2 * EPS_OVERCUT,
                     FreeCAD.Vector(-SERVICE_OPEN_X/2.0,
-                                    -SERVICE_OPEN_Y/2.0, -0.1))
+                                    -SERVICE_OPEN_Y/2.0, -EPS_OVERCUT))
 beam = beam.cut(svc)
 
 # Export

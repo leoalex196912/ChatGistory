@@ -65,9 +65,9 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P04"
 PART_NAME       = "Pi Fan Cover"
-VERSION         = "V1.1"
-STATUS          = "RC1"
-PART_ID         = "CSM_V3_PiFanCover_V1_1"
+VERSION         = "V1.2"
+STATUS          = "RC2"
+PART_ID         = "CSM_V3_PiFanCover_V1_2"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
 PRINT_INFILL    = "100%"
@@ -84,6 +84,37 @@ def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0,
 def cut_box(shape, w, d, h, origin):
     box = Part.makeBox(w, d, h, origin)
     return shape.cut(box)
+
+def rounded_rect_face(w, d, r):
+    """Filleted-corner rectangle face in XY plane, centered on origin."""
+    hw, hd = w / 2.0, d / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -hd, 0)
+    p2 = FreeCAD.Vector( hw - r, -hd, 0)
+    p3 = FreeCAD.Vector( hw,     -hd + r, 0)
+    p4 = FreeCAD.Vector( hw,      hd - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  hd, 0)
+    p6 = FreeCAD.Vector(-hw + r,  hd, 0)
+    p7 = FreeCAD.Vector(-hw,      hd - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -hd + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -hd + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  hd - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  hd - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -hd + r, 0)
+    m_BR = c_BR + FreeCAD.Vector(r * math.cos(-math.pi/4), r * math.sin(-math.pi/4), 0)
+    m_TR = c_TR + FreeCAD.Vector(r * math.cos( math.pi/4), r * math.sin( math.pi/4), 0)
+    m_TL = c_TL + FreeCAD.Vector(r * math.cos( 3*math.pi/4), r * math.sin( 3*math.pi/4), 0)
+    m_BL = c_BL + FreeCAD.Vector(r * math.cos(-3*math.pi/4), r * math.sin(-3*math.pi/4), 0)
+    edges = [
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, m_BR, p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, m_TR, p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, m_TL, p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, m_BL, p1).toShape(),
+    ]
+    return Part.Face(Part.Wire(edges))
 
 # ============================================================
 # Geometry parameters -- all from machine_datums.py (HMI block)
@@ -110,6 +141,19 @@ STANDOFF_H    = MD.HMI_PI_FAN_STANDOFF_H         # 11 mm Pi-to-Cover spacer
 RIB_W         = MD.HMI_PI_FAN_RIB_W              # 2.0 mm wide
 RIB_H         = MD.HMI_PI_FAN_RIB_H              # 1.5 mm tall (above top face)
 
+# V1.2: slotted grille (replaces single round opening)
+GRILLE_SLOTS  = MD.HMI_PI_FAN_GRILLE_SLOTS       # 5
+GRILLE_SLOT_W = MD.HMI_PI_FAN_GRILLE_SLOT_W      # 3.5 mm slot width
+GRILLE_SLOT_H = MD.HMI_PI_FAN_GRILLE_SLOT_H      # 22 mm slot length
+GRILLE_WALL   = MD.HMI_PI_FAN_GRILLE_WALL        # 1.6 mm between slots
+
+# V1.2: plate features
+CORNER_R      = MD.HMI_PI_FAN_CORNER_R           # 3.0 mm
+NOTCH_W       = MD.HMI_PI_FAN_CABLE_NOTCH_W      # 4.0 mm
+NOTCH_L       = MD.HMI_PI_FAN_CABLE_NOTCH_L      # 8.0 mm
+NOTCH_D       = MD.HMI_PI_FAN_CABLE_NOTCH_D      # 2.0 mm
+HEATSINK_H    = MD.HMI_PI_HEATSINK_H_NOMINAL     # 0 default (no heatsink)
+
 # Boolean / overcut helpers
 EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
 CUT_EXTRA     = MD.HMI_CUT_EXTRA
@@ -130,19 +174,25 @@ plate_edge_to_pi_hole_y   = PLATE_D / 2.0 - PI_PCD_Y / 2.0 - M2_5_CLEAR_D / 2.0
 plate_edge_to_fan_hole_x  = PLATE_W / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
 plate_edge_to_fan_hole_y  = PLATE_D / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
 fan_hole_radius           = math.sqrt(2.0) * FAN_MOUNT_PCD / 2.0      # 17.0 mm
-opening_edge_to_fan_hole  = fan_hole_radius - FAN_OPENING_D / 2.0 - M3_CLEAR_D / 2.0
+# V1.2: grille is centered, half-width = (N*W + (N-1)*WALL)/2
+grille_half_w             = (GRILLE_SLOTS * GRILLE_SLOT_W +
+                             (GRILLE_SLOTS - 1) * GRILLE_WALL) / 2.0
+grille_edge_to_fan_hole   = fan_hole_radius - grille_half_w - M3_CLEAR_D / 2.0
 pi_hole_distance          = math.sqrt((PI_PCD_X/2 - FAN_MOUNT_PCD/2)**2 +
                                       (PI_PCD_Y/2 - FAN_MOUNT_PCD/2)**2)
 pi_hole_to_fan_hole       = pi_hole_distance - M2_5_CLEAR_D/2 - M3_CLEAR_D/2
 fan_clearance             = STANDOFF_H - FAN_BODY_H                    # 1.0 mm
+heatsink_clearance        = STANDOFF_H - HEATSINK_H                    # Pi side
 checks = [
     ("Plate edge to Pi mount hole (X)",   plate_edge_to_pi_hole_x,   2.0),
     ("Plate edge to Pi mount hole (Y)",   plate_edge_to_pi_hole_y,   2.0),
     ("Plate edge to fan mount hole (X)",  plate_edge_to_fan_hole_x,  2.0),
     ("Plate edge to fan mount hole (Y)",  plate_edge_to_fan_hole_y,  2.0),
-    ("Opening edge to fan mount hole",    opening_edge_to_fan_hole,  2.0),
+    ("Grille edge to fan mount hole",     grille_edge_to_fan_hole,   2.0),
     ("Pi mount to fan mount diagonal",    pi_hole_to_fan_hole,       5.0),
     ("Fan clearance (standoff - body)",   fan_clearance,             0.5),
+    ("Pi heatsink envelope (info)",       heatsink_clearance,        0.5),
+    ("Grille slot wall thickness",        GRILLE_WALL,               1.6),
 ]
 for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
@@ -152,9 +202,12 @@ print("GEOMETRY:")
 print(f"  plate:          {PLATE_W} x {PLATE_D} x {PLATE_T} mm")
 print(f"  Pi interface:   4x M2.5 clearance at PCD {PI_PCD_X} x {PI_PCD_Y} (Pi 4 native)")
 print(f"  fan interface:  4x M3 clearance at PCD {FAN_MOUNT_PCD} x {FAN_MOUNT_PCD}")
-print(f"  fan opening:    D{FAN_OPENING_D} round (clears 25 mm blade swept area)")
+print(f"  intake grille:  {GRILLE_SLOTS} slots x {GRILLE_SLOT_W} x {GRILLE_SLOT_H} mm")
+print(f"                  free area = {GRILLE_SLOTS * GRILLE_SLOT_W * GRILLE_SLOT_H:.0f} mm^2")
 print(f"  fan target:     {FAN_BODY_W} x {FAN_BODY_W} x {FAN_BODY_H} mm, 5 V brushless")
 print(f"  spacer height:  {STANDOFF_H} mm M2.5 brass standoffs (Pi to Cover)")
+print(f"  corner fillet:  R{CORNER_R}")
+print(f"  cable notch:    {NOTCH_W} x {NOTCH_L} x {NOTCH_D} (near +X fan mount)")
 print()
 
 doc = FreeCAD.newDocument(PART_ID)
@@ -163,8 +216,10 @@ doc = FreeCAD.newDocument(PART_ID)
 # Build plate
 # Plate top face at Z=0 (fan-side), bottom face at Z=-PLATE_T
 # ============================================================
-plate = Part.makeBox(PLATE_W, PLATE_D, PLATE_T,
-                     FreeCAD.Vector(-PLATE_W/2.0, -PLATE_D/2.0, -PLATE_T))
+# V1.2: rounded-corner sketch + extrude (guaranteed fillets)
+plate_face = rounded_rect_face(PLATE_W, PLATE_D, CORNER_R)
+plate_face.translate(FreeCAD.Vector(0, 0, -PLATE_T))
+plate = plate_face.extrude(FreeCAD.Vector(0, 0, PLATE_T))
 
 # Pi mount holes (4 corners of PCD 58 x 49)
 for sx in (-1, +1):
@@ -182,9 +237,29 @@ for sx in (-1, +1):
         plate = cut_cylinder(plate, M3_CLEAR_D, PLATE_T + 2 * CUT_EXTRA,
                               FreeCAD.Vector(hx, hy, -PLATE_T - CUT_EXTRA))
 
-# Central air intake (round, full thickness)
-plate = cut_cylinder(plate, FAN_OPENING_D, PLATE_T + 2 * CUT_EXTRA,
-                      FreeCAD.Vector(0, 0, -PLATE_T - CUT_EXTRA))
+# V1.2: SLOTTED GRILLE (replaces single round opening)
+# 5 parallel slots centered on origin, full plate thickness.
+# Spacing: slot pitch = SLOT_W + WALL.  Centered around X=0.
+slot_pitch = GRILLE_SLOT_W + GRILLE_WALL
+total_w    = GRILLE_SLOTS * GRILLE_SLOT_W + (GRILLE_SLOTS - 1) * GRILLE_WALL
+x0         = -total_w / 2.0
+for i in range(GRILLE_SLOTS):
+    sx = x0 + i * slot_pitch
+    plate = cut_box(plate, GRILLE_SLOT_W,
+                            GRILLE_SLOT_H,
+                            PLATE_T + 2 * CUT_EXTRA,
+                            FreeCAD.Vector(sx,
+                                            -GRILLE_SLOT_H / 2.0,
+                                            -PLATE_T - CUT_EXTRA))
+
+# V1.2: CABLE EXIT NOTCH on top face, beside +X fan mount hole.
+# Routes from just outside the fan mount (X=+12) outward to X=+12+NOTCH_L,
+# centered at Y=-12 (the -Y +X corner where most fan wires exit).
+# Depth NOTCH_D into the top face (Z = 0 to Z = -NOTCH_D).
+plate = cut_box(plate, NOTCH_L, NOTCH_W, NOTCH_D + EPS_OVERCUT,
+                 FreeCAD.Vector(FAN_MOUNT_PCD / 2.0 + 2.0,
+                                 -FAN_MOUNT_PCD / 2.0 - NOTCH_W / 2.0,
+                                 -NOTCH_D))
 
 # V1.1: 4 diagonal stiffening RIBS on top face (Z = 0 to RIB_H),
 # from each Pi mount toward the central opening.  Ends short of the
@@ -217,7 +292,10 @@ def make_rib(sx, sy):
 
 for sx in (-1, +1):
     for sy in (-1, +1):
-        plate = plate.fuse(make_rib(sx, sy))
+        plate = plate.fuse(make_rib(sx, sy)).removeSplitter()
+
+# V1.2: corner fillets are built into the plate sketch (rounded_rect_face)
+# -- no post-boolean fillet pass needed.
 
 # Export
 obj = doc.addObject("Part::Feature", PART_ID)
@@ -225,6 +303,10 @@ obj.Shape = plate
 if FreeCAD.GuiUp and obj.ViewObject is not None:
     obj.ViewObject.ShapeColor = (0.55, 0.70, 0.85)
 doc.recompute()
+
+# V1.2: read shape back from the document after recompute, so the volume
+# and CoM we print match exactly what gets exported.
+plate = obj.Shape
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
@@ -263,6 +345,8 @@ print(" 7. Connect fan power leads to Pi GPIO header:")
 print("    - Red wire   -> Pin 4 (+5V)")
 print("    - Black wire -> Pin 6 (GND)")
 print("    (any 2-wire 5 V fan works -- connector style is irrelevant)")
-print(" 8. Verify fan spins on Pi power-up; airflow should pass UPWARD")
-print("    through the Cover opening into the Pi component area")
+print(" 8. Verify the fan spins on Pi power-up; confirm airflow direction")
+print("    is TOWARD the Raspberry Pi PCB (matches the molded arrow).")
+print("    Route the fan power leads through the cable-exit notch beside")
+print("    the +X +Y fan mount hole.")
 print("=" * 70)

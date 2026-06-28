@@ -7,7 +7,7 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Rectangle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STL_PATH = os.path.join(HERE, "CSM_V3_PiFanCover_V1_1.stl")
+STL_PATH = os.path.join(HERE, "CSM_V3_PiFanCover_V1_2.stl")
 
 def parse_stl(path):
     with open(path, 'rb') as f:
@@ -86,7 +86,7 @@ ax_tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96, facecolor='white',
 rows = [
     ('PART',     'Pi Fan Cover'),
     ('NUMBER',   'M10-P04'),
-    ('VERSION',  'V1.1 (RC1)'),
+    ('VERSION',  'V1.2 (RC2)'),
     ('MODULE',   '10 -- HMI'),
     ('QTY',      '1'),
     ('MATERIAL', 'PETG (PA12 prod)'),
@@ -107,7 +107,7 @@ dims = [
     ('Pi screws',     '4x M2.5'),
     ('Fan mount PCD', '24 x 24 (30 mm fan)'),
     ('Fan screws',    '4x M3'),
-    ('Fan opening',   'D24 round'),
+    ('Fan grille',    '5 slots @ 3.5 x 22'),
     ('Fan body',      '30 x 30 x 10'),
     ('Pi-Cover gap',  '11 mm standoffs'),
 ]
@@ -154,8 +154,8 @@ fig.text(0.5, 0.02,
          'Module 10 part 4 of 10',
          ha='center', fontsize=8, color='#888')
 
-out_png = os.path.join(HERE, "CSM_V3_PiFanCover_V1_1_views.png")
-out_pdf = os.path.join(HERE, "CSM_V3_PiFanCover_V1_1_views.pdf")
+out_png = os.path.join(HERE, "CSM_V3_PiFanCover_V1_2_views.png")
+out_pdf = os.path.join(HERE, "CSM_V3_PiFanCover_V1_2_views.pdf")
 fig.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
 fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
 plt.close(fig)

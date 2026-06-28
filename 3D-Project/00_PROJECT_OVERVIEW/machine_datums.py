@@ -259,13 +259,25 @@ HMI_PI_FAN_OPENING_D    = 24.0     # round air intake (better airflow than 22)
 HMI_PI_FAN_BODY_W       = 30.0     # standard 30 x 30 x 10 mm fan
 HMI_PI_FAN_BODY_H       = 10.0
 HMI_PI_FAN_MOUNT_PCD    = 24.0     # standard 30 mm fan screw spacing
-HMI_PI_FAN_M3_CLEAR_D   = 3.5      # M3 clearance for fan mount screws
+HMI_PI_FAN_M3_CLEAR_D   = 3.7      # M3 clearance (bumped from 3.5 for fan PCD tolerance)
 HMI_PI_FAN_STANDOFF_H   = 11.0     # user-supplied M2.5 brass standoff height
                                     # (Pi PCB to Fan Cover; clears 10 mm fan)
 HMI_PI_FAN_VOLTAGE      = 5.0      # supplied from Pi GPIO header
 HMI_PI_FAN_AIRFLOW      = "TOWARD_PI"  # arrow on fan should point at Pi PCB
 HMI_PI_FAN_RIB_W        = 2.0      # stiffening rib width (perpendicular)
 HMI_PI_FAN_RIB_H        = 1.5      # stiffening rib height (above top face)
+# V1.2 -- slotted grille (replaces single round D24 intake)
+HMI_PI_FAN_GRILLE_SLOTS    = 5     # number of parallel slots
+HMI_PI_FAN_GRILLE_SLOT_W   = 3.5   # slot width (X)
+HMI_PI_FAN_GRILLE_SLOT_H   = 22.0  # slot length (Y)
+HMI_PI_FAN_GRILLE_WALL     = 1.6   # wall between slots (>= 4 perimeters at 0.4 mm)
+# V1.2 -- additional features
+HMI_PI_FAN_CORNER_R        = 3.0   # plate corner fillet radius
+HMI_PI_FAN_CABLE_NOTCH_W   = 4.0   # cable exit notch width (X)
+HMI_PI_FAN_CABLE_NOTCH_L   = 8.0   # cable exit notch length (X, away from fan)
+HMI_PI_FAN_CABLE_NOTCH_D   = 2.0   # cable exit notch depth (Z, into plate top)
+HMI_PI_HEATSINK_H_NOMINAL  = 0.0   # if user adds a Pi heatsink, set this for
+                                    # envelope check (0 = no heatsink)
 
 # === Pi Carrier V1.0 (Part M10-P03) ===
 # Adapter plate between beam (58 x 28 PCD inserts) and Pi 4 (58 x 49 PCD).

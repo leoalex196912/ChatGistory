@@ -41,9 +41,9 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P05"
 PART_NAME       = "Touchscreen Frame"
-VERSION         = "V1.1"
+VERSION         = "V1.2"
 STATUS          = "DRAFT"
-PART_ID         = "CSM_V3_TouchscreenFrame_V1_1"
+PART_ID         = "CSM_V3_TouchscreenFrame_V1_2"
 PRINT_QTY       = 1
 PRINT_MATERIAL  = "PETG (PA12 production)"
 PRINT_INFILL    = "100%"
@@ -224,17 +224,17 @@ print()
 print("ASSEMBLY:")
 print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
 print("    (BACK face up so the window edges print clean)")
-print(" 2. Identify your screen's 4-hole back-panel pattern.  This frame")
-print("    accommodates ANY pattern with X spacing 28-88 mm and Y spacing")
-print("    29-69 mm: includes Pi 4 (58 x 49), VESA-75 (75 x 75), and most")
-print("    7\" panel layouts.  No measurement needed before printing.")
+print(" 2. ELECROW RC070S official drawing confirms back-panel PCD =")
+print("    79.45 x 64.4 mm. This frame nominal is 80 x 64 (centered).")
+print("    Window range also accommodates Pi 4 (58 x 49), VESA-75 (75 x 75),")
+print("    and most 7\" panel layouts -- X 50-110 mm, Y 34-94 mm.")
 print(" 3. Thread 4x brass pillars (ELECROW kit) INTO the screen back")
 print(" 4. Hold the screen behind the frame.  For each of the 4 pillars:")
 print("    - Pass an M2.5 screw + small fender washer (~10 mm OD) through")
 print("      the corner window from the FRONT face")
 print("    - Thread into the pillar; snug -- the washer bridges the window")
 print("      edges and clamps the position")
-print(" 5. Cables (HDMI + USB) hide in the pillar gap behind the screen")
+print(" 5. Connect HDMI + USB-C (power) -- cables hide in pillar gap")
 print(" 6. Route cables DOWN through the bottom-edge cutout")
 print(" 7. Bolt 4x M5 x 12 mm socket-head into beam FRONT face inserts")
 print("    (at X = +/-33 and +/-55; skip the middle pair)")

@@ -236,13 +236,14 @@ HMI_FRAME_TAB_HEIGHT       = 18.0    # band at top with beam-mount bolts
 HMI_FRAME_BEAM_BOLT_Z      = 7.0     # bolt center distance from top edge
 HMI_FRAME_CABLE_CUT_W      = 30.0    # bottom-edge cable cutout, X width
 HMI_FRAME_CABLE_CUT_H      = 10.0    # bottom-edge cable cutout, Z up
-HMI_TOUCH_W                = 165.0   # ELECROW RC070S panel dimensions
-HMI_TOUCH_H                = 100.0
-HMI_TOUCH_T                = 10.0
-HMI_TOUCH_PCD_X_NOMINAL    = 58.0    # Pi 4 pattern (most likely per ELECROW kit)
-HMI_TOUCH_PCD_Y_NOMINAL    = 49.0
-HMI_TOUCH_WIN_W            = 30.0    # mount window X (covers PCD X 28-88)
-HMI_TOUCH_WIN_H            = 30.0    # mount window Z (covers PCD Y 19-79, includes VESA-75)
+HMI_TOUCH_W                = 164.9   # ELECROW RC070S, from official drawing 7inch-D_Size
+HMI_TOUCH_H                = 102.0   # (was 165 x 100; corrected from drawing)
+HMI_TOUCH_T                = 10.0    # LCD module thickness (front bezel)
+HMI_TOUCH_DEPTH_TOTAL      = 34.73   # total depth incl. back PCB (per drawing)
+HMI_TOUCH_PCD_X_NOMINAL    = 80.0    # ELECROW mount PCD 79.45 (drawing) -> round 80
+HMI_TOUCH_PCD_Y_NOMINAL    = 64.0    # ELECROW mount PCD 64.4 (drawing) -> round 64
+HMI_TOUCH_WIN_W            = 30.0    # mount window X (PCD X range 50-110)
+HMI_TOUCH_WIN_H            = 30.0    # mount window Z (PCD Y range 34-94)
 HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
 
 # === Pi Carrier V1.0 (Part M10-P03) ===

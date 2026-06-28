@@ -141,13 +141,74 @@ ALU_PLATE_BOTTOM_Z     = 223.7    # = ALU_PLATE_TOP_Z - ALU_PLATE_T
 ALU_PLATE_TOP_Z        = 230.0    # MASTER DATUM PLANE (ICD invariant B3, locked)
 ALU_PLATE_MATERIAL     = "6061-T6 mill finish"
 
-# Touchscreen mast (dual 2020 + crossbar, REAR of wood base, -Y)
+# Touchscreen mast (LEGACY -- pre Module-10 lock; do not import in new code)
+# These values are kept for backward compatibility with older docs only.
+# All NEW HMI code MUST reference the HMI_* block below (ICD R7 Module 10).
 MAST_UPRIGHT_LEN       = 400.0
 MAST_CENTER_X          =   0.0
 MAST_CENTER_Y          = -180.0
 MAST_X_OFFSETS         = (+30.0, -30.0)
 MAST_TOP_CROSSBAR_LEN  =  60.0
-MAST_TOP_Z             = 418.0   # = WOOD_BASE_TOP_Z + MAST_UPRIGHT_LEN
+MAST_TOP_Z             = 418.0
+
+# ============================================================
+# HMI MODULE 10  (ICD R7 -- locked 2026-06-28)
+# Single source of truth for Module 10 (HMI) dimensions.
+# Any HMI macro reads constants from this block.
+# ============================================================
+
+# Mast placement and stick
+HMI_MAST_X_POSITIONS   = (+75.0, -75.0)   # left + right mast centers
+HMI_MAST_SPACING_X     = 150.0
+HMI_MAST_Y             = -210.0            # wood-base Y of mast feet
+HMI_MAST_LEN           = 400.0             # 2020 stick length (cut from 500)
+
+# 2020 extrusion + slip fit
+HMI_EXT_W              = 20.0
+HMI_EXT_CLEAR          = 0.4               # 0.2 mm per side, FDM slip fit
+HMI_POCKET_W           = HMI_EXT_W + 2 * HMI_EXT_CLEAR     # 20.8
+
+# Heat-set inserts (BOM B0DPQJ4W3Z, M5 brass, ~Ø6.4 x 8 mm)
+HMI_INSERT_POCKET_D    = 6.2               # press fit (insert OD - 0.2)
+HMI_INSERT_POCKET_H    = 8.5
+
+# Foot/beam bolt counterbore for M5 socket-head cap screws
+HMI_M5_THROUGH_D       = 5.5
+HMI_BOLT_CB_D          = 9.5
+HMI_BOLT_CB_H          = 5.5
+
+# Lead-in chamfer at pocket entries
+HMI_POCKET_CHAMFER     = 1.0
+
+# === Mast Base Socket V1.3 ===
+HMI_SOCKET_OUTER_W     = 34.0
+HMI_SOCKET_OUTER_T     = 34.0
+HMI_SOCKET_H           = 50.0              # mast engagement
+HMI_SOCKET_BOT_T       = 5.0               # closed pocket floor
+HMI_SOCKET_POCKET_R    = 1.5               # inner corner fillet
+HMI_FOOT_LEN           = 70.0
+HMI_FOOT_W             = 54.0
+HMI_FOOT_T             = 10.0
+HMI_FOOT_BOLT_DX       = 25.0
+HMI_FOOT_BOLT_DY       = 19.0
+HMI_GUSSET_BASE        = 25.0
+HMI_GUSSET_RISE        = 30.0
+HMI_GUSSET_T           = 6.0
+HMI_FRONT_BOSS_W       = 14.0
+HMI_FRONT_BOSS_T       = 4.0
+HMI_DRAIN_D            = 3.0
+
+# === Cross Beam V1.2 ===
+HMI_BEAM_LEN_X         = 178.0
+HMI_BEAM_W_Y           = 40.0
+HMI_BEAM_H_Z           = 30.0
+HMI_BEAM_POCKET_DEPTH  = 12.0
+HMI_PI_MOUNT_PCD_X     = 58.0              # beam-side Pi Carrier interface
+HMI_PI_MOUNT_PCD_Y     = 28.0              # Pi Carrier adapts to Pi 4 58 x 49
+HMI_SERVICE_OPEN_X     = 50.0
+HMI_SERVICE_OPEN_Y     = 16.0
+HMI_CABLE_CH_W         = 8.0
+HMI_CABLE_CH_D         = 4.0
 
 # ============================================================
 # BOUGHT-PARTS DIMENSIONS (from BOM V12 -- physical inventory)

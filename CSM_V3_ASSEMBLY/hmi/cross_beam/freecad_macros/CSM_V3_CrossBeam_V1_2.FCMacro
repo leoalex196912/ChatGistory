@@ -27,40 +27,40 @@ def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0,
     return shape.cut(cyl)
 
 # ============================================================
-# Geometry parameters
+# Geometry parameters -- all from machine_datums.py (HMI block)
 # ============================================================
-MAST_X_POS     = (+75.0, -75.0)
-EXT_W          = 20.0
-EXT_CLEAR      = 0.4
+MAST_X_POS      = MD.HMI_MAST_X_POSITIONS
+EXT_W           = MD.HMI_EXT_W
+EXT_CLEAR       = MD.HMI_EXT_CLEAR
 
-BEAM_LEN_X     = 178.0    # V1.2: 170 -> 178 (closed-end wall past mast pocket)
-BEAM_W_Y       = 40.0
-BEAM_H_Z       = 30.0
+BEAM_LEN_X      = MD.HMI_BEAM_LEN_X
+BEAM_W_Y        = MD.HMI_BEAM_W_Y
+BEAM_H_Z        = MD.HMI_BEAM_H_Z
 
-POCKET_W       = EXT_W + 2 * EXT_CLEAR
-POCKET_T       = EXT_W + 2 * EXT_CLEAR
-POCKET_DEPTH   = 12.0
-CHAMFER_SIZE   = 1.0                              # V1.2: lead-in
+POCKET_W        = MD.HMI_POCKET_W
+POCKET_T        = MD.HMI_POCKET_W
+POCKET_DEPTH    = MD.HMI_BEAM_POCKET_DEPTH
+CHAMFER_SIZE    = MD.HMI_POCKET_CHAMFER
 
-MAST_BOLT_D    = 5.5
-BOLT_CB_D      = 9.5
-BOLT_CB_H      = 5.5
+MAST_BOLT_D     = MD.HMI_M5_THROUGH_D
+BOLT_CB_D       = MD.HMI_BOLT_CB_D
+BOLT_CB_H       = MD.HMI_BOLT_CB_H
 
-INSERT_POCKET_D = 6.2
-INSERT_POCKET_H = 8.5
-PI_MOUNT_PCD_X  = 58.0
-PI_MOUNT_PCD_Y  = 28.0                            # V1.2: 49 didn't fit; 28 gives 2.9 mm edge wall
+INSERT_POCKET_D = MD.HMI_INSERT_POCKET_D
+INSERT_POCKET_H = MD.HMI_INSERT_POCKET_H
+PI_MOUNT_PCD_X  = MD.HMI_PI_MOUNT_PCD_X
+PI_MOUNT_PCD_Y  = MD.HMI_PI_MOUNT_PCD_Y
 
-CABLE_CH_W      = 8.0
-CABLE_CH_D      = 4.0
+CABLE_CH_W      = MD.HMI_CABLE_CH_W
+CABLE_CH_D      = MD.HMI_CABLE_CH_D
 CABLE_CH_LEN_X  = BEAM_LEN_X - 30.0
 
 FRONT_INSERT_COUNT = 6
 FRONT_INSERT_PITCH = 22.0
 FRONT_INSERT_Z     = BEAM_H_Z / 2.0
 
-SERVICE_OPEN_X  = 50.0
-SERVICE_OPEN_Y  = 16.0    # V1.2: 18 -> 16 (clear Pi insert wall to 2.9 mm)
+SERVICE_OPEN_X  = MD.HMI_SERVICE_OPEN_X
+SERVICE_OPEN_Y  = MD.HMI_SERVICE_OPEN_Y
 
 # ============================================================
 # Wall-thickness verification (V1.2 freeze documentation)
@@ -174,7 +174,13 @@ OUT_STL  = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.stl")
 OUT_STEP = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.step")
 Part.export([obj], OUT_STL)
 Part.export([obj], OUT_STEP)
+try:
+    com = beam.CenterOfMass
+except AttributeError:
+    com = beam.Solids[0].CenterOfMass if beam.Solids else None
 print(f"[OK] STL:  {OUT_STL}")
 print(f"[OK] STEP: {OUT_STEP}")
 print(f"     volume: {beam.Volume:.0f} mm^3  (~{beam.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (beam-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
 print("=" * 70)

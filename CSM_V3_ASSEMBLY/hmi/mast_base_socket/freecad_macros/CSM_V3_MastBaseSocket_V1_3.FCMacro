@@ -63,46 +63,54 @@ def rounded_rect_face(w, t, r):
     return Part.Face(Part.Wire(edges))
 
 # ============================================================
-# Geometry parameters
+# Geometry parameters -- all from machine_datums.py (HMI block)
 # ============================================================
-EXT_W, EXT_T, EXT_CLEAR = 20.0, 20.0, 0.4
-SOCKET_OUTER_W = 34.0
-SOCKET_OUTER_T = 34.0
-SOCKET_H       = 50.0
-SOCKET_BOT_T   =  5.0
-POCKET_W       = EXT_W + 2 * EXT_CLEAR
-POCKET_T       = EXT_T + 2 * EXT_CLEAR
-WALL_T         = (SOCKET_OUTER_W - POCKET_W) / 2.0
-POCKET_FILLET_R = 1.5
-CHAMFER_SIZE   = 1.0                              # V1.3: lead-in
+EXT_W           = MD.HMI_EXT_W
+EXT_T           = MD.HMI_EXT_W
+EXT_CLEAR       = MD.HMI_EXT_CLEAR
+SOCKET_OUTER_W  = MD.HMI_SOCKET_OUTER_W
+SOCKET_OUTER_T  = MD.HMI_SOCKET_OUTER_T
+SOCKET_H        = MD.HMI_SOCKET_H
+SOCKET_BOT_T    = MD.HMI_SOCKET_BOT_T
+POCKET_W        = MD.HMI_POCKET_W
+POCKET_T        = MD.HMI_POCKET_W
+WALL_T          = (SOCKET_OUTER_W - POCKET_W) / 2.0
+POCKET_FILLET_R = MD.HMI_SOCKET_POCKET_R
+CHAMFER_SIZE    = MD.HMI_POCKET_CHAMFER
 
-FOOT_LEN, FOOT_W, FOOT_T = 70.0, 54.0, 10.0     # V1.3: FOOT_W 50 -> 54 (bolt clearance)
-M5_THROUGH_D, BOLT_CB_D, BOLT_CB_H = 5.5, 9.5, 5.5
-FOOT_BOLT_DX, FOOT_BOLT_DY = 25.0, 19.0          # V1.3: DY 17 -> 19 (clear socket OD)
+FOOT_LEN        = MD.HMI_FOOT_LEN
+FOOT_W          = MD.HMI_FOOT_W
+FOOT_T          = MD.HMI_FOOT_T
+M5_THROUGH_D    = MD.HMI_M5_THROUGH_D
+BOLT_CB_D       = MD.HMI_BOLT_CB_D
+BOLT_CB_H       = MD.HMI_BOLT_CB_H
+FOOT_BOLT_DX    = MD.HMI_FOOT_BOLT_DX
+FOOT_BOLT_DY    = MD.HMI_FOOT_BOLT_DY
 
-# V1.3: FRONT face local boss for heat-set inserts
-# Without boss, 8.5 mm insert pocket exceeds 6.6 mm front wall and pokes
-# into the 2020 pocket interior. Boss adds 4 mm of local material.
-FRONT_BOSS_W   = 14.0
-FRONT_BOSS_T   =  4.0
-FRONT_BOSS_H_TOP_REL = 5.0                       # below socket top
+FRONT_BOSS_W           = MD.HMI_FRONT_BOSS_W
+FRONT_BOSS_T           = MD.HMI_FRONT_BOSS_T
+FRONT_BOSS_H_TOP_REL   = 5.0
 
-M5_T_BOLT_D    = 5.5
+M5_T_BOLT_D     = MD.HMI_M5_THROUGH_D
 T_BOLT_Z1, T_BOLT_Z2 = 12.0, 38.0
 
-GUSSET_BASE, GUSSET_RISE, GUSSET_T = 25.0, 30.0, 6.0
+GUSSET_BASE     = MD.HMI_GUSSET_BASE
+GUSSET_RISE     = MD.HMI_GUSSET_RISE
+GUSSET_T        = MD.HMI_GUSSET_T
 
-# V1.3: 4 diagonal ribs (replaces 2 straight ribs from V1.2)
 RIB_T = 3.0
 RIB_H = 6.0
+RIB_OVERLAP_INTO_GUSSET = 4.0                    # V1.3+ review: feed into gusset volume
 
-CABLE_CH_W, CABLE_CH_D = 8.0, 4.0
-CABLE_CH_H = SOCKET_H + FOOT_T - 4.0
+CABLE_CH_W      = MD.HMI_CABLE_CH_W
+CABLE_CH_D      = MD.HMI_CABLE_CH_D
+CABLE_CH_H      = SOCKET_H + FOOT_T - 4.0
 
-INSERT_POCKET_D, INSERT_POCKET_H = 6.2, 8.5
+INSERT_POCKET_D = MD.HMI_INSERT_POCKET_D
+INSERT_POCKET_H = MD.HMI_INSERT_POCKET_H
 EXP_INSERT_COUNT, EXP_INSERT_PITCH, EXP_INSERT_Z0_REL = 4, 20.0, 6.0
 
-DRAIN_D = 3.0                                     # V1.3: drain hole
+DRAIN_D         = MD.HMI_DRAIN_D
 
 # ============================================================
 # Wall-thickness verification (V1.3 freeze documentation)
@@ -202,7 +210,10 @@ bracket = bracket.fuse(boss)
 # Slab thickness RIB_T perpendicular to that line, height RIB_H above foot.
 def make_diagonal_rib(sxf, syf):
     start = FreeCAD.Vector(sxf * FOOT_BOLT_DX, syf * FOOT_BOLT_DY, FOOT_T)
-    end   = FreeCAD.Vector(sxf * SOCKET_OUTER_W / 2.0, 0, FOOT_T)
+    # End point reaches INSIDE the gusset by RIB_OVERLAP so rib feeds load
+    # into gusset volume instead of butting against its edge.
+    end   = FreeCAD.Vector(sxf * (SOCKET_OUTER_W / 2.0 - RIB_OVERLAP_INTO_GUSSET),
+                            0, FOOT_T)
     dx, dy = end.x - start.x, end.y - start.y
     L = math.hypot(dx, dy)
     ux, uy = dx / L, dy / L
@@ -295,7 +306,13 @@ OUT_STL  = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.stl")
 OUT_STEP = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.step")
 Part.export([obj], OUT_STL)
 Part.export([obj], OUT_STEP)
+try:
+    com = bracket.CenterOfMass
+except AttributeError:
+    com = bracket.Solids[0].CenterOfMass if bracket.Solids else None
 print(f"[OK] STL:  {OUT_STL}")
 print(f"[OK] STEP: {OUT_STEP}")
 print(f"     volume: {bracket.Volume:.0f} mm^3  (~{bracket.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (bracket-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
 print("=" * 70)

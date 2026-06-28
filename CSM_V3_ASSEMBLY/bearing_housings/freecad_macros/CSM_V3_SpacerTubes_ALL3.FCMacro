@@ -1,0 +1,86 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- BEARING SHAFT -- 3 SPACER TUBES IN ONE PRINT
+# =============================================================================
+# Combines the 3 bracketing spacer-tube variants (22.7 / 22.9 / 23.1 mm)
+# into a single STL+STEP for one print job.
+#
+# Why a single print:
+#   - 2.9 mm thin walls print rounder when nozzle hops between parts
+#     (each layer gets cool-down time)
+#   - One bed prep, one preheat
+#   - All 3 ready for fit testing on the bearing stack at the same time
+#
+# Print: PETG, 100% infill, 4 walls, 0.2 mm layers, no support, no brim
+# Total mass: ~15 g, ~25 min on a Kobra 2 with proper cooling
+# =============================================================================
+
+import FreeCAD, Part, os
+
+PART_NUMBER     = "M07-P03"
+PART_NAME       = "Spacer Tubes (3 variants combined)"
+VERSION         = "V2.5.1"
+STATUS          = "RC1"
+PART_ID         = "CSM_V3_SpacerTubes_ALL3_V2_5_1"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+
+# Spacer geometry (matches main bearing housing macro)
+SPACER_ID       = 12.2     # slip fit on 12 mm shaft
+SPACER_OD       = 18.0     # clears bearing OD, contacts inner race
+SPACER_LENGTHS  = (22.7, 22.9, 23.1)    # bracketing variants for fit test
+SPACER_PITCH    = 25.0     # X spacing center-to-center (7 mm gap = nozzle clearance)
+
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}, {PRINT_INFILL} infill, 4 walls, {PRINT_LAYER} layers")
+print(f"  Tubes:      {len(SPACER_LENGTHS)} (ID {SPACER_ID} / OD {SPACER_OD}, lengths {SPACER_LENGTHS} mm)")
+print(f"  Bed pitch:  {SPACER_PITCH} mm center-to-center along X")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+shapes = []
+
+# X-center each tube; total span = (N-1) * pitch, centered on origin
+total_span = (len(SPACER_LENGTHS) - 1) * SPACER_PITCH
+x0 = -total_span / 2.0
+
+for i, L in enumerate(SPACER_LENGTHS):
+    cx = x0 + i * SPACER_PITCH
+    outer = Part.makeCylinder(SPACER_OD / 2.0, L,
+                              FreeCAD.Vector(cx, 0, 0))
+    inner = Part.makeCylinder(SPACER_ID / 2.0, L + 0.2,
+                              FreeCAD.Vector(cx, 0, -0.1))
+    tube = outer.cut(inner)
+    obj = doc.addObject("Part::Feature", f"Spacer_{L:.1f}".replace(".", "_"))
+    obj.Shape = tube
+    if FreeCAD.GuiUp and obj.ViewObject is not None:
+        obj.ViewObject.ShapeColor = (0.55, 0.55, 0.60)
+    shapes.append(obj)
+    print(f"  tube {i+1}: L={L} mm at X={cx:+.1f}")
+
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export(shapes, OUT_STL)
+Part.export(shapes, OUT_STEP)
+
+total_vol = sum(s.Shape.Volume for s in shapes)
+print()
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     total volume: {total_vol:.0f} mm^3  (~{total_vol*1.27/1000:.1f}g PETG)")
+print()
+print("FIT-TEST PROCEDURE:")
+print(" 1. Print all 3 tubes in one go (no support, no brim)")
+print(" 2. Assemble bearing stack with 22.9 mm spacer first")
+print(" 3. Hand-rotate shaft -- listen / feel for binding or play")
+print(" 4. If too tight  -> swap in 22.7 mm")
+print(" 5. If too loose  -> swap in 23.1 mm")
+print(" 6. Discard the other two; the winner becomes the production part")
+print("=" * 70)

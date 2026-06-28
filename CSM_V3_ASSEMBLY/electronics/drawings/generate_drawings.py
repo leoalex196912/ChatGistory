@@ -119,7 +119,11 @@ COMPONENTS = {
     ),
     'MEGA': dict(
         label='Arduino Mega 2560',
-        cx=200, cy=75, w=102, d=54,
+        # cx 200 -> 195 (2026-06-28): right edge of board was at +251,
+        # overhanging the 500 mm wood base by 1 mm.  Also, the right
+        # mounting holes at X=247 sat only 1.4 mm from the sheet edge,
+        # below SendCutSend minimum of 3.61 mm (.142") for 12 mm plywood.
+        cx=195, cy=75, w=102, d=54,
         color='#1f4ea8',
         hw=HW_MEGA,
         holes=[(-47, -23, 3.2, 'M3'), (+47, -23, 3.2, 'M3'),

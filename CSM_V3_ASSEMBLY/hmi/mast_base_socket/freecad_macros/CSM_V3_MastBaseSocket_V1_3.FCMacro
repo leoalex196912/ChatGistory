@@ -26,6 +26,20 @@ sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
 import machine_datums as MD
 
 # ============================================================
+# PART METADATA (CSM V3 macro standard header)
+# ============================================================
+PART_NUMBER     = "M10-P01"
+PART_NAME       = "Mast Base Socket"
+VERSION         = "V1.3 RC1"
+STATUS          = "FROZEN"
+PART_ID         = "CSM_V3_MastBaseSocket_V1_3"   # filename root
+PRINT_QTY       = 2
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+# ============================================================
 # Helpers
 # ============================================================
 def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
@@ -122,11 +136,15 @@ CUT_EXTRA       = MD.HMI_CUT_EXTRA              # 2.0 mm through-cut margin
 CUT_START_OFF   = MD.HMI_CUT_START_OFFSET       # 0.05 mm pre-face start
 
 # ============================================================
-# Wall-thickness verification (V1.3 freeze documentation)
+# Standard CSM V3 banner
 # ============================================================
 print("=" * 70)
-print("CSM V3 -- HMI MODULE 10 -- Mast Base Socket V1.3  (FREEZE CANDIDATE)")
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
 print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
 print("WALL-THICKNESS CHECK:")
 wall_pocket_to_outer = WALL_T
 foot_edge_to_bolt_x  = FOOT_LEN/2 - FOOT_BOLT_DX
@@ -149,18 +167,17 @@ for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
     print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
 print()
-print("MATERIAL: PETG 100% infill, 4 walls, 0.2 mm layers (Phase 1)")
+print("GEOMETRY:")
 print(f"  socket outer:    {SOCKET_OUTER_W} sq x {SOCKET_H} mm")
 print(f"  pocket:          {POCKET_W:.1f} sq, R{POCKET_FILLET_R} fillets, {CHAMFER_SIZE} mm lead-in")
 print(f"  foot:            {FOOT_LEN} x {FOOT_W} x {FOOT_T}")
 print(f"  gussets:         {GUSSET_BASE} x {GUSSET_RISE} x {GUSSET_T}")
-print(f"  4x diagonal ribs:  {RIB_T} x {RIB_H} from outer bolts to gussets")
+print(f"  4x diagonal ribs:  {RIB_T} x {RIB_H} from outer bolts into gussets")
 print(f"  drain hole:      D{DRAIN_D} through pocket floor")
 print(f"  inserts:         {EXP_INSERT_COUNT}x M5 heat-set @ {EXP_INSERT_PITCH} mm pitch")
-print(f"  quantity:        2 (left + right)")
 print()
 
-doc = FreeCAD.newDocument("MastBaseSocket_V1_3")
+doc = FreeCAD.newDocument(PART_ID)
 
 # ============================================================
 # Build bracket
@@ -303,16 +320,16 @@ def _at_socket_root(edge):
 
 bracket = _try_fillet(bracket, 3.0, _at_socket_root, "socket-root")
 
-# Export
-obj = doc.addObject("Part::Feature", "MastBaseSocket_V1_3")
+# Export (filenames derived from PART_ID -- no drift on revision)
+obj = doc.addObject("Part::Feature", PART_ID)
 obj.Shape = bracket
 if FreeCAD.GuiUp and obj.ViewObject is not None:
     obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
 doc.recompute()
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_STL  = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.stl")
-OUT_STEP = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.step")
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
 Part.export([obj], OUT_STL)
 Part.export([obj], OUT_STEP)
 try:

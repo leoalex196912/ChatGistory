@@ -22,6 +22,20 @@ import FreeCAD, Part, math, os, sys
 sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
 import machine_datums as MD
 
+# ============================================================
+# PART METADATA (CSM V3 macro standard header)
+# ============================================================
+PART_NUMBER     = "M10-P02"
+PART_NAME       = "Cross Beam"
+VERSION         = "V1.2 RC1"
+STATUS          = "FROZEN"
+PART_ID         = "CSM_V3_CrossBeam_V1_2"        # filename root
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
 def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
     cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
     return shape.cut(cyl)
@@ -69,11 +83,15 @@ CUT_EXTRA       = MD.HMI_CUT_EXTRA
 CUT_START_OFF   = MD.HMI_CUT_START_OFFSET
 
 # ============================================================
-# Wall-thickness verification (V1.2 freeze documentation)
+# Standard CSM V3 banner
 # ============================================================
 print("=" * 70)
-print("CSM V3 -- HMI MODULE 10 -- Cross Beam V1.2  (FREEZE CANDIDATE)")
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
 print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
 print("WALL-THICKNESS CHECK:")
 beam_y_wall = (BEAM_W_Y - POCKET_T) / 2.0
 end_wall_x  = (BEAM_LEN_X - 2 * MAST_X_POS[0]) / 2.0 - POCKET_W / 2.0
@@ -94,7 +112,7 @@ for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
     print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
 print()
-print("MATERIAL: PETG 100% infill, 4 walls, 0.2 mm layers (Phase 1)")
+print("GEOMETRY:")
 print(f"  beam:            {BEAM_LEN_X} x {BEAM_W_Y} x {BEAM_H_Z} mm")
 print(f"  mast pockets:    {POCKET_W:.1f} sq x {POCKET_DEPTH}, {CHAMFER_SIZE} lead-in")
 print(f"  mast bolts:      2x M5, CB {BOLT_CB_D} x {BOLT_CB_H} TOP")
@@ -102,10 +120,9 @@ print(f"  Pi mount grid:   {PI_MOUNT_PCD_X} x {PI_MOUNT_PCD_Y} (Pi Carrier adapt
 print(f"  service opening: {SERVICE_OPEN_X} x {SERVICE_OPEN_Y} on TOP")
 print(f"  cable channel:   {CABLE_CH_W} x {CABLE_CH_D} on REAR")
 print(f"  accessory:       {FRONT_INSERT_COUNT}x M5 inserts on FRONT")
-print(f"  quantity:        1")
 print()
 
-doc = FreeCAD.newDocument("CrossBeam_V1_2")
+doc = FreeCAD.newDocument(PART_ID)
 
 # ============================================================
 # Build beam
@@ -168,16 +185,16 @@ svc = Part.makeBox(SERVICE_OPEN_X, SERVICE_OPEN_Y, BEAM_H_Z + 2 * EPS_OVERCUT,
                                     -SERVICE_OPEN_Y/2.0, -EPS_OVERCUT))
 beam = beam.cut(svc)
 
-# Export
-obj = doc.addObject("Part::Feature", "CrossBeam_V1_2")
+# Export (filenames derived from PART_ID -- no drift on revision)
+obj = doc.addObject("Part::Feature", PART_ID)
 obj.Shape = beam
 if FreeCAD.GuiUp and obj.ViewObject is not None:
     obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
 doc.recompute()
 
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-OUT_STL  = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.stl")
-OUT_STEP = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.step")
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
 Part.export([obj], OUT_STL)
 Part.export([obj], OUT_STEP)
 try:

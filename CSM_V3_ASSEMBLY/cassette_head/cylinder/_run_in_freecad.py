@@ -1,7 +1,7 @@
 """Run the Cylinder V3.0 macro inside FreeCAD via XML-RPC (port 9875)."""
 import xmlrpc.client
 
-MACRO = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder\freecad_macros\CSM_V3_Cylinder_V3_0.FCMacro"
+MACRO = r"C:\Users\LEONID\Downloads\CSM_V3_GitHub_Ready\csm-v3-repo\CSM_V3_ASSEMBLY\cassette_head\cylinder\freecad_macros\CSM_V3_Cylinder_V3_0.FCMacro"
 
 code = r'''
 import FreeCAD

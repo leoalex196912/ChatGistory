@@ -48,7 +48,8 @@ FEEDER_REFERENCE_Z  = 78.0   # nominal feeder finger height (above sinker)
 # =============================================================================
 # OUTPUT PATHS
 # =============================================================================
-BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cassette_base"
+# Path derived from macro location (consolidation 2026-06-28)
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH_STL = os.path.join(BASE, "CSM_V3_CassetteBase_V1_1_FULL.stl")
 PATH_PNG = os.path.join(BASE, "images", "CassetteBase_V1_1_ISO.png")
 PATH_SVG = os.path.join(BASE, "blueprints", "CassetteBase_V1_1_Blueprint.svg")

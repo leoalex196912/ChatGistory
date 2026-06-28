@@ -48,7 +48,8 @@ import FreeCAD, Part, math, os
 # =============================================================================
 # OUTPUT PATHS
 # =============================================================================
-BASE = r"C:\3D-Project\01_MECHANICAL\02_CASSETTE_HEAD\cylinder"
+# Path derived from macro location (consolidation 2026-06-28)
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATH_STL = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_FULL.stl")
 PATH_STL_WEDGE_A = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_WEDGE_A_WIDTH.stl")
 PATH_STL_WEDGE_B = os.path.join(BASE, "CSM_V3_Cylinder_V3_1_WEDGE_B_DEPTH.stl")

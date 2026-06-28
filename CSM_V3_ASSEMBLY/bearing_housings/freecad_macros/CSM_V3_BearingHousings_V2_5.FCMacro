@@ -112,12 +112,19 @@ import FreeCAD, FreeCADGui, Part, math, os
 # =============================================================================
 # OUTPUT PATHS (V2.1-A: all paths now create directories)
 # =============================================================================
-BASE = r"C:\3D-Project\01_MECHANICAL\05_BEARINGS_SHAFT"
+# V2.5.3: BASE derived from macro location (was hardcoded to old 01_MECHANICAL
+# tree before the 2026-06-28 consolidation). Macro is now portable.
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-PATH_STL_TOP    = os.path.join(BASE, "CSM_V3_BearingHousing_TOP_V2_5.stl")
-PATH_STL_BOT    = os.path.join(BASE, "CSM_V3_BearingHousing_BOTTOM_V2_5.stl")
-PATH_STL_PAIR   = os.path.join(BASE, "CSM_V3_BearingHousings_PAIR_V2_5.stl")
-PATH_STL_SPACER = os.path.join(BASE, "CSM_V3_SpacerTube_V2_5.stl")  # V2.5 NEW LENGTH
+PATH_STL_TOP    = os.path.join(BASE, "CSM_V3_BearingHousing_TOP_V2_5_1.stl")
+PATH_STL_BOT    = os.path.join(BASE, "CSM_V3_BearingHousing_BOTTOM_V2_5_1.stl")
+PATH_STL_PAIR   = os.path.join(BASE, "CSM_V3_BearingHousings_PAIR_V2_5_1.stl")
+PATH_STL_SPACER = os.path.join(BASE, "CSM_V3_SpacerTube_22_9mm_V2_5_1.stl")
+# V2.5.2: STEP exports added so CAD review / interference checking is possible.
+PATH_STEP_TOP    = PATH_STL_TOP.replace(".stl", ".step")
+PATH_STEP_BOT    = PATH_STL_BOT.replace(".stl", ".step")
+PATH_STEP_PAIR   = PATH_STL_PAIR.replace(".stl", ".step")
+PATH_STEP_SPACER = PATH_STL_SPACER.replace(".stl", ".step")
 PATH_PNG_TOP    = os.path.join(BASE, "images", "BearingHousing_TOP_V2_5_View.png")
 PATH_PNG_BOT    = os.path.join(BASE, "images", "BearingHousing_BOTTOM_V2_5_View.png")
 PATH_PNG_BOTH   = os.path.join(BASE, "images", "BearingHousings_V2_5_Both_View.png")
@@ -304,7 +311,7 @@ top.translate(FreeCAD.Vector(-60, 0, 0))
 
 obj_top = doc.addObject("Part::Feature", "BearingHousing_TOP_V2_5")
 obj_top.Shape = top
-obj_top.ViewObject.ShapeColor = (0.25, 0.55, 0.85)
+if obj_top.ViewObject is not None: obj_top.ViewObject.ShapeColor = (0.25, 0.55, 0.85)
 print(f"  Size:             {TOP_W}x{TOP_D}x{TOP_H}mm")
 print(f"  Bearing pocket:   D{TOP_BEARING_POCKET_D:.2f}mm x {TOP_BEARING_POCKET_H}mm")
 print(f"  Shaft bore:       D{SHAFT_CLEAR}mm")
@@ -408,7 +415,7 @@ bot.translate(FreeCAD.Vector(60, 0, 0))
 
 obj_bot = doc.addObject("Part::Feature", "BearingHousing_BOTTOM_V2_5")
 obj_bot.Shape = bot
-obj_bot.ViewObject.ShapeColor = (0.85, 0.45, 0.25)
+if obj_bot.ViewObject is not None: obj_bot.ViewObject.ShapeColor = (0.85, 0.45, 0.25)
 print(f"  Size:             {BOT_W}x{BOT_D}x{BOT_H}mm")
 print(f"  Floor:            {BOT_FLOOR_H}mm solid")
 print(f"  Washer pockets:   D{BOT_WASHER_POCKET_D}mm x {WASHER_T_STACKED}mm (2x)")
@@ -455,7 +462,7 @@ spacer_tube.translate(FreeCAD.Vector(0, 100, 0))
 
 obj_spacer = doc.addObject("Part::Feature", "SpacerTube_V2_5")
 obj_spacer.Shape = spacer_tube
-obj_spacer.ViewObject.ShapeColor = (0.55, 0.55, 0.6)  # gray for steel
+if obj_spacer.ViewObject is not None: obj_spacer.ViewObject.ShapeColor = (0.55, 0.55, 0.6)
 print(f"  ID:               D{SPACER_TUBE_ID}mm (slip on D12 shaft)")
 print(f"  OD:               D{SPACER_TUBE_OD}mm (clears bearing OD)")
 print(f"  Length:           {SPACER_TUBE_LEN}mm  *** PRELOAD CRITICAL ***")
@@ -481,17 +488,23 @@ try:
     tmp_top = doc.addObject("Part::Feature", "tmp_top")
     tmp_top.Shape = top_export
     Part.export([tmp_top], PATH_STL_TOP)
+    Part.export([tmp_top], PATH_STEP_TOP)
     doc.removeObject("tmp_top")
     print(f"  [OK] TOP STL:    {PATH_STL_TOP}")
+    print(f"  [OK] TOP STEP:   {PATH_STEP_TOP}")
 
     tmp_bot = doc.addObject("Part::Feature", "tmp_bot")
     tmp_bot.Shape = bot_export
     Part.export([tmp_bot], PATH_STL_BOT)
+    Part.export([tmp_bot], PATH_STEP_BOT)
     doc.removeObject("tmp_bot")
     print(f"  [OK] BOTTOM STL: {PATH_STL_BOT}")
+    print(f"  [OK] BOTTOM STEP:{PATH_STEP_BOT}")
 
     Part.export([obj_top, obj_bot], PATH_STL_PAIR)
+    Part.export([obj_top, obj_bot], PATH_STEP_PAIR)
     print(f"  [OK] PAIR STL:   {PATH_STL_PAIR}")
+    print(f"  [OK] PAIR STEP:  {PATH_STEP_PAIR}")
 
     # V2.4: Export spacer tube as separate STL (centered at origin)
     spacer_export = obj_spacer.Shape.copy()
@@ -499,11 +512,13 @@ try:
     tmp_spacer = doc.addObject("Part::Feature", "tmp_spacer")
     tmp_spacer.Shape = spacer_export
     Part.export([tmp_spacer], PATH_STL_SPACER)
+    Part.export([tmp_spacer], PATH_STEP_SPACER)
     doc.removeObject("tmp_spacer")
     print(f"  [OK] SPACER STL: {PATH_STL_SPACER}")
+    print(f"  [OK] SPACER STEP:{PATH_STEP_SPACER}")
 
 except Exception as e:
-    print(f"  [FAIL] STL export error: {e}")
+    print(f"  [FAIL] STL/STEP export error: {e}")
 
 # =============================================================================
 # EXPORT 2 -- PNG views

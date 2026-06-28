@@ -113,7 +113,7 @@ ax_tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96,
 rows = [
     ('PART',     'Pi Carrier'),
     ('NUMBER',   'M10-P03'),
-    ('VERSION',  'V1.0 (DRAFT)'),
+    ('VERSION',  'V1.0 (RC1)'),
     ('MODULE',   '10 -- HMI'),
     ('QTY',      '1'),
     ('MATERIAL', 'PETG (PA12 prod)'),

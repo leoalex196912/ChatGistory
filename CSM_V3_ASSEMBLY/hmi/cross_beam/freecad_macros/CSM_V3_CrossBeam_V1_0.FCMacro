@@ -1,0 +1,209 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- CROSS BEAM V1.0
+# =============================================================================
+# Horizontal cross-member joining the tops of the two vertical 2020 masts.
+# Carries the Pi Carrier Plate (Module 10 Part 3) and Touchscreen Frame
+# (Part 5).  Provides cable routing from electronics up through the masts,
+# along the rear face of the beam, to the Pi.
+#
+# Single beam needed (no left/right mirror).  Installed at top of masts
+# at the user-chosen Z height (mast tops are at Z=212 mm in machine
+# world coords; beam Z position is freely adjustable along masts).
+#
+# Design intent:
+#   - Beam SITS DOWN over both mast tops via shallow capture pockets on
+#     bottom face (8 mm deep) -- self-aligning, anti-rotation.
+#   - One M5 bolt per end, vertical, through-beam, threads into the
+#     2020 center bore (M5 self-tap into Ø4.2 hole at extrusion end).
+#   - Bolt heads countersunk on TOP face -- hidden hardware.
+#   - 4× heat-set insert pockets on BOTTOM face for Pi Carrier mounting
+#     (M5 spacing matches Pi Carrier V1.0 hole pattern).
+#   - Cable channel on REAR (+Y) face, 8 × 4 mm, full beam length.
+#   - 6× heat-set insert pockets on FRONT (-Y) face for accessories
+#     (status LEDs, microphone, motion sensor, etc.)
+#
+# Reference: ICD R7 Module 10 (HMI)
+#            Master datum Z=230 (top of aluminum plate)
+#            Mast tops Z=212 (per machine_datums after 12 mm wood update)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# HMI Module 10 -- mast geometry references
+# ============================================================
+MAST_X_POS     = (+75.0, -75.0)       # mast centers in X
+MAST_SPACING_X = 150.0                 # center-to-center
+EXT_W          = 20.0                  # 2020 extrusion width
+EXT_CLEAR      = 0.4                   # mast top pocket clearance (FDM friendly)
+
+# ============================================================
+# Beam geometry
+# ============================================================
+BEAM_LEN_X     = 170.0                 # total length, X direction
+BEAM_W_Y       = 30.0                  # depth (Y direction, front-to-back)
+BEAM_H_Z       = 25.0                  # height (Z direction)
+END_PAD        = (BEAM_LEN_X - MAST_SPACING_X) / 2.0  # 10 mm pad each end
+
+# ============================================================
+# Mast-top capture pockets (anti-rotation, self-aligning)
+# ============================================================
+POCKET_W       = EXT_W + 2 * EXT_CLEAR   # 20.8
+POCKET_T       = EXT_W + 2 * EXT_CLEAR   # 20.8
+POCKET_DEPTH   = 8.0                     # how deep beam sits over mast top
+
+# ============================================================
+# Vertical mast-mount bolts (M5 into 2020 center bore)
+# ============================================================
+MAST_BOLT_D    = 5.5                     # M5 clearance
+HEAD_CSK_D     = 10.0                    # M5 socket-head countersink Ø
+HEAD_CSK_H     = 4.0                     # countersink depth
+
+# ============================================================
+# Pi Carrier mounting (heat-set inserts on BOTTOM face)
+# Pi 4 + standoff mounting hole pattern: standard 58 × 49 mm
+# Pi carrier will have its own design; here we just provide M5
+# insert points at canonical positions for the Pi carrier to bolt up to.
+# ============================================================
+INSERT_POCKET_D = 6.2                    # M5 brass insert OD - 0.2 press fit
+INSERT_POCKET_H = 8.5                    # pocket depth (insert + slop)
+
+PI_MOUNT_PCD_X  = 58.0                   # Pi carrier mount X spread
+PI_MOUNT_PCD_Y  = 18.0                   # Pi carrier mount Y spread (constrained by beam W=30)
+
+# ============================================================
+# Cable channel on REAR (+Y) face
+# ============================================================
+CABLE_CH_W      = 8.0                    # X width
+CABLE_CH_D      = 4.0                    # Y depth into wall
+CABLE_CH_LEN_X  = BEAM_LEN_X - 30.0      # full length minus margin near ends
+
+# ============================================================
+# Accessory expansion pockets on FRONT (-Y) face
+# 6 evenly distributed: status LED, microphone, motion sensor, etc.
+# ============================================================
+FRONT_INSERT_COUNT = 6
+FRONT_INSERT_PITCH = 22.0                # X spacing between inserts
+FRONT_INSERT_Z     = 12.5                # vertical center (mid-beam)
+
+MATERIAL = "PETG, 100% infill, 4 walls, 0.2 mm layers (Phase 1)"
+
+print("=" * 70)
+print("CSM V3 -- HMI MODULE 10 -- Cross Beam V1.0")
+print("=" * 70)
+print(f"  material:           {MATERIAL}")
+print(f"  beam:               {BEAM_LEN_X} x {BEAM_W_Y} x {BEAM_H_Z} mm")
+print(f"  mast pockets:       {POCKET_W:.1f} x {POCKET_T:.1f} x {POCKET_DEPTH} (at X=±{MAST_SPACING_X/2})")
+print(f"  mast bolts:         2x M5 vertical into 2020 center bore (self-tap)")
+print(f"  Pi mount inserts:   4x M5 heat-set pockets on BOTTOM face")
+print(f"  cable channel:      {CABLE_CH_W} x {CABLE_CH_D} on REAR face")
+print(f"  accessory inserts:  {FRONT_INSERT_COUNT}x M5 heat-set pockets on FRONT face")
+print(f"  install:            spans between masts at user-chosen Z height")
+print(f"  quantity needed:    1")
+
+doc = FreeCAD.newDocument("CrossBeam_V1_0")
+
+# ============================================================
+# Build beam
+# Local frame: origin at center of beam at its bottom face
+#   X = along beam (between masts)
+#   Y = horizontal perpendicular (front-back of machine)
+#   Z = vertical (up)
+# ============================================================
+
+# Main rectangular beam
+beam = Part.makeBox(BEAM_LEN_X, BEAM_W_Y, BEAM_H_Z,
+                    FreeCAD.Vector(-BEAM_LEN_X/2.0, -BEAM_W_Y/2.0, 0))
+
+# --- MAST CAPTURE POCKETS (bottom face, 8 mm deep) ---
+for mx in MAST_X_POS:
+    pocket = Part.makeBox(POCKET_W, POCKET_T, POCKET_DEPTH + 0.1,
+                          FreeCAD.Vector(mx - POCKET_W/2.0,
+                                          -POCKET_T/2.0,
+                                          -0.05))
+    beam = beam.cut(pocket)
+
+# --- MAST MOUNT M5 THROUGH-HOLES (vertical, with countersink on top) ---
+for mx in MAST_X_POS:
+    # Through-hole
+    hole = Part.makeCylinder(MAST_BOLT_D/2.0, BEAM_H_Z + 4.0,
+                              FreeCAD.Vector(mx, 0, -2.0))
+    beam = beam.cut(hole)
+    # Countersink on TOP face
+    csk = Part.makeCone(HEAD_CSK_D/2.0, MAST_BOLT_D/2.0, HEAD_CSK_H,
+                        FreeCAD.Vector(mx, 0, BEAM_H_Z - HEAD_CSK_H))
+    beam = beam.cut(csk)
+
+# --- PI CARRIER MOUNT POCKETS (4× heat-set inserts on BOTTOM face) ---
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (PI_MOUNT_PCD_X / 2.0)
+        hy = sy * (PI_MOUNT_PCD_Y / 2.0)
+        pocket = Part.makeCylinder(INSERT_POCKET_D/2.0, INSERT_POCKET_H,
+                                    FreeCAD.Vector(hx, hy, -0.1))
+        beam = beam.cut(pocket)
+
+# --- CABLE CHANNEL on REAR (+Y) face ---
+ch = Part.makeBox(CABLE_CH_LEN_X, CABLE_CH_D + 0.1, CABLE_CH_W,
+                   FreeCAD.Vector(-CABLE_CH_LEN_X/2.0,
+                                   BEAM_W_Y/2.0 - CABLE_CH_D,
+                                   (BEAM_H_Z - CABLE_CH_W) / 2.0))
+beam = beam.cut(ch)
+
+# --- ACCESSORY EXPANSION POCKETS on FRONT (-Y) face ---
+front_y = -BEAM_W_Y/2.0
+total_span = (FRONT_INSERT_COUNT - 1) * FRONT_INSERT_PITCH
+x0 = -total_span / 2.0
+for i in range(FRONT_INSERT_COUNT):
+    hx = x0 + i * FRONT_INSERT_PITCH
+    # Skip pockets that overlap with mast bolts
+    if any(abs(hx - mx) < INSERT_POCKET_D for mx in MAST_X_POS):
+        continue
+    pocket = Part.makeCylinder(INSERT_POCKET_D/2.0, INSERT_POCKET_H,
+                                FreeCAD.Vector(hx, front_y - 0.1, FRONT_INSERT_Z),
+                                FreeCAD.Vector(0, 1, 0))
+    beam = beam.cut(pocket)
+
+# ============================================================
+# Export STL + STEP
+# ============================================================
+obj = doc.addObject("Part::Feature", "CrossBeam_V1_0")
+obj.Shape = beam
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, "CSM_V3_CrossBeam_V1_0.stl")
+OUT_STEP = os.path.join(BASE, "CSM_V3_CrossBeam_V1_0.step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+sz_stl  = os.path.getsize(OUT_STL)
+sz_step = os.path.getsize(OUT_STEP)
+print(f"[OK] STL:  {OUT_STL}  ({sz_stl/1024:.1f} KB)")
+print(f"[OK] STEP: {OUT_STEP} ({sz_step/1024:.1f} KB)")
+print(f"     volume: {beam.Volume:.0f} mm³  (~{beam.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG 100% infill, 4 walls, 0.2 mm layers")
+print("    (orient flat on bed -- beam laid horizontally for best surface)")
+print(" 2. Heat 4× M5 brass inserts into BOTTOM face pockets (Pi mount points)")
+print(" 3. Heat 6× M5 brass inserts into FRONT face pockets (accessories)")
+print(" 4. Position beam over both mast tops; pockets engage mast XS")
+print(" 5. M5 socket-head bolts (~25 mm) through top countersinks into")
+print("    each mast's center bore (M5 self-tap into Ø4.2 bore)")
+print(" 6. Verify beam is level; check Pi mount holes are accessible")
+print(" 7. Mount Pi Carrier V1.0 (Module 10 Part 3) to BOTTOM face inserts")
+print(" 8. Route cables from electronics up REAR mast face into cable channel")
+print()
+print("FUTURE EXPANSION (6× M5 heat-set inserts on FRONT face):")
+print("    - Status LED indicator panel")
+print("    - Microphone for voice commands (Phase 2+)")
+print("    - Motion sensor / activity detector")
+print("    - Status text label or small OLED display")
+print("    - Camera mount (small webcam for monitoring)")
+print("    - Any future operator-facing UI element")
+print("=" * 70)

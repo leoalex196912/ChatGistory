@@ -1,0 +1,180 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- CROSS BEAM V1.2  (FREEZE CANDIDATE)
+# =============================================================================
+# Final freeze revision over V1.1 per engineering review:
+#
+# V1.2 CHANGES:
+#   1. 1 mm stepped lead-in CHAMFER at mast pocket entry (bottom face).
+#      Easier drop-over onto mast tops, anti elephant-foot at entry.
+#   2. PI_PCD_Y corrected 49 -> 30 mm.  V1.1 spec'd 58 x 49 (real Pi 4
+#      footprint) but inserts at +/-24.5 don't fit in a 40 mm-wide beam.
+#      Beam now uses a 58 x 30 mount grid; Pi Carrier V1.0 (Module 10
+#      Part 3) is the 58 x 30 (beam side) -> 58 x 49 (Pi 4 side) adapter.
+#   3. WALL-THICKNESS verification block prints all critical ligaments.
+#
+# Otherwise identical to V1.1: 170 x 40 x 30 mm beam, deep mast pockets,
+# closed ends, center service opening, counterbore for socket-head bolts,
+# cable channel, 6x accessory inserts.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+# ============================================================
+# Geometry parameters
+# ============================================================
+MAST_X_POS     = (+75.0, -75.0)
+EXT_W          = 20.0
+EXT_CLEAR      = 0.4
+
+BEAM_LEN_X     = 178.0    # V1.2: 170 -> 178 (closed-end wall past mast pocket)
+BEAM_W_Y       = 40.0
+BEAM_H_Z       = 30.0
+
+POCKET_W       = EXT_W + 2 * EXT_CLEAR
+POCKET_T       = EXT_W + 2 * EXT_CLEAR
+POCKET_DEPTH   = 12.0
+CHAMFER_SIZE   = 1.0                              # V1.2: lead-in
+
+MAST_BOLT_D    = 5.5
+BOLT_CB_D      = 9.5
+BOLT_CB_H      = 5.5
+
+INSERT_POCKET_D = 6.2
+INSERT_POCKET_H = 8.5
+PI_MOUNT_PCD_X  = 58.0
+PI_MOUNT_PCD_Y  = 28.0                            # V1.2: 49 didn't fit; 28 gives 2.9 mm edge wall
+
+CABLE_CH_W      = 8.0
+CABLE_CH_D      = 4.0
+CABLE_CH_LEN_X  = BEAM_LEN_X - 30.0
+
+FRONT_INSERT_COUNT = 6
+FRONT_INSERT_PITCH = 22.0
+FRONT_INSERT_Z     = BEAM_H_Z / 2.0
+
+SERVICE_OPEN_X  = 50.0
+SERVICE_OPEN_Y  = 16.0    # V1.2: 18 -> 16 (clear Pi insert wall to 2.9 mm)
+
+# ============================================================
+# Wall-thickness verification (V1.2 freeze documentation)
+# ============================================================
+print("=" * 70)
+print("CSM V3 -- HMI MODULE 10 -- Cross Beam V1.2  (FREEZE CANDIDATE)")
+print("=" * 70)
+print("WALL-THICKNESS CHECK:")
+beam_y_wall = (BEAM_W_Y - POCKET_T) / 2.0
+end_wall_x  = (BEAM_LEN_X - 2 * MAST_X_POS[0]) / 2.0 - POCKET_W / 2.0
+pi_to_edge_y = BEAM_W_Y / 2.0 - PI_MOUNT_PCD_Y / 2.0 - INSERT_POCKET_D / 2.0
+pi_to_svc_y  = PI_MOUNT_PCD_Y / 2.0 - SERVICE_OPEN_Y / 2.0 - INSERT_POCKET_D / 2.0
+svc_to_pocket_x = MAST_X_POS[0] - POCKET_W / 2.0 - SERVICE_OPEN_X / 2.0
+front_remaining = BEAM_W_Y / 2.0 + 0  # unused, kept for symmetry
+material_above_pocket = BEAM_H_Z - POCKET_DEPTH
+checks = [
+    ("Beam Y wall around mast pocket",  beam_y_wall,         4.0),
+    ("Beam X end past mast pocket",     end_wall_x,          3.0),
+    ("Pi insert to beam Y edge",        pi_to_edge_y,        2.0),
+    ("Pi insert to service opening Y",  pi_to_svc_y,         2.0),
+    ("Service opening to mast pocket",  svc_to_pocket_x,     5.0),
+    ("Material above mast pocket",      material_above_pocket, 8.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("MATERIAL: PETG 100% infill, 4 walls, 0.2 mm layers (Phase 1)")
+print(f"  beam:            {BEAM_LEN_X} x {BEAM_W_Y} x {BEAM_H_Z} mm")
+print(f"  mast pockets:    {POCKET_W:.1f} sq x {POCKET_DEPTH}, {CHAMFER_SIZE} lead-in")
+print(f"  mast bolts:      2x M5, CB {BOLT_CB_D} x {BOLT_CB_H} TOP")
+print(f"  Pi mount grid:   {PI_MOUNT_PCD_X} x {PI_MOUNT_PCD_Y} (Pi Carrier adapts to 58 x 49)")
+print(f"  service opening: {SERVICE_OPEN_X} x {SERVICE_OPEN_Y} on TOP")
+print(f"  cable channel:   {CABLE_CH_W} x {CABLE_CH_D} on REAR")
+print(f"  accessory:       {FRONT_INSERT_COUNT}x M5 inserts on FRONT")
+print(f"  quantity:        1")
+print()
+
+doc = FreeCAD.newDocument("CrossBeam_V1_2")
+
+# ============================================================
+# Build beam
+# ============================================================
+beam = Part.makeBox(BEAM_LEN_X, BEAM_W_Y, BEAM_H_Z,
+                    FreeCAD.Vector(-BEAM_LEN_X/2.0, -BEAM_W_Y/2.0, 0))
+
+# Mast capture pockets (cut from bottom)
+for mx in MAST_X_POS:
+    pocket = Part.makeBox(POCKET_W, POCKET_T, POCKET_DEPTH + 0.1,
+                          FreeCAD.Vector(mx - POCKET_W/2.0,
+                                          -POCKET_T/2.0, -0.05))
+    beam = beam.cut(pocket)
+    # V1.2: 1 mm stepped lead-in at entry (bottom face)
+    cham = Part.makeBox(POCKET_W + 2 * CHAMFER_SIZE,
+                         POCKET_T + 2 * CHAMFER_SIZE,
+                         CHAMFER_SIZE + 0.1,
+                         FreeCAD.Vector(mx - (POCKET_W + 2 * CHAMFER_SIZE)/2.0,
+                                         -(POCKET_T + 2 * CHAMFER_SIZE)/2.0,
+                                         -0.05))
+    beam = beam.cut(cham)
+
+# Mast through-bolts + top counterbore
+for mx in MAST_X_POS:
+    beam = cut_cylinder(beam, MAST_BOLT_D, BEAM_H_Z + 4.0,
+                         FreeCAD.Vector(mx, 0, -2.0))
+    beam = cut_cylinder(beam, BOLT_CB_D, BOLT_CB_H + 0.1,
+                         FreeCAD.Vector(mx, 0, BEAM_H_Z - BOLT_CB_H))
+
+# Pi mount inserts (BOTTOM face) -- 58 x 30 PCD; Pi Carrier adapts to Pi 4
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (PI_MOUNT_PCD_X / 2.0)
+        hy = sy * (PI_MOUNT_PCD_Y / 2.0)
+        beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
+                             FreeCAD.Vector(hx, hy, -0.1))
+
+# Cable channel (REAR)
+ch = Part.makeBox(CABLE_CH_LEN_X, CABLE_CH_D + 0.1, CABLE_CH_W,
+                   FreeCAD.Vector(-CABLE_CH_LEN_X/2.0,
+                                   BEAM_W_Y/2.0 - CABLE_CH_D,
+                                   (BEAM_H_Z - CABLE_CH_W) / 2.0))
+beam = beam.cut(ch)
+
+# Accessory expansion pockets (FRONT)
+front_y = -BEAM_W_Y/2.0
+total_span = (FRONT_INSERT_COUNT - 1) * FRONT_INSERT_PITCH
+x0 = -total_span / 2.0
+for i in range(FRONT_INSERT_COUNT):
+    hx = x0 + i * FRONT_INSERT_PITCH
+    if any(abs(hx - mx) < INSERT_POCKET_D for mx in MAST_X_POS):
+        continue
+    beam = cut_cylinder(beam, INSERT_POCKET_D, INSERT_POCKET_H,
+                         FreeCAD.Vector(hx, front_y - 0.1, FRONT_INSERT_Z),
+                         FreeCAD.Vector(0, 1, 0))
+
+# Center service opening (TOP through-cut)
+svc = Part.makeBox(SERVICE_OPEN_X, SERVICE_OPEN_Y, BEAM_H_Z + 0.2,
+                    FreeCAD.Vector(-SERVICE_OPEN_X/2.0,
+                                    -SERVICE_OPEN_Y/2.0, -0.1))
+beam = beam.cut(svc)
+
+# Export
+obj = doc.addObject("Part::Feature", "CrossBeam_V1_2")
+obj.Shape = beam
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.stl")
+OUT_STEP = os.path.join(BASE, "CSM_V3_CrossBeam_V1_2.step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {beam.Volume:.0f} mm^3  (~{beam.Volume*1.27/1000:.1f}g PETG)")
+print("=" * 70)

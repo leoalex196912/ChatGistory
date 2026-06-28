@@ -24,28 +24,29 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Rectangle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-STL_PATH = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1.stl")
+STL_PATH = os.path.join(HERE, "CSM_V3_CrossBeam_V1_2.stl")
 
 # Beam parameters (V1.1, mirror the macro for dimension annotation)
-BEAM_LEN_X   = 170.0
+BEAM_LEN_X   = 178.0
 BEAM_W_Y     = 40.0
 BEAM_H_Z     = 30.0
 MAST_SPACING = 150.0
 POCKET_W     = 20.8
 POCKET_DEPTH = 12.0
+CHAMFER      = 1.0
 MAST_BOLT_D  = 5.5
 BOLT_CB_D    = 9.5
 BOLT_CB_H    = 5.5
 INSERT_D     = 6.2
 INSERT_H     = 8.5
 PI_PCD_X     = 58.0
-PI_PCD_Y     = 49.0
+PI_PCD_Y     = 28.0
 CABLE_CH_W   = 8.0
 CABLE_CH_D   = 4.0
 FRONT_COUNT  = 6
 FRONT_PITCH  = 22.0
 SERVICE_X    = 50.0
-SERVICE_Y    = 18.0
+SERVICE_Y    = 16.0
 
 # ============================================================
 # STL parser (auto-detect ASCII vs binary)
@@ -143,13 +144,13 @@ ax_tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96,
                             facecolor='white', edgecolor='black', lw=1.5))
 rows = [
     ('PART',      'Cross Beam'),
-    ('VERSION',   'V1.1'),
+    ('VERSION',   'V1.2'),
     ('MODULE',    '10 -- HMI'),
     ('QTY',       '1'),
     ('MATERIAL',  'PETG (PA12 prod)'),
     ('INFILL',    '100%, 4 walls'),
     ('LAYER',     '0.2 mm'),
-    ('MASS',      '~202 g'),
+    ('MASS',      '~216 g'),
     ('TIME',      '~8-10 h'),
     ('INSTALL',   'top of HMI masts (X=0)'),
 ]
@@ -215,8 +216,8 @@ fig.text(0.5, 0.02,
          'Module 10 part 2 of 10',
          ha='center', fontsize=8, color='#888')
 
-out_png = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1_views.png")
-out_pdf = os.path.join(HERE, "CSM_V3_CrossBeam_V1_1_views.pdf")
+out_png = os.path.join(HERE, "CSM_V3_CrossBeam_V1_2_views.png")
+out_pdf = os.path.join(HERE, "CSM_V3_CrossBeam_V1_2_views.pdf")
 fig.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
 fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
 plt.close(fig)

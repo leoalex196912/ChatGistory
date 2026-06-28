@@ -1,0 +1,301 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- MAST BASE SOCKET V1.3  (FREEZE CANDIDATE)
+# =============================================================================
+# Final freeze revision over V1.2 per engineering review:
+#
+# V1.3 CHANGES:
+#   1. 1 mm stepped lead-in CHAMFER at pocket entry (open top of socket).
+#      Easier 2020 insertion, traps no elephant-foot at entry.
+#   2. Ø3 DRAIN HOLE through closed pocket floor, exiting via foot bottom.
+#      Lets support fragments / strings / moisture escape.
+#   3. RIB-to-GUSSET BLEND: 2 straight foot-top ribs replaced with 4
+#      DIAGONAL ribs running from each outer foot bolt to the gusset
+#      foot-attach line on the same socket X-face.  Load now flows:
+#         bolt -> rib -> gusset -> socket -> mast
+#      with a smoother stress path.
+#   4. WALL-THICKNESS verification block prints all critical ligaments.
+#
+# All V1.2 features retained: 50 mm engagement, 10 mm foot, 25x30 gussets,
+# R1.5 pocket inner fillets, counterbore for socket-head, 20 mm insert pitch,
+# cable channel, heat-set inserts.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# Helpers
+# ============================================================
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+def rounded_rect_face(w, t, r):
+    hw, ht = w / 2.0, t / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -ht, 0)
+    p2 = FreeCAD.Vector( hw - r, -ht, 0)
+    p3 = FreeCAD.Vector( hw,     -ht + r, 0)
+    p4 = FreeCAD.Vector( hw,      ht - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  ht, 0)
+    p6 = FreeCAD.Vector(-hw + r,  ht, 0)
+    p7 = FreeCAD.Vector(-hw,      ht - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -ht + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -ht + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  ht - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  ht - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -ht + r, 0)
+    m_BR = c_BR + FreeCAD.Vector(r * math.cos(-math.pi/4), r * math.sin(-math.pi/4), 0)
+    m_TR = c_TR + FreeCAD.Vector(r * math.cos( math.pi/4), r * math.sin( math.pi/4), 0)
+    m_TL = c_TL + FreeCAD.Vector(r * math.cos( 3*math.pi/4), r * math.sin( 3*math.pi/4), 0)
+    m_BL = c_BL + FreeCAD.Vector(r * math.cos(-3*math.pi/4), r * math.sin(-3*math.pi/4), 0)
+    edges = [
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, m_BR, p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, m_TR, p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, m_TL, p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, m_BL, p1).toShape(),
+    ]
+    return Part.Face(Part.Wire(edges))
+
+# ============================================================
+# Geometry parameters
+# ============================================================
+EXT_W, EXT_T, EXT_CLEAR = 20.0, 20.0, 0.4
+SOCKET_OUTER_W = 34.0
+SOCKET_OUTER_T = 34.0
+SOCKET_H       = 50.0
+SOCKET_BOT_T   =  5.0
+POCKET_W       = EXT_W + 2 * EXT_CLEAR
+POCKET_T       = EXT_T + 2 * EXT_CLEAR
+WALL_T         = (SOCKET_OUTER_W - POCKET_W) / 2.0
+POCKET_FILLET_R = 1.5
+CHAMFER_SIZE   = 1.0                              # V1.3: lead-in
+
+FOOT_LEN, FOOT_W, FOOT_T = 70.0, 54.0, 10.0     # V1.3: FOOT_W 50 -> 54 (bolt clearance)
+M5_THROUGH_D, BOLT_CB_D, BOLT_CB_H = 5.5, 9.5, 5.5
+FOOT_BOLT_DX, FOOT_BOLT_DY = 25.0, 19.0          # V1.3: DY 17 -> 19 (clear socket OD)
+
+# V1.3: FRONT face local boss for heat-set inserts
+# Without boss, 8.5 mm insert pocket exceeds 6.6 mm front wall and pokes
+# into the 2020 pocket interior. Boss adds 4 mm of local material.
+FRONT_BOSS_W   = 14.0
+FRONT_BOSS_T   =  4.0
+FRONT_BOSS_H_TOP_REL = 5.0                       # below socket top
+
+M5_T_BOLT_D    = 5.5
+T_BOLT_Z1, T_BOLT_Z2 = 12.0, 38.0
+
+GUSSET_BASE, GUSSET_RISE, GUSSET_T = 25.0, 30.0, 6.0
+
+# V1.3: 4 diagonal ribs (replaces 2 straight ribs from V1.2)
+RIB_T = 3.0
+RIB_H = 6.0
+
+CABLE_CH_W, CABLE_CH_D = 8.0, 4.0
+CABLE_CH_H = SOCKET_H + FOOT_T - 4.0
+
+INSERT_POCKET_D, INSERT_POCKET_H = 6.2, 8.5
+EXP_INSERT_COUNT, EXP_INSERT_PITCH, EXP_INSERT_Z0_REL = 4, 20.0, 6.0
+
+DRAIN_D = 3.0                                     # V1.3: drain hole
+
+# ============================================================
+# Wall-thickness verification (V1.3 freeze documentation)
+# ============================================================
+print("=" * 70)
+print("CSM V3 -- HMI MODULE 10 -- Mast Base Socket V1.3  (FREEZE CANDIDATE)")
+print("=" * 70)
+print("WALL-THICKNESS CHECK:")
+wall_pocket_to_outer = WALL_T
+foot_edge_to_bolt_x  = FOOT_LEN/2 - FOOT_BOLT_DX
+foot_edge_to_bolt_y  = FOOT_W/2 - FOOT_BOLT_DY
+bolt_wall_x          = foot_edge_to_bolt_x - BOLT_CB_D/2
+bolt_wall_y          = foot_edge_to_bolt_y - BOLT_CB_D/2
+socket_to_bolt_x     = FOOT_BOLT_DX - SOCKET_OUTER_W/2
+socket_to_bolt_y     = FOOT_BOLT_DY - SOCKET_OUTER_T/2
+front_wall_with_boss = WALL_T + FRONT_BOSS_T - INSERT_POCKET_H
+checks = [
+    ("Pocket wall (socket OD)",     wall_pocket_to_outer, 4.0),
+    ("Foot edge to bolt CB (X)",    bolt_wall_x,          2.0),
+    ("Foot edge to bolt CB (Y)",    bolt_wall_y,          2.0),
+    ("Socket OD to bolt (X)",       socket_to_bolt_x,     2.0),
+    ("Socket OD to bolt (Y)",       socket_to_bolt_y,     2.0),
+    ("Front wall (with boss) behind insert",
+                                    front_wall_with_boss, 1.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("MATERIAL: PETG 100% infill, 4 walls, 0.2 mm layers (Phase 1)")
+print(f"  socket outer:    {SOCKET_OUTER_W} sq x {SOCKET_H} mm")
+print(f"  pocket:          {POCKET_W:.1f} sq, R{POCKET_FILLET_R} fillets, {CHAMFER_SIZE} mm lead-in")
+print(f"  foot:            {FOOT_LEN} x {FOOT_W} x {FOOT_T}")
+print(f"  gussets:         {GUSSET_BASE} x {GUSSET_RISE} x {GUSSET_T}")
+print(f"  4x diagonal ribs:  {RIB_T} x {RIB_H} from outer bolts to gussets")
+print(f"  drain hole:      D{DRAIN_D} through pocket floor")
+print(f"  inserts:         {EXP_INSERT_COUNT}x M5 heat-set @ {EXP_INSERT_PITCH} mm pitch")
+print(f"  quantity:        2 (left + right)")
+print()
+
+doc = FreeCAD.newDocument("MastBaseSocket_V1_3")
+
+# ============================================================
+# Build bracket
+# ============================================================
+foot = Part.makeBox(FOOT_LEN, FOOT_W, FOOT_T,
+                    FreeCAD.Vector(-FOOT_LEN/2.0, -FOOT_W/2.0, 0))
+
+socket_z = FOOT_T
+socket = Part.makeBox(SOCKET_OUTER_W, SOCKET_OUTER_T, SOCKET_H,
+                       FreeCAD.Vector(-SOCKET_OUTER_W/2.0,
+                                       -SOCKET_OUTER_T/2.0, socket_z))
+
+# Pocket (main bore, top-open)
+pocket_face = rounded_rect_face(POCKET_W, POCKET_T, POCKET_FILLET_R)
+pocket_face.translate(FreeCAD.Vector(0, 0, socket_z + SOCKET_BOT_T))
+pocket = pocket_face.extrude(FreeCAD.Vector(0, 0, SOCKET_H - SOCKET_BOT_T + 2))
+socket = socket.cut(pocket)
+
+# V1.3: 1 mm stepped lead-in chamfer at pocket entry (top of socket)
+chamfer_face = rounded_rect_face(POCKET_W + 2 * CHAMFER_SIZE,
+                                   POCKET_T + 2 * CHAMFER_SIZE,
+                                   POCKET_FILLET_R + CHAMFER_SIZE)
+chamfer_top_z = socket_z + SOCKET_H - CHAMFER_SIZE
+chamfer_face.translate(FreeCAD.Vector(0, 0, chamfer_top_z))
+chamfer = chamfer_face.extrude(FreeCAD.Vector(0, 0, CHAMFER_SIZE + 0.1))
+socket = socket.cut(chamfer)
+
+bracket = foot.fuse(socket)
+
+# Gussets (unchanged from V1.2)
+def make_gusset(sx):
+    x_wall = sx * (SOCKET_OUTER_W / 2.0)
+    p1 = FreeCAD.Vector(x_wall, 0, FOOT_T)
+    p2 = FreeCAD.Vector(x_wall, 0, FOOT_T + GUSSET_RISE)
+    p3 = FreeCAD.Vector(x_wall + sx * GUSSET_BASE, 0, FOOT_T)
+    wire = Part.makePolygon([p1, p2, p3, p1])
+    face = Part.Face(wire)
+    g = face.extrude(FreeCAD.Vector(0, GUSSET_T, 0))
+    g.translate(FreeCAD.Vector(0, -GUSSET_T / 2.0, 0))
+    return g
+
+for sx in (-1, +1):
+    bracket = bracket.fuse(make_gusset(sx))
+
+# V1.3: FRONT FACE BOSS for heat-set inserts (local thickening)
+boss_h = SOCKET_H - FRONT_BOSS_H_TOP_REL - 1.0
+boss = Part.makeBox(FRONT_BOSS_W, FRONT_BOSS_T, boss_h,
+                     FreeCAD.Vector(-FRONT_BOSS_W / 2.0,
+                                     -SOCKET_OUTER_T / 2.0 - FRONT_BOSS_T,
+                                     FOOT_T + 1.0))
+bracket = bracket.fuse(boss)
+
+# V1.3: 4 DIAGONAL RIBS  (corner bolts -> gusset attach on socket X face)
+# Each rib is a thin slab on foot top, oriented along the line from
+# (sxf * FOOT_BOLT_DX, syf * FOOT_BOLT_DY)  ->  (sxf * SOCKET_OUTER_W/2, 0)
+# Slab thickness RIB_T perpendicular to that line, height RIB_H above foot.
+def make_diagonal_rib(sxf, syf):
+    start = FreeCAD.Vector(sxf * FOOT_BOLT_DX, syf * FOOT_BOLT_DY, FOOT_T)
+    end   = FreeCAD.Vector(sxf * SOCKET_OUTER_W / 2.0, 0, FOOT_T)
+    dx, dy = end.x - start.x, end.y - start.y
+    L = math.hypot(dx, dy)
+    ux, uy = dx / L, dy / L
+    px, py = -uy, ux                              # perpendicular in XY
+    h = RIB_T / 2.0
+    c1 = FreeCAD.Vector(start.x + px * h, start.y + py * h, FOOT_T)
+    c2 = FreeCAD.Vector(end.x   + px * h, end.y   + py * h, FOOT_T)
+    c3 = FreeCAD.Vector(end.x   - px * h, end.y   - py * h, FOOT_T)
+    c4 = FreeCAD.Vector(start.x - px * h, start.y - py * h, FOOT_T)
+    wire = Part.makePolygon([c1, c2, c3, c4, c1])
+    face = Part.Face(wire)
+    return face.extrude(FreeCAD.Vector(0, 0, RIB_H))
+
+for sxf in (-1, +1):
+    for syf in (-1, +1):
+        bracket = bracket.fuse(make_diagonal_rib(sxf, syf))
+
+# Foot bolt holes + counterbores (cut AFTER ribs so bolts pass through rib origin)
+for sxf in (-1, +1):
+    for syf in (-1, +1):
+        hx = sxf * FOOT_BOLT_DX
+        hy = syf * FOOT_BOLT_DY
+        bracket = cut_cylinder(bracket, M5_THROUGH_D, FOOT_T + 4.0,
+                                FreeCAD.Vector(hx, hy, -2.0))
+        bracket = cut_cylinder(bracket, BOLT_CB_D, BOLT_CB_H + 0.1,
+                                FreeCAD.Vector(hx, hy, FOOT_T - BOLT_CB_H))
+
+# Lateral 2020 bolts
+front_y = -SOCKET_OUTER_T / 2.0
+for tz in (T_BOLT_Z1, T_BOLT_Z2):
+    z_center = socket_z + SOCKET_BOT_T + tz
+    bracket = cut_cylinder(bracket, M5_T_BOLT_D,
+                            FRONT_BOSS_T + WALL_T + POCKET_T + WALL_T + 4.0,
+                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - 2.0, z_center),
+                            FreeCAD.Vector(0, 1, 0))
+
+# Cable channel (REAR)
+rear_y = SOCKET_OUTER_T / 2.0
+ch = Part.makeBox(CABLE_CH_W, CABLE_CH_D + 0.1, CABLE_CH_H,
+                   FreeCAD.Vector(-CABLE_CH_W / 2.0,
+                                   rear_y - CABLE_CH_D, 2.0))
+bracket = bracket.cut(ch)
+
+# Heat-set insert pockets (FRONT)
+for i in range(EXP_INSERT_COUNT):
+    z = FOOT_T + EXP_INSERT_Z0_REL + i * EXP_INSERT_PITCH
+    if z > FOOT_T + SOCKET_H - 5:
+        continue
+    bracket = cut_cylinder(bracket, INSERT_POCKET_D, INSERT_POCKET_H,
+                            FreeCAD.Vector(0, front_y - FRONT_BOSS_T - 0.1, z),
+                            FreeCAD.Vector(0, 1, 0))
+
+# V1.3: Ø3 DRAIN HOLE through pocket floor (vertical, all the way through foot)
+bracket = cut_cylinder(bracket, DRAIN_D, FOOT_T + SOCKET_BOT_T + 1.0,
+                        FreeCAD.Vector(0, 0, -0.5))
+
+# Defensive fillet at foot-socket transition (may skip on OCC error)
+def _try_fillet(shape, radius, edge_filter, label):
+    try:
+        target = [e for e in shape.Edges if edge_filter(e)]
+        if not target:
+            print(f"  fillet[{label}]: no edges matched (skipped)")
+            return shape
+        filleted = shape.makeFillet(radius, target)
+        print(f"  fillet[{label}] R{radius}: {len(target)} edges OK")
+        return filleted
+    except Exception as ex:
+        print(f"  fillet[{label}] failed ({ex.__class__.__name__}): skipped")
+        return shape
+
+def _at_socket_root(edge):
+    v1, v2 = edge.Vertexes[0].Point, edge.Vertexes[1].Point
+    if abs(v1.z - FOOT_T) > 0.1 or abs(v2.z - FOOT_T) > 0.1:
+        return False
+    if edge.Length < 5.0 or edge.Length > FOOT_LEN + 5:
+        return False
+    return True
+
+bracket = _try_fillet(bracket, 3.0, _at_socket_root, "socket-root")
+
+# Export
+obj = doc.addObject("Part::Feature", "MastBaseSocket_V1_3")
+obj.Shape = bracket
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.stl")
+OUT_STEP = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_3.step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {bracket.Volume:.0f} mm^3  (~{bracket.Volume*1.27/1000:.1f}g PETG)")
+print("=" * 70)

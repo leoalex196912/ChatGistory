@@ -225,6 +225,26 @@ HMI_CABLE_CH_D         = 4.0
 HMI_FRONT_INSERT_COUNT = 6                 # FRONT-face accessory inserts (beam)
 HMI_FRONT_INSERT_PITCH = 22.0
 
+# === Touchscreen Frame V1.0 (Part M10-P05) ===
+# Back plate for ELECROW RC070S 7" touchscreen (Amazon B08FMNDDSL).
+# Plate hangs below beam FRONT face; screen attaches via 4 brass pillars
+# (included in ELECROW kit) -- M2.5 screws through plate slots into pillars.
+HMI_FRAME_W                = 180.0
+HMI_FRAME_H                = 130.0
+HMI_FRAME_T                = 5.0
+HMI_FRAME_TAB_HEIGHT       = 18.0    # band at top with beam-mount bolts
+HMI_FRAME_BEAM_BOLT_Z      = 7.0     # bolt center distance from top edge
+HMI_FRAME_CABLE_CUT_W      = 30.0    # bottom-edge cable cutout, X width
+HMI_FRAME_CABLE_CUT_H      = 10.0    # bottom-edge cable cutout, Z up
+HMI_TOUCH_W                = 165.0   # ELECROW RC070S panel dimensions
+HMI_TOUCH_H                = 100.0
+HMI_TOUCH_T                = 10.0
+HMI_TOUCH_PCD_X_NOMINAL    = 130.0   # screen mount PCD (assumed; user verifies)
+HMI_TOUCH_PCD_Y_NOMINAL    = 75.0
+HMI_TOUCH_SLOT_LEN_X       = 20.0    # elongated slot X (+/-10 mm adjustment)
+HMI_TOUCH_SLOT_LEN_Z       = 10.0    # elongated slot Z (+/-5 mm adjustment)
+HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
+
 # === Pi Carrier V1.0 (Part M10-P03) ===
 # Adapter plate between beam (58 x 28 PCD inserts) and Pi 4 (58 x 49 PCD).
 # Hangs from beam bottom face via M5 socket-head bolts going UP into beam

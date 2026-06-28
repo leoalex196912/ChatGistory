@@ -1,0 +1,310 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- MAST BASE SOCKET V1.1
+# =============================================================================
+# Full U-socket that captures one 2020 V-slot extrusion on all 4 sides.
+# Two needed (left + right) at (X=±75, Y=-210) on wood base top.
+#
+# V1.1 CHANGES (engineering-review feedback, 2026-06-27)
+# -------------------------------------------------------
+# 1. Socket engagement 35 -> 50 mm.  Better resists twisting of the 400 mm
+#    mast (mast-to-grip aspect ratio improved from 11.4:1 to 8:1).
+# 2. Foot-to-socket junction filleted (3 mm radius).  Reduces PETG stress
+#    concentration at the highest-load corner.
+# 3. Expansion holes on FRONT face changed from M5 through-holes to M5
+#    HEAT-SET INSERT POCKETS (Ø6.2 × 8.5 mm).  Future accessories
+#    (camera, LED, sensors) screw IN once, no T-nut hassle, repeatable
+#    install / removal.  Heat-set inserts via BOM B0DPQJ4W3Z (in hand).
+# 4. CABLE_CH_H and expansion hole vertical layout updated to match new
+#    socket height.
+#
+# Locked architecture (V1.0):
+#   - U-pocket, 4 walls + closed bottom, open top (2020 inserts down)
+#   - Foot flange beneath bracket, M5 through-bolts into wood + locknut below
+#   - Triangular gussets both X sides for PETG stress relief
+#   - Cable channel on REAR (+Y / cassette-facing) face
+#   - 4× M5 expansion holes on FRONT (-Y / operator-facing) face
+#   - Recessed (countersunk) bolt heads on foot top -- hidden hardware
+#   - 2× M5 lateral bolts through FRONT wall into T-nut in 2020's -Y slot
+#
+# Reference: ICD R7 Module 10 (HMI) — dual 2020 mast position
+#            (X = ±75, Y = -210), 150 mm spacing, 400 mm tall (B0D89Y43YK)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# HMI Module 10 — locked geometry parameters
+# ============================================================
+MAST_X_POS     = (+75.0, -75.0)     # left + right mast positions
+MAST_Y_POS     = -210.0              # behind front edge, between operator panel + uprights
+MAST_SPACING_X = 150.0               # center-to-center spacing
+MAST_H         = 400.0               # length of 2020 stick (cut from B0D89YS5VP 500 mm)
+
+# ============================================================
+# 2020 V-slot extrusion dimensions
+# ============================================================
+EXT_W          = 20.0
+EXT_T          = 20.0
+EXT_CLEAR      =  0.4                # 0.2 mm per side, FDM-friendly slip fit
+
+# ============================================================
+# Socket (U-pocket capturing 2020 on 4 sides)
+# ============================================================
+SOCKET_OUTER_W = 34.0                # outer width  (X)
+SOCKET_OUTER_T = 34.0                # outer depth  (Y)
+SOCKET_H       = 50.0                # vertical engagement of 2020
+                                     # V1.1: 35 -> 50 (better twist resistance)
+SOCKET_BOT_T   =  5.0                # closed bottom of socket
+POCKET_W       = EXT_W + 2 * EXT_CLEAR    # 20.8
+POCKET_T       = EXT_T + 2 * EXT_CLEAR    # 20.8
+WALL_T         = (SOCKET_OUTER_W - POCKET_W) / 2.0    # ~6.6 mm wall
+
+# ============================================================
+# Foot flange (mounts to wood base)
+# ============================================================
+FOOT_LEN       = 70.0                # X extent
+FOOT_W         = 50.0                # Y extent
+FOOT_T         =  8.0                # vertical thickness
+
+# ============================================================
+# Foot bolt holes (4× M5 through-bolt + steel washer + M5 locknut underneath)
+# ============================================================
+M5_THROUGH_D   =  5.5                # M5 clearance
+M5_HEAD_CSK_D  = 10.0                # countersink for M5 socket head (hidden hardware)
+M5_HEAD_CSK_H  =  4.0                # countersink depth
+FOOT_BOLT_DX   = 25.0                # ±25 mm from socket center along X
+FOOT_BOLT_DY   = 17.0                # ±17 mm from socket center along Y
+
+# ============================================================
+# Lateral 2020 bolt holes (2× M5 through FRONT wall into 2020 T-nuts)
+# ============================================================
+M5_T_BOLT_D    =  5.5
+T_BOLT_Z1      = 12.0                # height from socket floor (low bolt)
+T_BOLT_Z2      = 38.0                # height from socket floor (high bolt)
+                                     # V1.1: wider Z spacing for taller socket
+
+# ============================================================
+# Triangular gussets (one each on +X and -X faces, for PETG stress relief)
+# ============================================================
+GUSSET_BASE    = 18.0                # along foot top from socket wall
+GUSSET_RISE    = 22.0                # up socket side from foot top
+GUSSET_T       =  6.0                # rib thickness in tangential direction
+
+# ============================================================
+# Cable channel on REAR (+Y / cassette-facing) face
+# ============================================================
+CABLE_CH_W     =  8.0                # X width
+CABLE_CH_D     =  4.0                # Y depth (into wall, toward cassette side)
+CABLE_CH_H     = SOCKET_H + FOOT_T - 4.0   # vertical length (almost full bracket)
+
+# ============================================================
+# Expansion: M5 HEAT-SET INSERT POCKETS on FRONT face (V1.1)
+# Allows future accessories to bolt IN repeatably (camera, LED, sensors)
+# without dropping T-nuts. Insert spec: M5 brass, ~Ø6.4 OD × 8 mm.
+# Pocket undersized by 0.2 mm so insert grips when heated in.
+# ============================================================
+INSERT_POCKET_D     =  6.2           # M5 heat-set insert OD - 0.2 (press fit when heated)
+INSERT_POCKET_H     =  8.5           # pocket depth (slightly > insert length)
+EXP_INSERT_COUNT    =  4
+EXP_INSERT_PITCH    = 10.0           # vertical pitch (M5 head clearance)
+EXP_INSERT_Z0_REL   =  6.0           # first insert this far above foot top
+
+MATERIAL = "PETG, 100% infill, 4 walls, 0.2 mm layers (Phase 1)"
+
+print("=" * 70)
+print("CSM V3 -- HMI MODULE 10 -- Mast Base Socket V1.1")
+print("=" * 70)
+print(f"  material:        {MATERIAL}")
+print(f"  socket outer:    {SOCKET_OUTER_W} x {SOCKET_OUTER_T} x {SOCKET_H} mm")
+print(f"  pocket:          {POCKET_W:.1f} x {POCKET_T:.1f} (FDM clearance {EXT_CLEAR} mm)")
+print(f"  wall thickness:  {WALL_T:.1f} mm")
+print(f"  foot:            {FOOT_LEN} x {FOOT_W} x {FOOT_T} mm")
+print(f"  foot bolts:      4x M5 through + locknut at (±{FOOT_BOLT_DX}, ±{FOOT_BOLT_DY})")
+print(f"  lateral bolts:   2x M5 through FRONT wall into 2020 T-nuts")
+print(f"  gussets:         {GUSSET_BASE} x {GUSSET_RISE} x {GUSSET_T} both X sides")
+print(f"  cable channel:   {CABLE_CH_W} x {CABLE_CH_D} on REAR face")
+print(f"  expansion:       {EXP_INSERT_COUNT}x M5 heat-set insert pockets")
+print(f"                   (Ø{INSERT_POCKET_D} x {INSERT_POCKET_H} on FRONT face)")
+print(f"  install:         X = ±75, Y = -210 (one bracket per X position)")
+print(f"  quantity needed: 2 (left + right; same design, mirror not required)")
+
+doc = FreeCAD.newDocument("MastBaseSocket_V1_1")
+
+# ============================================================
+# Build bracket
+# Local frame: bracket origin at center of socket footprint.
+#   X = tangential (along wood-base X axis)
+#   Y = radial (toward cassette = +Y)
+#   Z = vertical (up from wood base top)
+# ============================================================
+
+# --- FOOT FLANGE ---
+foot = Part.makeBox(FOOT_LEN, FOOT_W, FOOT_T,
+                    FreeCAD.Vector(-FOOT_LEN/2, -FOOT_W/2, 0))
+
+# --- SOCKET BODY (outer) ---
+socket_z = FOOT_T
+socket = Part.makeBox(SOCKET_OUTER_W, SOCKET_OUTER_T, SOCKET_H,
+                      FreeCAD.Vector(-SOCKET_OUTER_W/2, -SOCKET_OUTER_T/2, socket_z))
+
+# --- POCKET CUT (open at top, closed bottom for floor under 2020) ---
+pocket = Part.makeBox(POCKET_W, POCKET_T, SOCKET_H - SOCKET_BOT_T + 2,
+                      FreeCAD.Vector(-POCKET_W/2, -POCKET_T/2,
+                                     socket_z + SOCKET_BOT_T))
+socket = socket.cut(pocket)
+
+bracket = foot.fuse(socket)
+
+# --- TRIANGULAR GUSSETS on +X and -X faces ---
+# Each gusset is a wedge: triangle in YZ plane, extruded ±X.
+# Triangle vertices (in YZ at given X):
+#   p1 = (socket wall top edge: y_socket_wall_x, z_socket_bottom)
+#   p2 = (foot edge: y_foot_far, z_foot_top)
+#   p3 = (gusset peak up socket: y_socket_wall_x, z_foot_top + GUSSET_RISE)
+# But since gussets attach to +X / -X face of socket AND foot top, simpler:
+# 3D wedge with triangular cross-section in (Y, Z) at constant X.
+
+def make_gusset(sx):
+    """sx = +1 or -1, sign of the X side."""
+    # X position of the gusset slab
+    # The gusset attaches to the socket's outer X wall, projects outward
+    # along foot, and rises diagonally to a peak on the socket wall.
+    x_wall = sx * (SOCKET_OUTER_W / 2.0)
+    # Triangle vertices in (X, Y, Z) -- thin slab along X
+    p1 = FreeCAD.Vector(x_wall, 0, FOOT_T)               # at socket wall, at foot top
+    p2 = FreeCAD.Vector(x_wall, 0, FOOT_T + GUSSET_RISE) # up the socket wall
+    p3 = FreeCAD.Vector(x_wall + sx * GUSSET_BASE, 0, FOOT_T)  # out along foot
+    # Make triangular wire + face
+    wire = Part.makePolygon([p1, p2, p3, p1])
+    face = Part.Face(wire)
+    # Extrude in Y direction by half-gusset thickness, both ways
+    gusset = face.extrude(FreeCAD.Vector(0, GUSSET_T, 0))
+    # Center the gusset on Y=0 (so it straddles Y axis)
+    gusset.translate(FreeCAD.Vector(0, -GUSSET_T / 2.0, 0))
+    return gusset
+
+for sx in (-1, +1):
+    g = make_gusset(sx)
+    bracket = bracket.fuse(g)
+
+# --- FOOT BOLT HOLES (4x M5 through + countersink on top) ---
+for sxf in (-1, +1):
+    for syf in (-1, +1):
+        hx = sxf * FOOT_BOLT_DX
+        hy = syf * FOOT_BOLT_DY
+        # Through hole
+        hole = Part.makeCylinder(M5_THROUGH_D / 2.0, FOOT_T + 4.0,
+                                  FreeCAD.Vector(hx, hy, -2.0))
+        bracket = bracket.cut(hole)
+        # Countersink for M5 socket head (cone widening toward foot top)
+        csk = Part.makeCone(M5_HEAD_CSK_D / 2.0, M5_THROUGH_D / 2.0, M5_HEAD_CSK_H,
+                             FreeCAD.Vector(hx, hy, FOOT_T - M5_HEAD_CSK_H))
+        bracket = bracket.cut(csk)
+
+# --- LATERAL 2020 BOLT HOLES (2x M5 through FRONT wall, going +Y into T-nut) ---
+front_y = -SOCKET_OUTER_T / 2.0   # outer face of the FRONT (operator-facing) wall
+for tz in (T_BOLT_Z1, T_BOLT_Z2):
+    z_center = socket_z + SOCKET_BOT_T + tz
+    hole = Part.makeCylinder(M5_T_BOLT_D / 2.0, WALL_T + POCKET_T + WALL_T + 4.0,
+                              FreeCAD.Vector(0, front_y - 2.0, z_center),
+                              FreeCAD.Vector(0, 1, 0))
+    bracket = bracket.cut(hole)
+
+# --- CABLE CHANNEL on REAR (+Y face) ---
+rear_y = SOCKET_OUTER_T / 2.0
+ch = Part.makeBox(CABLE_CH_W, CABLE_CH_D + 0.1, CABLE_CH_H,
+                   FreeCAD.Vector(-CABLE_CH_W / 2.0,
+                                  rear_y - CABLE_CH_D,
+                                  2.0))
+bracket = bracket.cut(ch)
+
+# --- EXPANSION POCKETS (M5 HEAT-SET INSERTS) on FRONT (-Y face) ---
+# V1.1: replaced M5 clearance through-holes with insert pockets.
+# Pocket opens from front face going INTO the wall, stops short of pocket
+# interior so insert is fully embedded in PETG.
+for i in range(EXP_INSERT_COUNT):
+    z = FOOT_T + EXP_INSERT_Z0_REL + i * EXP_INSERT_PITCH
+    if z > FOOT_T + SOCKET_H - 5:
+        continue
+    pocket = Part.makeCylinder(INSERT_POCKET_D / 2.0, INSERT_POCKET_H,
+                                FreeCAD.Vector(0, front_y - 0.1, z),
+                                FreeCAD.Vector(0, 1, 0))
+    bracket = bracket.cut(pocket)
+
+# ============================================================
+# V1.1 FILLETS — reduce stress concentration at foot/socket junction
+# ============================================================
+# OCC fillet on heavily-boolean shapes can fail. Try targeted edge filter
+# (edges along bracket FOOT TOP, at the foot-to-socket transition), wrap
+# in try/except so a fillet failure doesn't kill the whole macro.
+FILLET_R = 3.0
+
+def _try_fillet(shape, radius, edge_filter):
+    """Return filleted shape, or unfilleted shape on failure."""
+    try:
+        target = [e for e in shape.Edges if edge_filter(e)]
+        if not target:
+            print(f"  fillet: no edges matched filter (skipped)")
+            return shape
+        filleted = shape.makeFillet(radius, target)
+        print(f"  fillet R{radius}: {len(target)} edges OK")
+        return filleted
+    except Exception as ex:
+        print(f"  fillet failed ({ex.__class__.__name__}): skipped")
+        return shape
+
+# Filter: foot-top edges that lie roughly at Z = FOOT_T (the socket root)
+# AND that are oriented along Y or X (not vertical), AND are NOT inside
+# bolt holes (length > 5 mm).
+def _at_socket_root(edge):
+    v1, v2 = edge.Vertexes[0].Point, edge.Vertexes[1].Point
+    if abs(v1.z - FOOT_T) > 0.1 or abs(v2.z - FOOT_T) > 0.1:
+        return False
+    if edge.Length < 5.0 or edge.Length > FOOT_LEN + 5:
+        return False
+    return True
+
+bracket = _try_fillet(bracket, FILLET_R, _at_socket_root)
+
+# ============================================================
+# Export STL + STEP
+# ============================================================
+obj = doc.addObject("Part::Feature", "MastBaseSocket_V1_1")
+obj.Shape = bracket
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.50, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_1.stl")
+OUT_STEP = os.path.join(BASE, "CSM_V3_MastBaseSocket_V1_1.step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+sz_stl  = os.path.getsize(OUT_STL)
+sz_step = os.path.getsize(OUT_STEP)
+print(f"[OK] STL:  {OUT_STL}  ({sz_stl/1024:.1f} KB)")
+print(f"[OK] STEP: {OUT_STEP} ({sz_step/1024:.1f} KB)")
+print(f"     volume: {bracket.Volume:.0f} mm³  (~{bracket.Volume*1.27/1000:.1f}g PETG)")
+print()
+print("ASSEMBLY (per bracket -- print 2):")
+print(" 1. Print PETG 100% infill, 4 walls, 0.2 mm layers (foot down)")
+print(" 2. Slide 2 M5 T-nuts into the 2020's FRONT slot (-Y in machine frame)")
+print(" 3. Stand 2020 upright; slide bracket pocket down over 2020 base")
+print(" 4. 2 M5 × 12 mm bolts through bracket FRONT face into T-nuts; snug")
+print(" 5. Place bracket on wood base at target (X=+75 OR -75, Y=-210)")
+print(" 6. Mark + drill 4 × Ø5.5 holes through wood base under foot bolts")
+print(" 7. Insert 4 × M5 × 25 mm socket-head bolts through foot countersinks")
+print(" 8. M5 flat washer + M5 nyloc nut underneath wood base, tighten")
+print(" 9. Verify 2020 stands vertical (square against wood base + plate)")
+print(" 10. Heat 4× M5 brass inserts (B0DPQJ4W3Z) into FRONT-face pockets")
+print("     using soldering iron at ~220 °C, ~30 s per insert")
+print()
+print("FUTURE EXPANSION (4 × M5 heat-set insert pockets on FRONT face):")
+print("    - Heat 4× M5 inserts (BOM B0DPQJ4W3Z) into the FRONT face pockets")
+print("    - Once installed, any accessory bolts in/out repeatably with M5 screws")
+print("    - Accessories: camera mount, LED strip, status panel, sensors")
+print("    - No need to drop T-nuts into the 2020 each time")
+print("=" * 70)

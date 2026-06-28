@@ -1,0 +1,202 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- PI FAN COVER V1.0 (Part M10-P04)
+# =============================================================================
+# Flat plate that hangs below the Raspberry Pi 4 (opposite side from the
+# Pi Carrier).  Carries a standard 30 x 30 x 10 mm 5 V fan blowing air
+# toward the Pi's downward-facing components (SoC + RAM).
+#
+# Mount stack (top -> bottom):
+#   Pi Carrier (M10-P03)
+#     | -- M2.5 standoff into Pi Carrier (~10 mm)  -- from carrier kit
+#   Pi 4 PCB
+#     | -- M2.5 brass standoff (~11 mm)            -- user-supplied
+#   Pi Fan Cover (this part)
+#     | -- M2.5 x 25 mm screw heads (4x)           -- user-supplied
+#
+# The 4 mount screws are M2.5 x 25 mm and pass UP through the Cover,
+# through the 11 mm spacer, through the Pi PCB hole, into the Pi Carrier
+# heat-set standoff.  Replaces the M2.5 x 6 mm screw that V1.0 of the Pi
+# Carrier assembly notes called for.
+#
+# The 30 mm fan bolts to the Cover TOP face with M3 x 14 mm screws
+# (typically supplied with the fan).  Fan body lives in the 11 mm gap
+# between Cover and Pi PCB.
+#
+# Local frame (plate-local):
+#   X = along Pi long axis
+#   Y = across Pi
+#   Z = vertical (Z=0 = plate top face, fan side; Z=-T = bottom face)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# PART METADATA (CSM V3 macro standard header)
+# ============================================================
+PART_NUMBER     = "M10-P04"
+PART_NAME       = "Pi Fan Cover"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_PiFanCover_V1_0"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+# ============================================================
+# Helpers
+# ============================================================
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+def cut_box(shape, w, d, h, origin):
+    box = Part.makeBox(w, d, h, origin)
+    return shape.cut(box)
+
+# ============================================================
+# Geometry parameters -- all from machine_datums.py (HMI block)
+# ============================================================
+PLATE_W       = MD.HMI_PI_FAN_COVER_W
+PLATE_D       = MD.HMI_PI_FAN_COVER_D
+PLATE_T       = MD.HMI_PI_FAN_COVER_T
+
+# Pi 4 mount interface (same as Pi Carrier's Pi-side PCD)
+PI_PCD_X      = MD.HMI_PI4_PCD_X                 # 58 mm
+PI_PCD_Y      = MD.HMI_PI4_PCD_Y                 # 49 mm
+M2_5_CLEAR_D  = MD.HMI_M2_5_CLEAR_D              # 3.0 mm
+
+# 30 x 30 x 10 fan
+FAN_OPENING_D = MD.HMI_PI_FAN_OPENING_D          # 22 mm round intake
+FAN_MOUNT_PCD = MD.HMI_PI_FAN_MOUNT_PCD          # 24 mm corner-to-corner
+M3_CLEAR_D    = MD.HMI_PI_FAN_M3_CLEAR_D         # 3.5 mm
+FAN_BODY_W    = MD.HMI_PI_FAN_BODY_W             # 30 mm
+FAN_BODY_H    = MD.HMI_PI_FAN_BODY_H             # 10 mm
+STANDOFF_H    = MD.HMI_PI_FAN_STANDOFF_H         # 11 mm Pi-to-Cover spacer
+
+# Boolean / overcut helpers
+EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA     = MD.HMI_CUT_EXTRA
+
+# ============================================================
+# Standard CSM V3 banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
+print("WALL-THICKNESS CHECK:")
+plate_edge_to_pi_hole_x   = PLATE_W / 2.0 - PI_PCD_X / 2.0 - M2_5_CLEAR_D / 2.0
+plate_edge_to_pi_hole_y   = PLATE_D / 2.0 - PI_PCD_Y / 2.0 - M2_5_CLEAR_D / 2.0
+plate_edge_to_fan_hole_x  = PLATE_W / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
+plate_edge_to_fan_hole_y  = PLATE_D / 2.0 - FAN_MOUNT_PCD / 2.0 - M3_CLEAR_D / 2.0
+fan_corner_to_center      = math.sqrt(2.0) * FAN_MOUNT_PCD / 2.0      # 17.0 mm
+opening_edge_to_fan_hole  = fan_corner_to_center - FAN_OPENING_D / 2.0 - M3_CLEAR_D / 2.0
+pi_hole_distance          = math.sqrt((PI_PCD_X/2 - FAN_MOUNT_PCD/2)**2 +
+                                      (PI_PCD_Y/2 - FAN_MOUNT_PCD/2)**2)
+pi_hole_to_fan_hole       = pi_hole_distance - M2_5_CLEAR_D/2 - M3_CLEAR_D/2
+standoff_clears_fan       = STANDOFF_H - FAN_BODY_H                    # 1.0 mm
+checks = [
+    ("Plate edge to Pi mount hole (X)",   plate_edge_to_pi_hole_x,   2.0),
+    ("Plate edge to Pi mount hole (Y)",   plate_edge_to_pi_hole_y,   2.0),
+    ("Plate edge to fan mount hole (X)",  plate_edge_to_fan_hole_x,  2.0),
+    ("Plate edge to fan mount hole (Y)",  plate_edge_to_fan_hole_y,  2.0),
+    ("Opening edge to fan mount hole",    opening_edge_to_fan_hole,  2.0),
+    ("Pi mount to fan mount diagonal",    pi_hole_to_fan_hole,       5.0),
+    ("Standoff clears fan body height",   standoff_clears_fan,       0.5),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  plate:          {PLATE_W} x {PLATE_D} x {PLATE_T} mm")
+print(f"  Pi interface:   4x M2.5 clearance at PCD {PI_PCD_X} x {PI_PCD_Y} (Pi 4 native)")
+print(f"  fan interface:  4x M3 clearance at PCD {FAN_MOUNT_PCD} x {FAN_MOUNT_PCD}")
+print(f"  fan opening:    D{FAN_OPENING_D} round (clears 25 mm blade swept area)")
+print(f"  fan target:     {FAN_BODY_W} x {FAN_BODY_W} x {FAN_BODY_H} mm, 5 V brushless")
+print(f"  spacer height:  {STANDOFF_H} mm M2.5 brass standoffs (Pi to Cover)")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# ============================================================
+# Build plate
+# Plate top face at Z=0 (fan-side), bottom face at Z=-PLATE_T
+# ============================================================
+plate = Part.makeBox(PLATE_W, PLATE_D, PLATE_T,
+                     FreeCAD.Vector(-PLATE_W/2.0, -PLATE_D/2.0, -PLATE_T))
+
+# Pi mount holes (4 corners of PCD 58 x 49)
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (PI_PCD_X / 2.0)
+        hy = sy * (PI_PCD_Y / 2.0)
+        plate = cut_cylinder(plate, M2_5_CLEAR_D, PLATE_T + 2 * CUT_EXTRA,
+                              FreeCAD.Vector(hx, hy, -PLATE_T - CUT_EXTRA))
+
+# Fan mount holes (4 corners of PCD 24 x 24)
+for sx in (-1, +1):
+    for sy in (-1, +1):
+        hx = sx * (FAN_MOUNT_PCD / 2.0)
+        hy = sy * (FAN_MOUNT_PCD / 2.0)
+        plate = cut_cylinder(plate, M3_CLEAR_D, PLATE_T + 2 * CUT_EXTRA,
+                              FreeCAD.Vector(hx, hy, -PLATE_T - CUT_EXTRA))
+
+# Central air intake (round, full thickness)
+plate = cut_cylinder(plate, FAN_OPENING_D, PLATE_T + 2 * CUT_EXTRA,
+                      FreeCAD.Vector(0, 0, -PLATE_T - CUT_EXTRA))
+
+# Export
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = plate
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.55, 0.70, 0.85)
+doc.recompute()
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = plate.CenterOfMass
+except AttributeError:
+    com = plate.Solids[0].CenterOfMass if plate.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {plate.Volume:.0f} mm^3  (~{plate.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (plate-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY (after Pi is mounted on Pi Carrier per M10-P03 step 5):")
+print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
+print(" 2. Have ready: 4x M2.5 brass standoffs (11 mm, female-female)")
+print("                4x M2.5 x 25 mm socket-head screws")
+print("                4x M3 x 14 mm screws (usually supplied with fan)")
+print("                1x 30 x 30 x 10 mm 5 V fan")
+print(" 3. REMOVE the four M2.5 x 6 mm screws holding the Pi to the Pi")
+print("    Carrier standoffs (do NOT detach the Pi standoffs from carrier)")
+print(" 4. Thread the 4x 11 mm brass standoffs onto the BOTTOM of the Pi")
+print("    Carrier standoffs through the Pi PCB holes -- they sandwich the")
+print("    Pi between the carrier standoffs (above) and these (below)")
+print(" 5. Mount the fan to the Cover TOP face with 4x M3 x 14 screws into")
+print("    the 4 fan mount holes (PCD 24 x 24); fan should blow UP (toward")
+print("    the Pi components when assembled)")
+print(" 6. Position the Cover under the Pi: align Cover Pi-mount holes with")
+print("    the 11 mm standoffs; pass 4x M2.5 x 25 screws UP from BELOW the")
+print("    Cover into the 11 mm standoff threads")
+print(" 7. Connect fan's 2-pin connector to Pi GPIO header:")
+print("    - Red wire   -> Pin 4 (+5V)")
+print("    - Black wire -> Pin 6 (GND)")
+print(" 8. Verify fan spins on Pi power-up; airflow should pass UPWARD")
+print("    through the Cover opening into the Pi component area")
+print("=" * 70)

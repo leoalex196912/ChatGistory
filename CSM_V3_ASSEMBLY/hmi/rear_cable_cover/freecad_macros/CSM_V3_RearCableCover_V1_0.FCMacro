@@ -1,0 +1,163 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- REAR CABLE COVER V1.0 (Part M10-P07)
+# =============================================================================
+# Cosmetic strip that adheres to the Cross Beam REAR face, covering the
+# 8 x 4 mm cable channel and hiding the HDMI / USB-C / fan-power wires.
+#
+# Mounting: 3M VHB double-sided foam tape (or similar) on the -Y face.
+# The Cross Beam V1.2 is frozen and has no snap/bolt features on its rear
+# face, so adhesive is the cleanest V1.0 attachment method.  V1.1 may add
+# a tongue-and-detent design once we see how cables actually route.
+#
+# Local frame:
+#   X = along beam (and along cover), Y = depth (+Y = away from beam,
+#   operator side), Z = vertical.  Origin at strip center.
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+PART_NUMBER     = "M10-P07"
+PART_NAME       = "Rear Cable Cover"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_RearCableCover_V1_0"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+def rounded_rect_face(w, d, r):
+    hw, hd = w / 2.0, d / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -hd, 0)
+    p2 = FreeCAD.Vector( hw - r, -hd, 0)
+    p3 = FreeCAD.Vector( hw,     -hd + r, 0)
+    p4 = FreeCAD.Vector( hw,      hd - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  hd, 0)
+    p6 = FreeCAD.Vector(-hw + r,  hd, 0)
+    p7 = FreeCAD.Vector(-hw,      hd - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -hd + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -hd + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  hd - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  hd - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -hd + r, 0)
+    return Part.Face(Part.Wire([
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, c_BR + FreeCAD.Vector(r*math.cos(-math.pi/4), r*math.sin(-math.pi/4), 0), p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, c_TR + FreeCAD.Vector(r*math.cos(math.pi/4), r*math.sin(math.pi/4), 0), p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, c_TL + FreeCAD.Vector(r*math.cos(3*math.pi/4), r*math.sin(3*math.pi/4), 0), p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, c_BL + FreeCAD.Vector(r*math.cos(-3*math.pi/4), r*math.sin(-3*math.pi/4), 0), p1).toShape(),
+    ]))
+
+# ============================================================
+# Geometry
+# ============================================================
+LEN_X     = MD.HMI_RCC_LEN
+HEIGHT_Z  = MD.HMI_RCC_H
+THICK_Y   = MD.HMI_RCC_T
+CORNER_R  = MD.HMI_RCC_CORNER_R
+CHAMFER   = MD.HMI_RCC_CHAMFER
+
+# Reference (for context print)
+BEAM_LEN_X     = MD.HMI_BEAM_LEN_X
+BEAM_CABLE_W   = MD.HMI_CABLE_CH_W      # 8 mm
+BEAM_CABLE_D   = MD.HMI_CABLE_CH_D      # 4 mm
+
+# ============================================================
+# Banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
+print("WALL-THICKNESS CHECK:")
+fits_beam_x        = BEAM_LEN_X - LEN_X
+covers_channel_z   = HEIGHT_Z - BEAM_CABLE_W           # cover > channel width
+checks = [
+    ("Cover length fits beam (X)",     fits_beam_x,      4.0),
+    ("Cover H exceeds channel W (Z)",  covers_channel_z, 6.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  cover:           {LEN_X} x {THICK_Y} x {HEIGHT_Z} mm")
+print(f"  corner fillet:   R{CORNER_R}")
+print(f"  edge bevel:      {CHAMFER} mm (visible front edges)")
+print(f"  covers:          beam rear cable channel ({BEAM_CABLE_W} x {BEAM_CABLE_D} mm)")
+print(f"  mounts via:      3M VHB double-sided foam tape on -Y face")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# Build cover -- rounded rectangle face in XZ plane, extruded in Y
+face = rounded_rect_face(LEN_X, HEIGHT_Z, CORNER_R)
+face.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)
+cover = face.extrude(FreeCAD.Vector(0, THICK_Y, 0))
+
+# Visible-edge chamfer on the +Y face (operator side).
+# Apply makeChamfer to the 4 edges that lie at Y = THICK_Y (front face).
+# Wrap in try/except since OCC face filtering can be brittle.
+try:
+    front_edges = []
+    for e in cover.Edges:
+        v1, v2 = e.Vertexes[0].Point, e.Vertexes[1].Point
+        if abs(v1.y - THICK_Y) < 0.01 and abs(v2.y - THICK_Y) < 0.01:
+            front_edges.append(e)
+    if front_edges:
+        cover = cover.makeChamfer(CHAMFER, front_edges)
+        print(f"  chamfer: {len(front_edges)} front edges beveled {CHAMFER} mm")
+    else:
+        print(f"  chamfer skipped: no front edges matched")
+except Exception as ex:
+    print(f"  chamfer skipped ({ex.__class__.__name__})")
+
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = cover
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.35, 0.40, 0.50)
+doc.recompute()
+cover = obj.Shape
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = cover.CenterOfMass
+except AttributeError:
+    com = cover.Solids[0].CenterOfMass if cover.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {cover.Volume:.0f} mm^3  (~{cover.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass:  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG flat (+Y face down for clean visible surface),")
+print("    100% infill, 4 walls, 0.2 mm layers")
+print(" 2. Complete all HMI cable routing FIRST (HDMI + USB-C + fan power")
+print("    + LED strip leads all seated in the beam's rear cable channel)")
+print(" 3. Apply a strip of 3M VHB double-sided foam tape (~15 mm wide)")
+print("    along the cover's -Y face, centered on its Z axis")
+print(" 4. Peel the release liner, align the cover over the cable channel")
+print("    on the beam REAR face (cables tucked in below), press firmly")
+print("    for 10-15 seconds.  Cable channel is now hidden.")
+print(" 5. To service cables later: pry one corner with a thin spudger")
+print("    and peel.  VHB residue can be cleaned with isopropyl alcohol.")
+print()
+print("V1.1 PLAN: tongue-and-detent snap-in design once first install")
+print("reveals exactly how cables route in the channel.")
+print("=" * 70)

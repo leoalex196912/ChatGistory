@@ -293,6 +293,17 @@ HMI_TILT_SLOT_H         = 6.0     # arc-slot height (Z) -- M5 + clearance
 HMI_TILT_SLOT_X_OFFSET  = 4.5     # slot center X offset (asymmetric for 0-30°)
 HMI_TILT_CORNER_R       = 3.0     # plate corner fillet
 
+# === Rear Cable Cover V1.0 (Part M10-P07) ===
+# Cosmetic strip that adheres to the beam REAR face, covering the cable
+# channel and hiding the HDMI / USB-C / fan-power wire runs.
+# Mounting: 3M VHB foam tape on the -Y face (beam-side).  Simple, removable,
+# does not require any features on the beam (which is frozen at V1.2 RC1).
+HMI_RCC_LEN          = 170.0   # X length (just inside beam X)
+HMI_RCC_H            = 20.0    # Z height (wider than 8 mm channel for coverage)
+HMI_RCC_T            = 3.0     # Y thickness
+HMI_RCC_CORNER_R     = 4.0     # corner fillet (visible from rear)
+HMI_RCC_CHAMFER      = 0.6     # bevel on visible edges
+
 # === Cable Clamp V1.0 (Part M10-P08) ===
 # Saddle plate that bolts to a 2020 mast slot with one M5 T-nut, holding a
 # cable bundle against the mast face via 4 corner zip-tie holes.

@@ -264,6 +264,18 @@ HMI_EXP_BEAM_BOLT_Z   = 7.0     # M5 bolt center distance from top edge
                                   # 10 only left 0.5 mm)
 HMI_EXP_CORNER_R      = 3.0     # plate corner fillet
 
+# === LED Strip Holder V1.0 (Part M10-P09) ===
+# Long thin channel that zip-ties to the cross beam underside, carrying a
+# 5 V LED strip (10 x 2-3 mm) pointing down for cassette work-area lighting.
+HMI_LED_HOLDER_L         = 150.0  # X length (less than beam 178 mm)
+HMI_LED_HOLDER_W         = 14.0   # Y width
+HMI_LED_HOLDER_H         = 5.0    # Z thickness
+HMI_LED_STRIP_W          = 10.0   # LED strip cavity width
+HMI_LED_STRIP_H          = 2.5    # LED strip cavity depth (into bottom face)
+HMI_LED_TIE_GROOVE_W     = 4.0    # zip-tie groove width (X)
+HMI_LED_TIE_GROOVE_D     = 1.0    # zip-tie groove depth (Z, into top face)
+HMI_LED_TIE_X            = 60.0   # zip-tie groove X offset from center
+
 # === Cable Clamp V1.0 (Part M10-P08) ===
 # Saddle plate that bolts to a 2020 mast slot with one M5 T-nut, holding a
 # cable bundle against the mast face via 4 corner zip-tie holes.

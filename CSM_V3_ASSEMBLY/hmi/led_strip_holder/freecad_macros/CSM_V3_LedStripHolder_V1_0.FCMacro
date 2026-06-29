@@ -1,0 +1,160 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- LED STRIP HOLDER V1.0 (Part M10-P09)
+# =============================================================================
+# Long thin channel that holds a 5 V LED strip (10 mm wide x 2-3 mm thick)
+# and zip-ties to the underside of the Cross Beam V1.2.  Lights the
+# cylinder / cassette work area from above.
+#
+# Mount: 2 zip-ties wrap around the beam (40 mm Y) and the holder, seating
+# in grooves on the holder's TOP face.  No bolts required, so it doesn't
+# compete with the Touchscreen Frame or Expansion Plate for FRONT-face
+# insert positions.
+#
+# Local frame:
+#   X = along beam length (also along LED strip)
+#   Y = depth (front-back of machine)
+#   Z = vertical; Z=0 is the BOTTOM face (LED side), Z=H is the TOP
+#       face (against beam)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+PART_NUMBER     = "M10-P09"
+PART_NAME       = "LED Strip Holder"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_LedStripHolder_V1_0"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+def cut_box(shape, w, d, h, origin):
+    box = Part.makeBox(w, d, h, origin)
+    return shape.cut(box)
+
+# ============================================================
+# Geometry parameters
+# ============================================================
+HOLDER_L       = MD.HMI_LED_HOLDER_L
+HOLDER_W       = MD.HMI_LED_HOLDER_W
+HOLDER_H       = MD.HMI_LED_HOLDER_H
+STRIP_W        = MD.HMI_LED_STRIP_W
+STRIP_H        = MD.HMI_LED_STRIP_H
+TIE_GROOVE_W   = MD.HMI_LED_TIE_GROOVE_W
+TIE_GROOVE_D   = MD.HMI_LED_TIE_GROOVE_D
+TIE_X          = MD.HMI_LED_TIE_X
+
+EPS_OVERCUT    = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA      = MD.HMI_CUT_EXTRA
+
+# Reference: beam dimensions for envelope check
+BEAM_W_Y       = MD.HMI_BEAM_W_Y          # 40 mm
+BEAM_LEN_X     = MD.HMI_BEAM_LEN_X        # 178 mm
+
+# ============================================================
+# Banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
+print("WALL-THICKNESS CHECK:")
+strip_wall_y      = (HOLDER_W - STRIP_W) / 2.0          # side wall of channel
+strip_wall_z      = HOLDER_H - STRIP_H                  # top wall above channel
+groove_to_strip   = strip_wall_z - TIE_GROOVE_D         # material between
+                                                         # groove bottom and
+                                                         # strip cavity top
+edge_to_groove_x  = HOLDER_L / 2.0 - TIE_X - TIE_GROOVE_W / 2.0
+holder_inside_beam = BEAM_LEN_X - HOLDER_L              # margin: holder
+                                                         # length < beam length
+holder_y_fits_beam = BEAM_W_Y - HOLDER_W                # beam covers holder Y
+checks = [
+    ("Strip channel side wall (Y)",       strip_wall_y,       1.5),
+    ("Strip channel top wall (Z)",        strip_wall_z,       2.0),
+    ("Groove bottom to strip cavity",     groove_to_strip,    1.0),
+    ("End edge to zip-tie groove (X)",    edge_to_groove_x,   5.0),
+    ("Holder L inside beam L margin",     holder_inside_beam, 0.0),
+    ("Holder Y fits within beam Y",       holder_y_fits_beam, 0.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  holder:          {HOLDER_L} x {HOLDER_W} x {HOLDER_H} mm")
+print(f"  strip channel:   {STRIP_W} x {STRIP_H} on BOTTOM face (full length)")
+print(f"  zip-tie grooves: 2x {TIE_GROOVE_W} x {TIE_GROOVE_D} at X=+/-{TIE_X}")
+print(f"  LED strip:       5 V, 10 mm wide x 2-3 mm thick (adhesive backed)")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# Build holder: simple rectangular bar
+holder = Part.makeBox(HOLDER_L, HOLDER_W, HOLDER_H,
+                      FreeCAD.Vector(-HOLDER_L/2.0, -HOLDER_W/2.0, 0))
+
+# LED strip channel: cut from bottom face, full length
+holder = cut_box(holder, HOLDER_L + 2 * CUT_EXTRA, STRIP_W,
+                          STRIP_H + EPS_OVERCUT,
+                          FreeCAD.Vector(-HOLDER_L/2.0 - CUT_EXTRA,
+                                          -STRIP_W/2.0,
+                                          -EPS_OVERCUT))
+
+# 2x zip-tie grooves on TOP face (cross-cuts in Y direction, full width)
+for sx in (-1, +1):
+    cx = sx * TIE_X
+    holder = cut_box(holder, TIE_GROOVE_W, HOLDER_W + 2 * EPS_OVERCUT,
+                              TIE_GROOVE_D + EPS_OVERCUT,
+                              FreeCAD.Vector(cx - TIE_GROOVE_W/2.0,
+                                              -HOLDER_W/2.0 - EPS_OVERCUT,
+                                              HOLDER_H - TIE_GROOVE_D))
+
+# Export
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = holder
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.95, 0.95, 0.55)
+doc.recompute()
+holder = obj.Shape
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = holder.CenterOfMass
+except AttributeError:
+    com = holder.Solids[0].CenterOfMass if holder.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {holder.Volume:.0f} mm^3  (~{holder.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (holder-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG flat on bed (TOP face down so the LED channel prints")
+print("    clean), 100% infill, 4 walls, 0.2 mm layers")
+print(" 2. Peel the adhesive backing off the LED strip; press the strip up")
+print("    into the channel on the BOTTOM face (LEDs face out / downward)")
+print(" 3. Solder leads to the strip's end pads BEFORE installing in the")
+print("    machine (much easier than working overhead)")
+print(" 4. Position the holder against the beam's BOTTOM face, centered")
+print("    on the beam's X axis.  Pi Carrier is at X=0 -- holder runs along")
+print("    BOTH sides; its strip cavity is open downward so it doesn't")
+print("    interfere with the Pi.")
+print(" 5. Pass 2 zip-ties (2.5 mm wide) UP through the holder grooves,")
+print("    OVER the beam top, DOWN the other Y side, and pull tight.")
+print("    The grooves keep the zip-ties from sliding along X.")
+print(" 6. Wire the strip's leads up the rear mast face into the beam cable")
+print("    channel, then to a 5 V source (Pi pin 4/6 or LM2596 buck #2)")
+print("=" * 70)

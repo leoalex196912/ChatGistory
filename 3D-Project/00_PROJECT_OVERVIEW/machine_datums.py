@@ -288,9 +288,12 @@ HMI_TILT_BEAM_BOLT_Z    = 28.0    # M5 beam-mount holes Z (relative to center)
 HMI_TILT_FRAME_BOLT_Z   = 22.0    # M5 frame-mount inserts Z
 HMI_TILT_PIVOT_Z        = -25.0   # M5 pivot Z (below center)
 HMI_TILT_LOCK_Z         = 0.0     # M5 lock-screw nominal Z (center)
-HMI_TILT_SLOT_W         = 15.0    # arc-slot width (X), 0 to +30° tilt
-HMI_TILT_SLOT_H         = 6.0     # arc-slot height (Z) -- M5 + clearance
-HMI_TILT_SLOT_X_OFFSET  = 4.5     # slot center X offset (asymmetric for 0-30°)
+# V1.1: TRUE arc slot centered on the pivot.  The lock bolt traverses an arc
+# at constant radius from the pivot, eliminating side-loading of the screw.
+HMI_TILT_SLOT_R         = 25.0    # arc center radius (pivot -> lock nominal)
+HMI_TILT_SLOT_HALF_W    = 3.0     # slot perpendicular half-width (M5 + clearance)
+HMI_TILT_ANGLE_HALF_DEG = 20.0    # +/- angular range from vertical-up
+                                    # (40 deg total tilt range)
 HMI_TILT_CORNER_R       = 3.0     # plate corner fillet
 
 # === Rear Cable Cover V1.0 (Part M10-P07) ===

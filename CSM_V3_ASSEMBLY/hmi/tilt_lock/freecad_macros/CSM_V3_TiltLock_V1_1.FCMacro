@@ -16,8 +16,10 @@
 #
 # Outputs TWO STL/STEP files: ..._Base.* and ..._Arm.*
 #
-# V1.0 = friction tilt (PETG-on-PETG with M5 clamp force).
-# V1.1 = toothed indexing at 10 deg increments (planned).
+# V1.0 = friction tilt, RECTANGULAR slot (side-loaded the lock bolt).
+# V1.1 = friction tilt with TRUE ARC slot centered on the pivot
+#        (no side-load, smoother feel, longer wear life).
+# V2.0 = toothed indexing at 10 deg increments + friction boss (planned).
 #
 # Local frame (both plates):
 #   X = horizontal along beam, Y = thickness (5 mm), Z = vertical
@@ -30,9 +32,9 @@ import machine_datums as MD
 
 PART_NUMBER     = "M10-P06"
 PART_NAME       = "Display Tilt Lock"
-VERSION         = "V1.0"
-STATUS          = "DRAFT"
-PART_ID         = "CSM_V3_TiltLock_V1_0"
+VERSION         = "V1.1"
+STATUS          = "RC1"
+PART_ID         = "CSM_V3_TiltLock_V1_1"
 PRINT_QTY       = 1  # qty of each (1 Base + 1 Arm)
 PRINT_MATERIAL  = "PETG (PA12 production)"
 PRINT_INFILL    = "100%"
@@ -46,6 +48,39 @@ def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0,
 def cut_box(shape, w, d, h, origin):
     box = Part.makeBox(w, d, h, origin)
     return shape.cut(box)
+
+def arc_slot_face_xz(pivot_x, pivot_z, R_center, half_w,
+                     angle_min_deg, angle_max_deg):
+    """Curved slot face in XZ plane (Y=0).
+    Slot center traces an arc at radius R_center from (pivot_x, pivot_z).
+    Perpendicular half-width = half_w (so total slot width = 2*half_w).
+    Angular range angle_min_deg to angle_max_deg, measured CCW from +X axis.
+    The face is in XZ -- rotate to XZ via FreeCAD.Vector(x, 0, z)."""
+    r_in  = R_center - half_w
+    r_out = R_center + half_w
+    a_min = math.radians(angle_min_deg)
+    a_max = math.radians(angle_max_deg)
+    a_mid = (a_min + a_max) / 2.0
+
+    def at(r, a):
+        return FreeCAD.Vector(pivot_x + r * math.cos(a),
+                              0.0,
+                              pivot_z + r * math.sin(a))
+
+    p_in_min  = at(r_in,  a_min)
+    p_in_mid  = at(r_in,  a_mid)
+    p_in_max  = at(r_in,  a_max)
+    p_out_min = at(r_out, a_min)
+    p_out_mid = at(r_out, a_mid)
+    p_out_max = at(r_out, a_max)
+
+    edges = [
+        Part.Arc(p_in_min,  p_in_mid,  p_in_max).toShape(),
+        Part.LineSegment(p_in_max,  p_out_max).toShape(),
+        Part.Arc(p_out_max, p_out_mid, p_out_min).toShape(),
+        Part.LineSegment(p_out_min, p_in_min).toShape(),
+    ]
+    return Part.Face(Part.Wire(edges))
 
 def rounded_rect_face(w, d, r):
     hw, hd = w / 2.0, d / 2.0
@@ -84,9 +119,10 @@ BEAM_BOLT_Z = MD.HMI_TILT_BEAM_BOLT_Z
 FRAME_BOLT_Z = MD.HMI_TILT_FRAME_BOLT_Z
 PIVOT_Z   = MD.HMI_TILT_PIVOT_Z
 LOCK_Z    = MD.HMI_TILT_LOCK_Z
-SLOT_W    = MD.HMI_TILT_SLOT_W
-SLOT_H    = MD.HMI_TILT_SLOT_H
-SLOT_X    = MD.HMI_TILT_SLOT_X_OFFSET
+# V1.1: TRUE arc slot centered on pivot (replaces the V1.0 rectangular slot)
+SLOT_R           = MD.HMI_TILT_SLOT_R              # arc center radius = pivot-to-lock distance
+SLOT_HALF_W      = MD.HMI_TILT_SLOT_HALF_W         # perpendicular half-width
+ANGLE_HALF_DEG   = MD.HMI_TILT_ANGLE_HALF_DEG      # +/- angular range from vertical
 M5_D      = MD.HMI_M5_THROUGH_D
 INSERT_D  = MD.HMI_INSERT_POCKET_D     # M5 heat-set insert pocket
 INSERT_H  = MD.HMI_INSERT_POCKET_H
@@ -110,19 +146,24 @@ print()
 print("WALL-THICKNESS CHECK:")
 top_edge_to_bolt_z   = PLATE_H/2.0 - BEAM_BOLT_Z - M5_D/2.0
 bolt_z_separation    = BEAM_BOLT_Z - FRAME_BOLT_Z - M5_D/2.0      # base bolt to arm bolt vertical gap
-frame_to_lock        = FRAME_BOLT_Z - LOCK_Z - SLOT_H/2.0 - M5_D/2.0
-lock_to_pivot        = LOCK_Z - PIVOT_Z - SLOT_H/2.0 - M5_D/2.0
+# V1.1 arc-slot extreme corner positions (in XZ, with pivot at (0, PIVOT_Z))
+ang_lo = math.radians(90.0 - ANGLE_HALF_DEG)
+ang_hi = math.radians(90.0 + ANGLE_HALF_DEG)
+slot_outer_r = SLOT_R + SLOT_HALF_W
+slot_xmax    = slot_outer_r * math.cos(ang_lo)    # at angle 70 deg, the +X-most reach
+slot_zmax    = PIVOT_Z + slot_outer_r * math.sin(ang_hi)  # top of slot
+frame_to_slot_z      = FRAME_BOLT_Z - slot_zmax
+slot_to_inner_bolt_x = abs(min(abs(x) for x in BOLT_XS)) - slot_xmax
 pivot_to_bottom      = PLATE_H/2.0 + PIVOT_Z - M5_D/2.0
 edge_to_outer_bolt_x = PLATE_W/2.0 - max(abs(x) for x in BOLT_XS) - M5_D/2.0
-slot_to_outer_bolt_x = abs(min(abs(x) for x in BOLT_XS)) - (SLOT_X + SLOT_W/2.0) - M5_D/2.0
 checks = [
-    ("Top edge to beam bolt (Z)",        top_edge_to_bolt_z,   3.0),
-    ("Beam bolt to frame bolt (Z)",      bolt_z_separation,    3.0),
-    ("Frame bolt to lock slot (Z)",      frame_to_lock,        3.0),
-    ("Lock slot to pivot (Z)",           lock_to_pivot,        3.0),
-    ("Pivot to bottom edge (Z)",         pivot_to_bottom,      3.0),
-    ("Edge to outer bolt (X)",           edge_to_outer_bolt_x, 3.0),
-    ("Lock slot to inner bolt (X)",      slot_to_outer_bolt_x, 5.0),
+    ("Top edge to beam bolt (Z)",        top_edge_to_bolt_z,    3.0),
+    ("Beam bolt to frame bolt (Z)",      bolt_z_separation,     3.0),
+    ("Frame bolt to arc-slot top (Z)",   frame_to_slot_z,       3.0),
+    ("Pivot to bottom edge (Z)",         pivot_to_bottom,       3.0),
+    ("Edge to outer bolt (X)",           edge_to_outer_bolt_x,  3.0),
+    ("Arc-slot reach to inner bolt (X)", slot_to_inner_bolt_x,  3.0),
+    ("Slot perpendicular for M5",        2 * SLOT_HALF_W - M5_D, 0.5),
 ]
 for label, val, min_ok in checks:
     flag = "OK " if val >= min_ok else "!! "
@@ -135,8 +176,11 @@ print(f"                   1x M5 insert (pivot) at X=0, Z={PIVOT_Z:+.0f}")
 print(f"                   1x M5 insert (lock)  at X=0, Z={LOCK_Z:+.0f}")
 print(f"  ARM features:    4x M5 insert (frame mount) at X={BOLT_XS}, Z={FRAME_BOLT_Z:+.0f}")
 print(f"                   1x M5 through (pivot) at X=0, Z={PIVOT_Z:+.0f}")
-print(f"                   1x arc slot for lock: {SLOT_W} x {SLOT_H}")
-print(f"                   at X=+{SLOT_X}, Z={LOCK_Z:+.0f}  (tilt range 0 to +30 deg)")
+print(f"                   TRUE ARC SLOT for lock:")
+print(f"                     center radius {SLOT_R} mm from pivot")
+print(f"                     half-width {SLOT_HALF_W} mm (slot W = {2*SLOT_HALF_W} mm)")
+print(f"                     angular range +/-{ANGLE_HALF_DEG:.0f} deg from vertical")
+print(f"                     tilt range = +/-{ANGLE_HALF_DEG:.0f} deg ({2*ANGLE_HALF_DEG:.0f} deg total)")
 print()
 
 doc = FreeCAD.newDocument(PART_ID)
@@ -180,11 +224,17 @@ for bx in BOLT_XS:
 arm = cut_cylinder(arm, M5_D, PLATE_T + 2 * CUT_EXTRA,
                     FreeCAD.Vector(0, -CUT_EXTRA, PIVOT_Z),
                     FreeCAD.Vector(0, 1, 0))
-# Lock arc slot: rectangular slot, 15 (X) x 6 (Z), centered at (X=+SLOT_X, Z=LOCK_Z)
-arm = cut_box(arm, SLOT_W, PLATE_T + 2 * EPS, SLOT_H,
-               FreeCAD.Vector(SLOT_X - SLOT_W/2.0,
-                               -EPS,
-                               LOCK_Z - SLOT_H/2.0))
+# V1.1: TRUE arc slot, centered on the pivot.
+# Builds the slot profile in the XZ plane, then extrudes through Y to cut.
+slot_face = arc_slot_face_xz(
+    pivot_x=0.0, pivot_z=PIVOT_Z,
+    R_center=SLOT_R, half_w=SLOT_HALF_W,
+    angle_min_deg=(90.0 - ANGLE_HALF_DEG),
+    angle_max_deg=(90.0 + ANGLE_HALF_DEG),
+)
+slot_face.translate(FreeCAD.Vector(0, -EPS, 0))
+slot_cutter = slot_face.extrude(FreeCAD.Vector(0, PLATE_T + 2 * EPS, 0))
+arm = arm.cut(slot_cutter)
 
 obj_arm = doc.addObject("Part::Feature", PART_ID + "_Arm")
 obj_arm.Shape = arm
@@ -229,6 +279,8 @@ print("    (existing frame bolts go into ARM's frame-mount inserts).")
 print(" 7. To adjust tilt: loosen lock thumb screw -> tilt screen ->")
 print("    retighten.  Friction between PETG faces holds the angle.")
 print()
-print("NOTE: V1.0 uses friction lock.  If position slips over time,")
-print("V1.1 will add toothed indexing at 10 deg increments.")
+print("NOTE: V1.1 uses TRUE ARC slot centered on the pivot, so the lock")
+print("bolt rides on a constant-radius arc and isn't side-loaded.")
+print("If friction lock slips over time, V2.0 will add toothed indexing")
+print("at 10 deg increments + a friction boss around the pivot.")
 print("=" * 70)

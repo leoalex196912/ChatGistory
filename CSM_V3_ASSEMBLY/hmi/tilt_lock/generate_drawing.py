@@ -8,8 +8,8 @@ from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from matplotlib.patches import Rectangle
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-BASE_STL = os.path.join(HERE, "CSM_V3_TiltLock_V1_0_Base.stl")
-ARM_STL  = os.path.join(HERE, "CSM_V3_TiltLock_V1_0_Arm.stl")
+BASE_STL = os.path.join(HERE, "CSM_V3_TiltLock_V1_1_Base.stl")
+ARM_STL  = os.path.join(HERE, "CSM_V3_TiltLock_V1_1_Arm.stl")
 
 def parse_stl(path):
     with open(path, 'rb') as f:
@@ -87,7 +87,7 @@ ax_tb.add_patch(Rectangle((0.02, 0.02), 0.96, 0.96, facecolor='white',
 rows = [
     ('PART',     'Display Tilt Lock'),
     ('NUMBER',   'M10-P06'),
-    ('VERSION',  'V1.0 (DRAFT)'),
+    ('VERSION',  'V1.1 (RC1)'),
     ('MODULE',   '10 -- HMI'),
     ('QTY',      '1 Base + 1 Arm'),
     ('MATERIAL', 'PETG (PA12 prod)'),
@@ -109,8 +109,8 @@ dims = [
     ('Frame inserts', '4x M5 heat-set (Arm)'),
     ('Pivot',         'M5 insert (Base)/thru (Arm)'),
     ('Lock screw',    'M5 insert (Base)'),
-    ('Lock arc slot', '15 x 6 (Arm), 0-30 deg'),
-    ('Tilt range',    '0 to +30 deg backward'),
+    ('Lock arc slot', 'TRUE arc, R25 +/- 3 mm'),
+    ('Tilt range',    '+/-20 deg (40 deg total)'),
 ]
 yy = 0.46
 for k, v in dims:
@@ -138,8 +138,8 @@ notes = [
     '7. Adjust: loosen lock thumb screw,',
     '   tilt, retighten.  Friction holds.',
     '',
-    'V1.1 PLAN: toothed indexing at 10 deg',
-    '       increments (eliminates slip).',
+    'V2.0 PLAN: toothed indexing 10 deg + friction',
+    '       boss around the pivot (eliminates slip)',
     '',
     'WALL CHECK: all 7 OK, min 3.25 mm',
 ]
@@ -154,8 +154,8 @@ fig.text(0.5, 0.02,
          'Module 10 part 6 of 10',
          ha='center', fontsize=8, color='#888')
 
-out_png = os.path.join(HERE, "CSM_V3_TiltLock_V1_0_views.png")
-out_pdf = os.path.join(HERE, "CSM_V3_TiltLock_V1_0_views.pdf")
+out_png = os.path.join(HERE, "CSM_V3_TiltLock_V1_1_views.png")
+out_pdf = os.path.join(HERE, "CSM_V3_TiltLock_V1_1_views.pdf")
 fig.savefig(out_png, dpi=180, bbox_inches='tight', facecolor='white')
 fig.savefig(out_pdf, bbox_inches='tight', facecolor='white')
 plt.close(fig)

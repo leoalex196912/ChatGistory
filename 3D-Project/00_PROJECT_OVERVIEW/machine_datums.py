@@ -247,6 +247,23 @@ HMI_TOUCH_WIN_W            = 30.0    # mount window X (PCD X range 50-110)
 HMI_TOUCH_WIN_H            = 30.0    # mount window Z (PCD Y range 34-94)
 HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
 
+# === Expansion Plate V1.0 (Part M10-P10) ===
+# Generic accessory plate that bolts to 4 of the 6 cross-beam FRONT-face
+# M5 heat-set inserts.  Carries a grid of M3 holes for mounting any
+# downstream accessory (sensor PCB, LED driver, label maker, etc.)
+HMI_EXP_PLATE_W       = 110.0   # plate X (along beam)
+HMI_EXP_PLATE_H       = 70.0    # plate Z (vertical)
+HMI_EXP_PLATE_T       = 4.0     # plate thickness (Y)
+HMI_EXP_M3_CLEAR_D    = 3.5     # M3 clearance for accessory mounting
+HMI_EXP_GRID_PITCH_X  = 20.0    # X spacing of M3 grid
+HMI_EXP_GRID_PITCH_Z  = 20.0    # Z spacing of M3 grid
+HMI_EXP_GRID_COLS     = 5       # 5 columns of M3 (X = -40 .. +40)
+HMI_EXP_GRID_ROWS     = 3       # 3 rows of M3
+HMI_EXP_BEAM_BOLT_Z   = 7.0     # M5 bolt center distance from top edge
+                                  # (7 leaves 3.5 mm clear to top M3 row;
+                                  # 10 only left 0.5 mm)
+HMI_EXP_CORNER_R      = 3.0     # plate corner fillet
+
 # === Cable Clamp V1.0 (Part M10-P08) ===
 # Saddle plate that bolts to a 2020 mast slot with one M5 T-nut, holding a
 # cable bundle against the mast face via 4 corner zip-tie holes.

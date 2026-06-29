@@ -1,0 +1,181 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- EXPANSION PLATE V1.0 (Part M10-P10)
+# =============================================================================
+# Generic accessory mounting plate.  Bolts to 4 of the 6 cross-beam FRONT-face
+# M5 heat-set inserts; provides a 5 x 3 grid of M3 clearance holes for
+# attaching any downstream accessory (status LED panel, microphone PCB,
+# motion sensor, small OLED label, etc.).
+#
+# Local frame (plate-local):
+#   X = along beam, Y = depth (+Y away from beam), Z = vertical (+Z up)
+#   Origin: plate center
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+PART_NUMBER     = "M10-P10"
+PART_NAME       = "Expansion Plate"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_ExpansionPlate_V1_0"
+PRINT_QTY       = 1
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+def rounded_rect_face(w, d, r):
+    hw, hd = w / 2.0, d / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -hd, 0)
+    p2 = FreeCAD.Vector( hw - r, -hd, 0)
+    p3 = FreeCAD.Vector( hw,     -hd + r, 0)
+    p4 = FreeCAD.Vector( hw,      hd - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  hd, 0)
+    p6 = FreeCAD.Vector(-hw + r,  hd, 0)
+    p7 = FreeCAD.Vector(-hw,      hd - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -hd + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -hd + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  hd - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  hd - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -hd + r, 0)
+    m_BR = c_BR + FreeCAD.Vector(r * math.cos(-math.pi/4), r * math.sin(-math.pi/4), 0)
+    m_TR = c_TR + FreeCAD.Vector(r * math.cos( math.pi/4), r * math.sin( math.pi/4), 0)
+    m_TL = c_TL + FreeCAD.Vector(r * math.cos( 3*math.pi/4), r * math.sin( 3*math.pi/4), 0)
+    m_BL = c_BL + FreeCAD.Vector(r * math.cos(-3*math.pi/4), r * math.sin(-3*math.pi/4), 0)
+    return Part.Face(Part.Wire([
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, m_BR, p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, m_TR, p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, m_TL, p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, m_BL, p1).toShape(),
+    ]))
+
+# ============================================================
+# Geometry parameters
+# ============================================================
+PLATE_W       = MD.HMI_EXP_PLATE_W
+PLATE_H       = MD.HMI_EXP_PLATE_H
+PLATE_T       = MD.HMI_EXP_PLATE_T
+CORNER_R      = MD.HMI_EXP_CORNER_R
+
+# Beam interface -- 4 of 6 FRONT-face inserts on inner pattern
+FRONT_PITCH   = MD.HMI_FRONT_INSERT_PITCH                # 22 mm
+BEAM_BOLT_XS  = (-1.5 * FRONT_PITCH, -0.5 * FRONT_PITCH,
+                 +0.5 * FRONT_PITCH, +1.5 * FRONT_PITCH)  # -33, -11, +11, +33
+M5_BOLT_D     = MD.HMI_M5_THROUGH_D
+BEAM_BOLT_Z   = PLATE_H / 2.0 - MD.HMI_EXP_BEAM_BOLT_Z   # 10 mm from top edge
+
+# M3 grid for accessories
+M3_D          = MD.HMI_EXP_M3_CLEAR_D
+GRID_COLS     = MD.HMI_EXP_GRID_COLS
+GRID_ROWS     = MD.HMI_EXP_GRID_ROWS
+GRID_PX       = MD.HMI_EXP_GRID_PITCH_X
+GRID_PZ       = MD.HMI_EXP_GRID_PITCH_Z
+
+EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA     = MD.HMI_CUT_EXTRA
+
+# ============================================================
+# Banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}")
+print()
+print("WALL-THICKNESS CHECK:")
+edge_to_outer_m5_x = PLATE_W / 2.0 - max(abs(x) for x in BEAM_BOLT_XS) - M5_BOLT_D/2
+top_to_m5         = PLATE_H / 2.0 - BEAM_BOLT_Z - M5_BOLT_D / 2.0
+m5_to_grid_top    = BEAM_BOLT_Z - M5_BOLT_D/2 - (GRID_ROWS - 1) * GRID_PZ / 2.0 - M3_D/2
+edge_to_grid_x    = PLATE_W / 2.0 - (GRID_COLS - 1) * GRID_PX / 2.0 - M3_D/2
+edge_to_grid_z    = PLATE_H / 2.0 - (GRID_ROWS - 1) * GRID_PZ / 2.0 - M3_D/2
+checks = [
+    ("Edge to outer beam-bolt (X)",      edge_to_outer_m5_x,  3.0),
+    ("Top edge to beam-bolt (Z)",        top_to_m5,           3.0),
+    ("Beam-bolt to top M3 grid row (Z)", m5_to_grid_top,      2.0),
+    ("Edge to outer M3 grid hole (X)",   edge_to_grid_x,      3.0),
+    ("Bottom edge to bottom grid (Z)",   edge_to_grid_z,      3.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  plate:           {PLATE_W} x {PLATE_T} x {PLATE_H} mm, R{CORNER_R} corners")
+print(f"  beam mount:      4x M5 at X={BEAM_BOLT_XS}, Z={BEAM_BOLT_Z:+.1f}")
+print(f"  M3 grid:         {GRID_COLS} x {GRID_ROWS} at pitch {GRID_PX} x {GRID_PZ} mm")
+print(f"                   total {GRID_COLS * GRID_ROWS} accessory holes")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# Build plate -- rounded XZ-plane face extruded in +Y direction
+face = rounded_rect_face(PLATE_W, PLATE_H, CORNER_R)
+face.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)
+plate = face.extrude(FreeCAD.Vector(0, PLATE_T, 0))
+
+# 4x M5 beam-mount holes (Y direction)
+for bx in BEAM_BOLT_XS:
+    plate = cut_cylinder(plate, M5_BOLT_D, PLATE_T + 2 * CUT_EXTRA,
+                          FreeCAD.Vector(bx, -CUT_EXTRA, BEAM_BOLT_Z),
+                          FreeCAD.Vector(0, 1, 0))
+
+# M3 grid (5 x 3)
+grid_x0 = -(GRID_COLS - 1) * GRID_PX / 2.0
+grid_z0 = -(GRID_ROWS - 1) * GRID_PZ / 2.0
+for cx in range(GRID_COLS):
+    for rz in range(GRID_ROWS):
+        hx = grid_x0 + cx * GRID_PX
+        hz = grid_z0 + rz * GRID_PZ
+        plate = cut_cylinder(plate, M3_D, PLATE_T + 2 * CUT_EXTRA,
+                              FreeCAD.Vector(hx, -CUT_EXTRA, hz),
+                              FreeCAD.Vector(0, 1, 0))
+
+# Export
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = plate
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.70, 0.60, 0.45)
+doc.recompute()
+plate = obj.Shape
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = plate.CenterOfMass
+except AttributeError:
+    com = plate.Solids[0].CenterOfMass if plate.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {plate.Volume:.0f} mm^3  (~{plate.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (plate-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG flat on bed, 100% infill, 4 walls, 0.2 mm layers")
+print(" 2. Bolt the plate to the beam's FRONT-face heat-set inserts at the")
+print("    INNER 4 positions (X = +/-11 and +/-33).  M5 x 12 socket-head")
+print("    cap screws.  The OUTER 2 inserts (X = +/-55) are left free for")
+print("    other parts (e.g., Touchscreen Frame uses those four).")
+print(" 3. Attach the desired accessory to the M3 grid using whichever 2-4")
+print("    holes match the accessory's mounting pattern.  Most generic")
+print("    PCBs have 50.8 mm or 20 mm hole spacing -- both fit the grid.")
+print(" 4. If no accessory needed yet, leave the plate installed -- it")
+print("    forms a structural panel and is ready when you add one.")
+print("=" * 70)

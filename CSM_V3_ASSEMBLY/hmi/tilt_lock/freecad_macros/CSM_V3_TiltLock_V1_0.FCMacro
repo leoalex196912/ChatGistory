@@ -1,0 +1,234 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- DISPLAY TILT LOCK V1.0 (Part M10-P06)
+# =============================================================================
+# 2-piece friction-tilt assembly that goes BETWEEN the Cross Beam (V1.2 RC1)
+# and the Touchscreen Frame (V1.2 RC1).  Lets the touchscreen tilt 0-30 deg
+# backward for ergonomic viewing.
+#
+# Architecture:
+#   BEAM     <-- 4 M5 x 20 SHCS into beam inserts
+#   BASE plate (rigid to beam)
+#     | -- M5 pivot thumb screw (heat-set insert in base)
+#     | -- M5 lock thumb screw  (heat-set insert in base, arc slot in arm)
+#   ARM plate (rotates around pivot, locked by lock screw)
+#   FRAME    <-- 4 M5 x 12 SHCS from frame TOP TAB into arm inserts
+#
+# Outputs TWO STL/STEP files: ..._Base.* and ..._Arm.*
+#
+# V1.0 = friction tilt (PETG-on-PETG with M5 clamp force).
+# V1.1 = toothed indexing at 10 deg increments (planned).
+#
+# Local frame (both plates):
+#   X = horizontal along beam, Y = thickness (5 mm), Z = vertical
+#   Origin: plate center
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+PART_NUMBER     = "M10-P06"
+PART_NAME       = "Display Tilt Lock"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_TiltLock_V1_0"
+PRINT_QTY       = 1  # qty of each (1 Base + 1 Arm)
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+def cut_box(shape, w, d, h, origin):
+    box = Part.makeBox(w, d, h, origin)
+    return shape.cut(box)
+
+def rounded_rect_face(w, d, r):
+    hw, hd = w / 2.0, d / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -hd, 0)
+    p2 = FreeCAD.Vector( hw - r, -hd, 0)
+    p3 = FreeCAD.Vector( hw,     -hd + r, 0)
+    p4 = FreeCAD.Vector( hw,      hd - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  hd, 0)
+    p6 = FreeCAD.Vector(-hw + r,  hd, 0)
+    p7 = FreeCAD.Vector(-hw,      hd - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -hd + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -hd + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  hd - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  hd - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -hd + r, 0)
+    return Part.Face(Part.Wire([
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, c_BR + FreeCAD.Vector(r*math.cos(-math.pi/4), r*math.sin(-math.pi/4), 0), p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, c_TR + FreeCAD.Vector(r*math.cos(math.pi/4), r*math.sin(math.pi/4), 0), p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, c_TL + FreeCAD.Vector(r*math.cos(3*math.pi/4), r*math.sin(3*math.pi/4), 0), p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, c_BL + FreeCAD.Vector(r*math.cos(-3*math.pi/4), r*math.sin(-3*math.pi/4), 0), p1).toShape(),
+    ]))
+
+# ============================================================
+# Geometry
+# ============================================================
+PLATE_W   = MD.HMI_TILT_PLATE_W
+PLATE_H   = MD.HMI_TILT_PLATE_H
+PLATE_T   = MD.HMI_TILT_PLATE_T
+CORNER_R  = MD.HMI_TILT_CORNER_R
+FRONT_PITCH = MD.HMI_FRONT_INSERT_PITCH        # 22 (beam) and same for frame mount
+BEAM_BOLT_Z = MD.HMI_TILT_BEAM_BOLT_Z
+FRAME_BOLT_Z = MD.HMI_TILT_FRAME_BOLT_Z
+PIVOT_Z   = MD.HMI_TILT_PIVOT_Z
+LOCK_Z    = MD.HMI_TILT_LOCK_Z
+SLOT_W    = MD.HMI_TILT_SLOT_W
+SLOT_H    = MD.HMI_TILT_SLOT_H
+SLOT_X    = MD.HMI_TILT_SLOT_X_OFFSET
+M5_D      = MD.HMI_M5_THROUGH_D
+INSERT_D  = MD.HMI_INSERT_POCKET_D     # M5 heat-set insert pocket
+INSERT_H  = MD.HMI_INSERT_POCKET_H
+EPS       = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA = MD.HMI_CUT_EXTRA
+
+# 4 of 6 beam/frame inserts -- match Touchscreen Frame's pattern
+BOLT_XS   = (-2.5*FRONT_PITCH, -1.5*FRONT_PITCH,
+              1.5*FRONT_PITCH,  2.5*FRONT_PITCH)   # -55, -33, +33, +55
+
+# ============================================================
+# Banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   1 each of Base + Arm")
+print()
+print("WALL-THICKNESS CHECK:")
+top_edge_to_bolt_z   = PLATE_H/2.0 - BEAM_BOLT_Z - M5_D/2.0
+bolt_z_separation    = BEAM_BOLT_Z - FRAME_BOLT_Z - M5_D/2.0      # base bolt to arm bolt vertical gap
+frame_to_lock        = FRAME_BOLT_Z - LOCK_Z - SLOT_H/2.0 - M5_D/2.0
+lock_to_pivot        = LOCK_Z - PIVOT_Z - SLOT_H/2.0 - M5_D/2.0
+pivot_to_bottom      = PLATE_H/2.0 + PIVOT_Z - M5_D/2.0
+edge_to_outer_bolt_x = PLATE_W/2.0 - max(abs(x) for x in BOLT_XS) - M5_D/2.0
+slot_to_outer_bolt_x = abs(min(abs(x) for x in BOLT_XS)) - (SLOT_X + SLOT_W/2.0) - M5_D/2.0
+checks = [
+    ("Top edge to beam bolt (Z)",        top_edge_to_bolt_z,   3.0),
+    ("Beam bolt to frame bolt (Z)",      bolt_z_separation,    3.0),
+    ("Frame bolt to lock slot (Z)",      frame_to_lock,        3.0),
+    ("Lock slot to pivot (Z)",           lock_to_pivot,        3.0),
+    ("Pivot to bottom edge (Z)",         pivot_to_bottom,      3.0),
+    ("Edge to outer bolt (X)",           edge_to_outer_bolt_x, 3.0),
+    ("Lock slot to inner bolt (X)",      slot_to_outer_bolt_x, 5.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  Each plate:      {PLATE_W} x {PLATE_T} x {PLATE_H} mm, R{CORNER_R} corners")
+print(f"  BASE features:   4x M5 through (beam mount) at X={BOLT_XS}, Z={BEAM_BOLT_Z:+.0f}")
+print(f"                   1x M5 insert (pivot) at X=0, Z={PIVOT_Z:+.0f}")
+print(f"                   1x M5 insert (lock)  at X=0, Z={LOCK_Z:+.0f}")
+print(f"  ARM features:    4x M5 insert (frame mount) at X={BOLT_XS}, Z={FRAME_BOLT_Z:+.0f}")
+print(f"                   1x M5 through (pivot) at X=0, Z={PIVOT_Z:+.0f}")
+print(f"                   1x arc slot for lock: {SLOT_W} x {SLOT_H}")
+print(f"                   at X=+{SLOT_X}, Z={LOCK_Z:+.0f}  (tilt range 0 to +30 deg)")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+def make_plate_blank():
+    """Common rounded rectangular plate (X x Z plane), extruded in Y."""
+    face = rounded_rect_face(PLATE_W, PLATE_H, CORNER_R)
+    face.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)
+    return face.extrude(FreeCAD.Vector(0, PLATE_T, 0))
+
+# --- BASE (mounts to beam) ---
+base = make_plate_blank()
+# 4 beam-mount M5 through-holes (Y direction)
+for bx in BOLT_XS:
+    base = cut_cylinder(base, M5_D, PLATE_T + 2 * CUT_EXTRA,
+                         FreeCAD.Vector(bx, -CUT_EXTRA, BEAM_BOLT_Z),
+                         FreeCAD.Vector(0, 1, 0))
+# Pivot M5 heat-set insert (operator-facing side, Y=0)
+base = cut_cylinder(base, INSERT_D, INSERT_H + EPS,
+                     FreeCAD.Vector(0, -EPS, PIVOT_Z),
+                     FreeCAD.Vector(0, 1, 0))
+# Lock M5 heat-set insert
+base = cut_cylinder(base, INSERT_D, INSERT_H + EPS,
+                     FreeCAD.Vector(0, -EPS, LOCK_Z),
+                     FreeCAD.Vector(0, 1, 0))
+
+obj_base = doc.addObject("Part::Feature", PART_ID + "_Base")
+obj_base.Shape = base
+if FreeCAD.GuiUp and obj_base.ViewObject is not None:
+    obj_base.ViewObject.ShapeColor = (0.55, 0.65, 0.85)
+
+# --- ARM (mounts to frame, rotates around pivot) ---
+arm = make_plate_blank()
+# 4 frame-mount M5 heat-set inserts (operator-facing, Y=0 of arm)
+for bx in BOLT_XS:
+    arm = cut_cylinder(arm, INSERT_D, INSERT_H + EPS,
+                        FreeCAD.Vector(bx, -EPS, FRAME_BOLT_Z),
+                        FreeCAD.Vector(0, 1, 0))
+# Pivot M5 through-hole (matches base pivot)
+arm = cut_cylinder(arm, M5_D, PLATE_T + 2 * CUT_EXTRA,
+                    FreeCAD.Vector(0, -CUT_EXTRA, PIVOT_Z),
+                    FreeCAD.Vector(0, 1, 0))
+# Lock arc slot: rectangular slot, 15 (X) x 6 (Z), centered at (X=+SLOT_X, Z=LOCK_Z)
+arm = cut_box(arm, SLOT_W, PLATE_T + 2 * EPS, SLOT_H,
+               FreeCAD.Vector(SLOT_X - SLOT_W/2.0,
+                               -EPS,
+                               LOCK_Z - SLOT_H/2.0))
+
+obj_arm = doc.addObject("Part::Feature", PART_ID + "_Arm")
+obj_arm.Shape = arm
+if FreeCAD.GuiUp and obj_arm.ViewObject is not None:
+    obj_arm.ViewObject.ShapeColor = (0.85, 0.65, 0.55)
+
+doc.recompute()
+
+# Export each as separate STL/STEP
+for obj, suffix in [(obj_base, "_Base"), (obj_arm, "_Arm")]:
+    out_stl  = os.path.join(BASE_DIR, PART_ID + suffix + ".stl")
+    out_step = os.path.join(BASE_DIR, PART_ID + suffix + ".step")
+    Part.export([obj], out_stl)
+    Part.export([obj], out_step)
+    sh = obj.Shape
+    try:
+        com = sh.CenterOfMass
+    except AttributeError:
+        com = sh.Solids[0].CenterOfMass if sh.Solids else None
+    print(f"[OK] STL:  {out_stl}")
+    print(f"[OK] STEP: {out_step}")
+    print(f"     volume: {sh.Volume:.0f} mm^3  (~{sh.Volume*1.27/1000:.1f}g PETG)")
+    if com is not None:
+        print(f"     CoM:   X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f}")
+
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG, 100% infill, 4 walls, 0.2 mm layers.")
+print("    Print BASE with operator face down for clean insert pockets.")
+print("    Print ARM with frame face down for clean insert pockets.")
+print(" 2. Heat the 6 M5 brass inserts (B0DPQJ4W3Z):")
+print("    - BASE: 1 pivot insert + 1 lock insert")
+print("    - ARM:  4 frame-mount inserts")
+print(" 3. Bolt BASE to beam FRONT inserts with 4x M5 x 20 SHCS through the")
+print("    BASE's beam-mount holes (X = +/-33, +/-55) -- BASE rigid to beam.")
+print(" 4. Stack ARM in front of BASE, aligning pivot holes.  Thread M5 x 16")
+print("    THUMB SCREW through ARM pivot, into BASE pivot insert.  Snug.")
+print(" 5. Thread second M5 x 16 THUMB SCREW through ARM lock slot into")
+print("    BASE lock insert.  Position determines tilt angle (0-30 deg).")
+print(" 6. Bolt Touchscreen Frame TOP TAB to ARM with 4x M5 x 12 SHCS")
+print("    (existing frame bolts go into ARM's frame-mount inserts).")
+print(" 7. To adjust tilt: loosen lock thumb screw -> tilt screen ->")
+print("    retighten.  Friction between PETG faces holds the angle.")
+print()
+print("NOTE: V1.0 uses friction lock.  If position slips over time,")
+print("V1.1 will add toothed indexing at 10 deg increments.")
+print("=" * 70)

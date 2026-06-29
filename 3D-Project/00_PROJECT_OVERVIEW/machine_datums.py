@@ -276,6 +276,23 @@ HMI_LED_TIE_GROOVE_W     = 4.0    # zip-tie groove width (X)
 HMI_LED_TIE_GROOVE_D     = 1.0    # zip-tie groove depth (Z, into top face)
 HMI_LED_TIE_X            = 60.0   # zip-tie groove X offset from center
 
+# === Display Tilt Lock V1.0 (Part M10-P06)  -- 2 parts: Base + Arm ===
+# Two-plate friction-tilt assembly between Cross Beam and Touchscreen Frame.
+# BASE bolts to beam FRONT face; ARM bolts to frame TOP TAB; the two pivot
+# around a horizontal X-axis hinge with a single M5 lock thumb screw whose
+# travel is constrained by an arc slot.
+HMI_TILT_PLATE_W        = 180.0   # both plates share same X
+HMI_TILT_PLATE_H        = 70.0    # both plates share same Z
+HMI_TILT_PLATE_T        = 5.0     # both plates same Y thickness
+HMI_TILT_BEAM_BOLT_Z    = 28.0    # M5 beam-mount holes Z (relative to center)
+HMI_TILT_FRAME_BOLT_Z   = 22.0    # M5 frame-mount inserts Z
+HMI_TILT_PIVOT_Z        = -25.0   # M5 pivot Z (below center)
+HMI_TILT_LOCK_Z         = 0.0     # M5 lock-screw nominal Z (center)
+HMI_TILT_SLOT_W         = 15.0    # arc-slot width (X), 0 to +30° tilt
+HMI_TILT_SLOT_H         = 6.0     # arc-slot height (Z) -- M5 + clearance
+HMI_TILT_SLOT_X_OFFSET  = 4.5     # slot center X offset (asymmetric for 0-30°)
+HMI_TILT_CORNER_R       = 3.0     # plate corner fillet
+
 # === Cable Clamp V1.0 (Part M10-P08) ===
 # Saddle plate that bolts to a 2020 mast slot with one M5 T-nut, holding a
 # cable bundle against the mast face via 4 corner zip-tie holes.

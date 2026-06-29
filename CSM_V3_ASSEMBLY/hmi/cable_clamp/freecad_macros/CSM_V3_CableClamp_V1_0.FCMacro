@@ -1,0 +1,212 @@
+# -*- coding: utf-8 -*-
+# =============================================================================
+# CSM V3 -- MODULE 10 HMI -- CABLE CLAMP V1.0 (Part M10-P08)
+# =============================================================================
+# Saddle plate that bolts to a 2020 mast slot (via one M5 T-nut) and holds a
+# cable bundle (HDMI + USB-C + fan power) against the mast face with one or
+# two zip-ties through the 4 corner holes.
+#
+# Mount: M5 x 12 mm socket-head + standard 2020 M5 T-nut
+# Cable bundle: ~10-14 mm diameter (HDMI ribbon + USB-C + 2-wire fan)
+#
+# Local frame (clamp-local):
+#   X = horizontal along mast face
+#   Y = depth out from mast (+Y away from mast)
+#   Z = vertical
+#   Origin: center of M5 mount hole at the mast face (Y = 0)
+# =============================================================================
+
+import FreeCAD, Part, math, os, sys
+sys.path.insert(0, r"C:\3D-Project\00_PROJECT_OVERVIEW")
+import machine_datums as MD
+
+# ============================================================
+# PART METADATA (CSM V3 macro standard header)
+# ============================================================
+PART_NUMBER     = "M10-P08"
+PART_NAME       = "Cable Clamp"
+VERSION         = "V1.0"
+STATUS          = "DRAFT"
+PART_ID         = "CSM_V3_CableClamp_V1_0"
+PRINT_QTY       = 2
+PRINT_MATERIAL  = "PETG (PA12 production)"
+PRINT_INFILL    = "100%"
+PRINT_LAYER     = "0.20 mm"
+PRINT_WALLS     = 4
+
+# ============================================================
+# Helpers
+# ============================================================
+def cut_cylinder(shape, diameter, length, origin, direction=FreeCAD.Vector(0, 0, 1)):
+    cyl = Part.makeCylinder(diameter / 2.0, length, origin, direction)
+    return shape.cut(cyl)
+
+def rounded_rect_face(w, d, r):
+    hw, hd = w / 2.0, d / 2.0
+    p1 = FreeCAD.Vector(-hw + r, -hd, 0)
+    p2 = FreeCAD.Vector( hw - r, -hd, 0)
+    p3 = FreeCAD.Vector( hw,     -hd + r, 0)
+    p4 = FreeCAD.Vector( hw,      hd - r, 0)
+    p5 = FreeCAD.Vector( hw - r,  hd, 0)
+    p6 = FreeCAD.Vector(-hw + r,  hd, 0)
+    p7 = FreeCAD.Vector(-hw,      hd - r, 0)
+    p8 = FreeCAD.Vector(-hw,     -hd + r, 0)
+    c_BR = FreeCAD.Vector( hw - r, -hd + r, 0)
+    c_TR = FreeCAD.Vector( hw - r,  hd - r, 0)
+    c_TL = FreeCAD.Vector(-hw + r,  hd - r, 0)
+    c_BL = FreeCAD.Vector(-hw + r, -hd + r, 0)
+    m_BR = c_BR + FreeCAD.Vector(r * math.cos(-math.pi/4), r * math.sin(-math.pi/4), 0)
+    m_TR = c_TR + FreeCAD.Vector(r * math.cos( math.pi/4), r * math.sin( math.pi/4), 0)
+    m_TL = c_TL + FreeCAD.Vector(r * math.cos( 3*math.pi/4), r * math.sin( 3*math.pi/4), 0)
+    m_BL = c_BL + FreeCAD.Vector(r * math.cos(-3*math.pi/4), r * math.sin(-3*math.pi/4), 0)
+    edges = [
+        Part.LineSegment(p1, p2).toShape(),
+        Part.Arc(p2, m_BR, p3).toShape(),
+        Part.LineSegment(p3, p4).toShape(),
+        Part.Arc(p4, m_TR, p5).toShape(),
+        Part.LineSegment(p5, p6).toShape(),
+        Part.Arc(p6, m_TL, p7).toShape(),
+        Part.LineSegment(p7, p8).toShape(),
+        Part.Arc(p8, m_BL, p1).toShape(),
+    ]
+    return Part.Face(Part.Wire(edges))
+
+# ============================================================
+# Geometry parameters -- all from machine_datums.py (HMI block)
+# ============================================================
+PLATE_W       = MD.HMI_CABLE_CLAMP_W
+PLATE_H       = MD.HMI_CABLE_CLAMP_H
+PLATE_T       = MD.HMI_CABLE_CLAMP_T
+CORNER_R      = MD.HMI_CABLE_CLAMP_CORNER_R
+
+# Mount bolt
+M5_BOLT_D     = MD.HMI_M5_THROUGH_D
+BOLT_CB_D     = MD.HMI_BOLT_CB_D
+BOLT_CB_H     = MD.HMI_BOLT_CB_H
+
+# Zip-tie holes
+TIE_D         = MD.HMI_CABLE_CLAMP_TIE_D
+TIE_X         = MD.HMI_CABLE_CLAMP_TIE_X
+TIE_Z         = MD.HMI_CABLE_CLAMP_TIE_Z
+
+# Boolean / overcut helpers
+EPS_OVERCUT   = MD.HMI_BOOLEAN_OVERCUT
+CUT_EXTRA     = MD.HMI_CUT_EXTRA
+
+# ============================================================
+# Standard CSM V3 banner
+# ============================================================
+print("=" * 70)
+print(f"CSM V3   Part {PART_NUMBER}   {PART_NAME}   {VERSION}   [{STATUS}]")
+print("=" * 70)
+print(f"  Material:   {PRINT_MATERIAL}")
+print(f"  Print:      {PRINT_INFILL} infill, {PRINT_WALLS} walls, {PRINT_LAYER} layers")
+print(f"  Quantity:   {PRINT_QTY}  (typical: 1 near base, 1 mid-mast)")
+print()
+print("WALL-THICKNESS CHECK:")
+edge_to_tie_x      = PLATE_W / 2.0 - TIE_X - TIE_D / 2.0
+edge_to_tie_z      = PLATE_H / 2.0 - TIE_Z - TIE_D / 2.0
+mount_to_tie       = math.hypot(TIE_X, TIE_Z) - M5_BOLT_D/2 - TIE_D/2
+mat_above_cb       = PLATE_T - BOLT_CB_H
+cb_clear_to_edge_x = PLATE_W / 2.0 - BOLT_CB_D / 2.0
+cb_clear_to_edge_z = PLATE_H / 2.0 - BOLT_CB_D / 2.0
+checks = [
+    ("Edge to zip-tie hole (X)",        edge_to_tie_x,      2.0),
+    ("Edge to zip-tie hole (Z)",        edge_to_tie_z,      2.0),
+    ("M5 mount to zip-tie hole (3D)",   mount_to_tie,       3.0),
+    ("Material above counterbore (Y)",  mat_above_cb,       2.0),
+    ("Counterbore clearance to edge X", cb_clear_to_edge_x, 5.0),
+    ("Counterbore clearance to edge Z", cb_clear_to_edge_z, 5.0),
+]
+for label, val, min_ok in checks:
+    flag = "OK " if val >= min_ok else "!! "
+    print(f"  {flag}{label:42s} {val:6.2f} mm  (min {min_ok})")
+print()
+print("GEOMETRY:")
+print(f"  plate:           {PLATE_W} x {PLATE_T} x {PLATE_H} mm, R{CORNER_R} corners")
+print(f"  mount:           1x M5 + CB {BOLT_CB_D} x {BOLT_CB_H} on +Y face")
+print(f"                   (T-nut into 2020 mast slot, hidden head)")
+print(f"  zip-tie holes:   4x D{TIE_D} at (+/-{TIE_X}, +/-{TIE_Z})")
+print(f"  cable bundle:    ~10-14 mm dia (HDMI + USB-C + 2-wire fan)")
+print()
+
+doc = FreeCAD.newDocument(PART_ID)
+
+# ============================================================
+# Build clamp body
+# ============================================================
+# Rounded rectangle plate, Y extruded
+plate_face = rounded_rect_face(PLATE_W, PLATE_H, CORNER_R)
+# Face lies in XY plane at Z=0 by default; rotate so Y becomes extrusion axis.
+# Simpler: build face in XZ plane manually by swapping axes after extrude.
+# Actually easiest: extrude in +Z direction (face is XY), then we'll treat
+# that direction as Y in our coordinate description.  Use Z-extrusion here
+# but rename later -- or rotate.
+# Cleanest: keep face in XZ plane.  Build directly.
+# Re-derive using face in XZ plane: build with d as Z dimension.
+plate_face_xz = rounded_rect_face(PLATE_W, PLATE_H, CORNER_R)
+# rounded_rect_face puts face in XY plane.  Rotate around X axis 90 deg -> XZ.
+plate_face_xz.rotate(FreeCAD.Vector(0, 0, 0), FreeCAD.Vector(1, 0, 0), 90)
+plate = plate_face_xz.extrude(FreeCAD.Vector(0, PLATE_T, 0))
+# After rotation+extrude:
+#   X spans PLATE_W (-15 to +15)
+#   Y spans 0 to PLATE_T (mast face at Y=0, outer face at Y=PLATE_T)
+#   Z spans PLATE_H (-15 to +15)
+
+# M5 mount hole (center, through Y direction)
+plate = cut_cylinder(plate, M5_BOLT_D, PLATE_T + 2 * CUT_EXTRA,
+                     FreeCAD.Vector(0, -CUT_EXTRA, 0),
+                     FreeCAD.Vector(0, 1, 0))
+
+# M5 counterbore on +Y face (head sits flush, away from mast)
+plate = cut_cylinder(plate, BOLT_CB_D, BOLT_CB_H + EPS_OVERCUT,
+                     FreeCAD.Vector(0, PLATE_T - BOLT_CB_H, 0),
+                     FreeCAD.Vector(0, 1, 0))
+
+# 4 zip-tie pass-through holes at corners (through Y)
+for sx in (-1, +1):
+    for sz in (-1, +1):
+        hx = sx * TIE_X
+        hz = sz * TIE_Z
+        plate = cut_cylinder(plate, TIE_D, PLATE_T + 2 * CUT_EXTRA,
+                              FreeCAD.Vector(hx, -CUT_EXTRA, hz),
+                              FreeCAD.Vector(0, 1, 0))
+
+# Export
+obj = doc.addObject("Part::Feature", PART_ID)
+obj.Shape = plate
+if FreeCAD.GuiUp and obj.ViewObject is not None:
+    obj.ViewObject.ShapeColor = (0.60, 0.60, 0.40)
+doc.recompute()
+plate = obj.Shape
+
+BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+OUT_STL  = os.path.join(BASE, PART_ID + ".stl")
+OUT_STEP = os.path.join(BASE, PART_ID + ".step")
+Part.export([obj], OUT_STL)
+Part.export([obj], OUT_STEP)
+
+try:
+    com = plate.CenterOfMass
+except AttributeError:
+    com = plate.Solids[0].CenterOfMass if plate.Solids else None
+print(f"[OK] STL:  {OUT_STL}")
+print(f"[OK] STEP: {OUT_STEP}")
+print(f"     volume: {plate.Volume:.0f} mm^3  (~{plate.Volume*1.27/1000:.1f}g PETG)")
+if com is not None:
+    print(f"     center of mass (clamp-local):  X={com.x:+.2f}  Y={com.y:+.2f}  Z={com.z:+.2f} mm")
+print()
+print("ASSEMBLY:")
+print(" 1. Print PETG flat on bed (mast face down), 100% infill, 4 walls")
+print(" 2. Slide an M5 T-nut into the 2020 mast slot at the desired Z height")
+print("    (typical: one near wood base, one at mid-mast)")
+print(" 3. Bolt the clamp to the mast with an M5 x 12 socket-head screw")
+print("    through the counterbore on the +Y (outer) face; snug only")
+print(" 4. Route the cable bundle (HDMI + USB-C + fan power) along the mast")
+print("    face beside the clamp")
+print(" 5. Pass a 2.5 mm zip-tie through one upper corner hole, around the")
+print("    cable bundle, and back through the diagonally OPPOSITE lower")
+print("    corner hole; tighten on the +Y side of the clamp")
+print(" 6. Repeat the diagonal-zip-tie step with the other pair if extra")
+print("    retention is needed; trim excess zip-tie")
+print("=" * 70)

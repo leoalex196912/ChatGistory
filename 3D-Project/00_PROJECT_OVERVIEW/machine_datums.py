@@ -247,6 +247,17 @@ HMI_TOUCH_WIN_W            = 30.0    # mount window X (PCD X range 50-110)
 HMI_TOUCH_WIN_H            = 30.0    # mount window Z (PCD Y range 34-94)
 HMI_M2_5_CLEAR_D           = 3.0     # M2.5 screw clearance hole
 
+# === Cable Clamp V1.0 (Part M10-P08) ===
+# Saddle plate that bolts to a 2020 mast slot with one M5 T-nut, holding a
+# cable bundle against the mast face via 4 corner zip-tie holes.
+HMI_CABLE_CLAMP_W       = 30.0    # plate X (along mast face)
+HMI_CABLE_CLAMP_H       = 30.0    # plate Z (vertical)
+HMI_CABLE_CLAMP_T       = 8.0     # plate thickness (Y, away from mast)
+HMI_CABLE_CLAMP_TIE_D   = 3.0     # zip-tie pass-through hole diameter
+HMI_CABLE_CLAMP_TIE_X   = 10.0    # zip-tie hole X offset from center
+HMI_CABLE_CLAMP_TIE_Z   = 10.0    # zip-tie hole Z offset from center
+HMI_CABLE_CLAMP_CORNER_R = 3.0    # plate corner fillet
+
 # === Pi Fan Cover V1.0 (Part M10-P04) ===
 # Flat plate hanging below the Pi 4 (opposite side from Pi Carrier).
 # Carries a 30 x 30 x 10 mm 5V fan that blows air toward Pi components.

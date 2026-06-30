@@ -27,7 +27,7 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P02"
 PART_NAME       = "Cross Beam"
-VERSION         = "V1.2 RC1"
+VERSION         = "V1.2"
 STATUS          = "FROZEN"
 PART_ID         = "CSM_V3_CrossBeam_V1_2"        # filename root
 PRINT_QTY       = 1

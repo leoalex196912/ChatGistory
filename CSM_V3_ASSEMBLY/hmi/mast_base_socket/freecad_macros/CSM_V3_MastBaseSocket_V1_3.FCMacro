@@ -30,7 +30,7 @@ import machine_datums as MD
 # ============================================================
 PART_NUMBER     = "M10-P01"
 PART_NAME       = "Mast Base Socket"
-VERSION         = "V1.3 RC1"
+VERSION         = "V1.3"
 STATUS          = "FROZEN"
 PART_ID         = "CSM_V3_MastBaseSocket_V1_3"   # filename root
 PRINT_QTY       = 2

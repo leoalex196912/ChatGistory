@@ -155,7 +155,28 @@ MAST_TOP_Z             = 418.0
 # HMI MODULE 10  (ICD R7 -- locked 2026-06-28)
 # Single source of truth for Module 10 (HMI) dimensions.
 # Any HMI macro reads constants from this block.
+#
+# === MODULE 10 HMI INTERFACE LOCK ===========================
+# RC1 freeze 2026-06-29.  The interface dimensions below are
+# part of the inter-module contract between Module 10 (HMI)
+# and downstream consumers (Pi Carrier, Touchscreen Frame,
+# Tilt Lock, all accessories).  Do NOT modify any HMI_*
+# value without a coordinated update across every macro that
+# imports it.  Bump HMI_INTERFACE_VERSION when you do.
+#
+# Locked interfaces (mechanical contracts between parts):
+#   HMI_MAST_X_POSITIONS, HMI_MAST_Y, HMI_MAST_LEN, HMI_EXT_*
+#   HMI_SOCKET_OUTER_*, HMI_FOOT_*, HMI_FOOT_BOLT_*
+#   HMI_BEAM_LEN_X/W_Y/H_Z, HMI_BEAM_POCKET_DEPTH
+#   HMI_PI_MOUNT_PCD_X/Y  (beam-side Pi Carrier mount)
+#   HMI_FRONT_INSERT_PITCH (beam FRONT accessory inserts)
+#   HMI_PI4_PCD_X/Y       (Pi 4 native footprint)
+#   HMI_TOUCH_PCD_X/Y_NOMINAL + HMI_TOUCH_WIN_W/H
+#   HMI_TILT_SLOT_R       (tilt-lock pivot-to-lock distance)
+#   HMI_INSERT_POCKET_D/H (M5 brass heat-set inserts, BOM
+#                          B0DPQJ4W3Z)
 # ============================================================
+HMI_INTERFACE_VERSION = "1.0"
 
 # Mast placement and stick
 HMI_MAST_X_POSITIONS   = (+75.0, -75.0)   # left + right mast centers

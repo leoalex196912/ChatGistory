@@ -153,7 +153,12 @@ COMPONENTS = {
 }
 
 # Build flat numbered list of every drill hole on the wood base
-# (uprights are 2020 extrusion, not drilled into base here)
+# 2026-06-29: added 4 upright mount holes at (+/-150, +/-120).  Earlier
+# revisions omitted these on the (mistaken) assumption that uprights would
+# be mounted via corner brackets instead of direct end-bore self-tap.
+# The design intent -- matching the upper deck's pre-drilled pattern --
+# is symmetric top/bottom mounting via M5 x 25 socket-head bolts + Loctite
+# 242 into the 2020's ~D4.2 mm cast center bore at each end.
 def build_drill_list():
     holes = []
     n = 1
@@ -161,6 +166,21 @@ def build_drill_list():
     holes.append(dict(n=0, x=0, y=0, d=HOLE_D, m='Ø100',
                       bolt='—', component='TAKE-DOWN',
                       note='Sock fabric column'))
+    # 4x upright mount holes (M5 clearance for direct through-bolt into
+    # 2020 end bore).  Position matches UPRIGHT_X/Y_POSITIONS in
+    # machine_datums.py and the pre-drilled pattern on the wood upper deck.
+    for sx in (+1, -1):
+        for sy in (+1, -1):
+            holes.append(dict(
+                n=n,
+                x=sx * 150.0,
+                y=sy * 120.0,
+                d=5.5, m='M5',
+                bolt='M5 x 25 SHCS + Loctite 242',
+                component='FRAME',
+                note='2020 upright bottom mount (self-tap into end bore)',
+            ))
+            n += 1
     for comp_id, comp in COMPONENTS.items():
         for (dx, dy, hd, ml) in comp['holes']:
             holes.append(dict(
